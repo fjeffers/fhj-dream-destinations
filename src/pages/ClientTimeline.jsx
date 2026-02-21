@@ -4,32 +4,25 @@ import {
   FHJCard,
   FHJButton,
   fhjTheme,
-} from "../components/fhj/FHJUIKit.jsx";
-
+} from "../components/FHJ/FHJUIKit.jsx";
 export default function ClientTimeline({ admin, client }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const isAssistant = admin.Role === "Assistant";
-
   const loadTimeline = async () => {
     setLoading(true);
-
     const res = await fetch("/.netlify/functions/client-timeline", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientId: client.id }),
     });
-
     const data = await res.json();
     setEvents(data.events || []);
     setLoading(false);
   };
-
   useEffect(() => {
     loadTimeline();
   }, []);
-
   const iconFor = (type) => {
     switch (type) {
       case "Trip":
@@ -46,12 +39,10 @@ export default function ClientTimeline({ admin, client }) {
         return "•";
     }
   };
-
   return (
     <FHJCard style={{ padding: "2rem" }}>
       <h2>Client Timeline</h2>
       <p style={{ opacity: 0.7 }}>{client.Name}</p>
-
       {loading ? (
         <p>Loading timeline...</p>
       ) : (
@@ -59,7 +50,6 @@ export default function ClientTimeline({ admin, client }) {
           {events.length === 0 && (
             <p style={{ opacity: 0.7 }}>No timeline events found.</p>
           )}
-
           <ul style={{ paddingLeft: "1rem" }}>
             {events.map((e, i) => (
               <li
