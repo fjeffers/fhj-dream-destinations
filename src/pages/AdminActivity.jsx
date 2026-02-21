@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FHJCard, fhjTheme } from "../components/fhj/FHJUIKit.jsx";
-
+import { FHJCard, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 export default function AdminActivity() {
   const [feed, setFeed] = useState([]);
   const [error, setError] = useState(false);
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -19,14 +17,11 @@ export default function AdminActivity() {
         setError(true);
       }
     };
-
     load();
-
     // Refresh every 20 seconds
     const interval = setInterval(load, 20000);
     return () => clearInterval(interval);
   }, []);
-
   if (error) {
      return (
         <FHJCard style={{ padding: "2rem", opacity: 0.7 }}>
@@ -34,7 +29,6 @@ export default function AdminActivity() {
         </FHJCard>
      );
   }
-
   return (
     <FHJCard style={{ padding: "2rem" }}>
       <h2 style={{ 
@@ -44,7 +38,6 @@ export default function AdminActivity() {
       }}>
         Activity Feed
       </h2>
-
       {feed.length === 0 ? (
         <p style={{ opacity: 0.6 }}>No recent activity.</p>
       ) : (
