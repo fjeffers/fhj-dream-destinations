@@ -1,7 +1,6 @@
 // src/components/admin/trips/TripFormModal.jsx
 import React, { useState } from "react";
-import { fhjTheme } from "../../../components/fhj/FHJUIKit.jsx";
-
+import { fhjTheme } from "../../../components/FHJ/FHJUIKit.jsx";
 export default function TripFormModal({ initialValues, onClose, onSubmit, saving }) {
   const [form, setForm] = useState({
     destination: initialValues?.destination || "",
@@ -12,24 +11,20 @@ export default function TripFormModal({ initialValues, onClose, onSubmit, saving
     status: initialValues?.status || "",
     notes: initialValues?.notes || "",
   });
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     await onSubmit(form);
   };
-
   return (
     <div style={backdrop}>
       <div style={modal}>
         <h3 style={{ marginTop: 0, marginBottom: "0.75rem", color: fhjTheme.primary }}>
           {initialValues ? "Edit Trip" : "Add Trip"}
         </h3>
-
         <form onSubmit={handleSubmit}>
           {[
             ["destination", "Destination"],
@@ -50,7 +45,6 @@ export default function TripFormModal({ initialValues, onClose, onSubmit, saving
               />
             </div>
           ))}
-
           <div style={field}>
             <label style={labelStyle}>Notes</label>
             <textarea
@@ -61,7 +55,6 @@ export default function TripFormModal({ initialValues, onClose, onSubmit, saving
               style={{ ...input, resize: "vertical" }}
             />
           </div>
-
           <div style={actions}>
             <button type="button" onClick={onClose} style={btn} disabled={saving}>
               Cancel
@@ -79,7 +72,6 @@ export default function TripFormModal({ initialValues, onClose, onSubmit, saving
     </div>
   );
 }
-
 const backdrop = {
   position: "fixed",
   inset: 0,
@@ -89,7 +81,6 @@ const backdrop = {
   justifyContent: "center",
   zIndex: 40,
 };
-
 const modal = {
   width: "100%",
   maxWidth: "480px",
@@ -99,18 +90,15 @@ const modal = {
   border: "1px solid rgba(255,255,255,0.12)",
   boxShadow: "0 18px 45px rgba(0,0,0,0.6)",
 };
-
 const field = {
   marginBottom: "0.9rem",
 };
-
 const labelStyle = {
   display: "block",
   marginBottom: "0.25rem",
   fontSize: "0.8rem",
   opacity: 0.8,
 };
-
 const input = {
   width: "100%",
   padding: "0.45rem 0.6rem",
@@ -120,14 +108,12 @@ const input = {
   color: "white",
   fontSize: "0.85rem",
 };
-
 const actions = {
   display: "flex",
   justifyContent: "flex-end",
   gap: "0.75rem",
   marginTop: "1rem",
 };
-
 const btn = {
   background: "transparent",
   border: "1px solid rgba(255,255,255,0.4)",
