@@ -3,7 +3,7 @@ import {
   FHJCard,
   FHJButton,
   fhjTheme,
-} from "../components/fhj/FHJUIKit.jsx";
+} from "../components/FHJ/FHJUIKit.jsx";
 
 export default function AdminAuditVisualizer({ admin }) {
   const [logs, setLogs] = useState([]);
