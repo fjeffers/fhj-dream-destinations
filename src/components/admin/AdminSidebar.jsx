@@ -49,6 +49,7 @@ export default function AdminSidebar({ admin, onLogout }) {
       {/* NAVIGATION */}
       {[
         { to: "/admin", label: "Dashboard" },
+        { to: "/admin/deals", label: "Deals" },
         { to: "/admin/clients", label: "Clients" },
         { to: "/admin/trips", label: "Trips" },
         { to: "/admin/events", label: "Events" },
