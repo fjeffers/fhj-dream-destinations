@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FHJCard, fhjTheme } from "../components/fhj/FHJUIKit.jsx";
-
+import { FHJCard, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 export default function AdminAnalytics({ admin }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -19,10 +17,8 @@ export default function AdminAnalytics({ admin }) {
     };
     load();
   }, []);
-
   if (error) return <div style={{ color: "white", padding: "2rem" }}>Analytics currently unavailable.</div>;
   if (!data) return <div style={{ color: "white", padding: "2rem" }}>Loading analytics...</div>;
-
   // Helper to render a simple bar chart
   const renderChart = (title, dataset) => {
     if (!dataset) return null;
@@ -30,7 +26,6 @@ export default function AdminAnalytics({ admin }) {
     const entries = Object.entries(dataset);
     // Find the max value to scale the bars relative to 100% width
     const maxValue = Math.max(...Object.values(dataset), 1); 
-
     return (
       <FHJCard style={{ padding: "1.5rem" }}>
         <h3 style={{ 
@@ -65,13 +60,11 @@ export default function AdminAnalytics({ admin }) {
       </FHJCard>
     );
   };
-
   return (
     <div>
       <h2 style={{ color: fhjTheme.colors.accent, marginBottom: "1.5rem" }}>
         FHJ Analytics Dashboard
       </h2>
-
       <div
         style={{
           display: "grid",
