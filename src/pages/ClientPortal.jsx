@@ -7,10 +7,10 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/fhj/FHJUIKit.jsx";
-import FHJBackground from "../components/fhj/FHJBackground.jsx";
-import FHJSkeleton from "../components/fhj/FHJSkeleton.jsx";
+import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+   import FHJBackground from "../components/FHJ/FHJBackground.jsx";
+   import FHJSkeleton from "../components/FHJ/FHJSkeleton.jsx";
+   import { useToast } from "../components/FHJ/FHJToast.jsx";
 import { useToast } from "../components/fhj/FHJToast.jsx";
 
 export default function ClientPortal() {
