@@ -1,0 +1,9 @@
+# Netlify redirects for Single Page Application (SPA)
+# This tells Netlify to serve index.html for all routes
+# Place this file in: public/_redirects
+
+# API routes (Netlify Functions)
+/.netlify/functions/*  /.netlify/functions/:splat  200
+
+# All other routes serve the SPA
+/*  /index.html  200
