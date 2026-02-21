@@ -1,7 +1,7 @@
 // src/pages/Booking.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FHJCard, FHJButton, fhjTheme } from "../components/fhj/FHJUIKit.jsx";
+import { FHJCard, FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion } from "framer-motion";
 
 export default function Booking() {
@@ -130,11 +130,11 @@ export default function Booking() {
           <div>
             <h1 style={{ margin: 0, fontSize: "1.8rem" }}>Design Your Journey</h1>
             <p style={{ opacity: 0.8, marginTop: "0.25rem" }}>
-              Tell us about your dream trip and we’ll handle the rest.
+              Tell us about your dream trip and we'll handle the rest.
             </p>
             {deal && (
               <p style={{ marginTop: "0.5rem", opacity: 0.9 }}>
-                You’re inquiring about:{" "}
+                You're inquiring about:{" "}
                 <span style={{ color: fhjTheme.primary, fontWeight: 600 }}>
                   {deal.tripName}
                 </span>
