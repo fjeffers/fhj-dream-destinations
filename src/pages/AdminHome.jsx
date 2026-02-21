@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import Navigation
-import { FHJCard, FHJButton, fhjTheme } from "../components/fhj/FHJUIKit.jsx";
-
+import { FHJCard, FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 export default function AdminHome({ admin }) {
   const navigate = useNavigate(); // Initialize hook
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(false);
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -30,7 +28,6 @@ export default function AdminHome({ admin }) {
     };
     load();
   }, []);
-
   if (!stats && !error) {
     return (
       <div style={{ padding: "2rem", color: "white" }}>
@@ -38,7 +35,6 @@ export default function AdminHome({ admin }) {
       </div>
     );
   }
-
   return (
     <div>
       <h2 style={{ 
@@ -47,7 +43,6 @@ export default function AdminHome({ admin }) {
       }}>
         Welcome back, {admin?.Name || admin?.email || "Admin"}
       </h2>
-
       {/* KPI GRID */}
       <div
         style={{
@@ -64,7 +59,6 @@ export default function AdminHome({ admin }) {
         <DashboardCard label="Unread Concierge" value={stats?.unreadMessages || 0} highlight />
         <DashboardCard label="Pending RSVPs" value={stats?.pendingRSVPs || 0} />
       </div>
-
       {/* QUICK ACTIONS */}
       <h3 style={{ marginBottom: "1rem", color: "white" }}>Quick Actions</h3>
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
@@ -87,7 +81,6 @@ export default function AdminHome({ admin }) {
     </div>
   );
 }
-
 // Small internal helper to keep the grid clean
 function DashboardCard({ label, value, highlight }) {
     return (
