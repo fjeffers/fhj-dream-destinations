@@ -1,3 +1,8 @@
+// ==========================================================
+// FILE: AdminLayout.jsx  (REFAC: use shared AdminSidebar)
+// Location: src/layouts/AdminLayout.jsx
+// ==========================================================
+
 import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
