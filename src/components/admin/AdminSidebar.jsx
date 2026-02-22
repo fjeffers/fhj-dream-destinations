@@ -1,10 +1,13 @@
+// ==========================================================
+// FILE: AdminSidebar.jsx (UPDATED — Added About Page)
+// Location: src/components/AdminSidebar.jsx
+// ==========================================================
+
 import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { fhjTheme } from "../fhj/FHJUIKit.jsx";
+import { NavLink } from "react-router-dom";
+import { fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 
 export default function AdminSidebar({ admin, onLogout }) {
-  const navigate = useNavigate();
-
   const linkStyle = {
     padding: "0.9rem 1.2rem",
     borderRadius: "8px",
@@ -16,18 +19,18 @@ export default function AdminSidebar({ admin, onLogout }) {
     display: "block",
     transition: "0.25s ease",
   };
-
+  
   const activeStyle = {
     background: "rgba(255,255,255,0.15)",
     backdropFilter: "blur(12px)",
     borderLeft: `3px solid ${fhjTheme.primary}`,
     boxShadow: "0 0 12px rgba(212,175,55,0.25)",
   };
-
+  
   const hoverStyle = {
     background: "rgba(255,255,255,0.08)",
   };
-
+  
   return (
     <div
       style={{
@@ -45,15 +48,16 @@ export default function AdminSidebar({ admin, onLogout }) {
       <h2 style={{ marginBottom: "2rem", fontWeight: 600 }}>
         FHJ Admin
       </h2>
-
+      
       {/* NAVIGATION */}
       {[
-        { to: "/admin", label: "Dashboard" },
+        { to: "/admin/dashboard", label: "Dashboard" },
         { to: "/admin/deals", label: "Deals" },
         { to: "/admin/clients", label: "Clients" },
         { to: "/admin/trips", label: "Trips" },
         { to: "/admin/events", label: "Events" },
         { to: "/admin/concierge", label: "Concierge Inbox" },
+        { to: "/admin/about", label: "About Page" },
       ].map((item) => (
         <NavLink
           key={item.to}
@@ -68,7 +72,7 @@ export default function AdminSidebar({ admin, onLogout }) {
           {item.label}
         </NavLink>
       ))}
-
+      
       {/* OWNER-ONLY SETTINGS */}
       {admin.Role === "Owner" && (
         <NavLink
@@ -77,13 +81,15 @@ export default function AdminSidebar({ admin, onLogout }) {
             ...linkStyle,
             ...(isActive ? activeStyle : {}),
           })}
+          onMouseEnter={(e) => Object.assign(e.target.style, hoverStyle)}
+          onMouseLeave={(e) => Object.assign(e.target.style, linkStyle)}
         >
           Admin Settings
         </NavLink>
       )}
-
+      
       <div style={{ flexGrow: 1 }} />
-
+      
       {/* LOGOUT */}
       <button
         onClick={onLogout}
