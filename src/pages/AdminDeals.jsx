@@ -1,5 +1,5 @@
 // ==========================================================
-// FILE: AdminDeals.jsx - Complete with Image Upload & Carousel
+// FILE: AdminDeals.jsx - WITH CLEAR IMAGE BUTTON
 // Location: src/pages/AdminDeals.jsx
 // ==========================================================
 
@@ -10,8 +10,8 @@ import { motion, AnimatePresence } from "framer-motion";
 const CATEGORIES = ["Beach", "Mountain", "City", "Cruise", "Safari", "Cultural", "Adventure", "Wellness", "Exclusive"];
 const DIFFICULTY_LEVELS = ["Easy", "Moderate", "Challenging"];
 
-// Image resize utility
-function resizeImage(file, maxWidth = 1200) {
+// Image resize utility - OPTIMIZED (smaller files)
+function resizeImage(file, maxWidth = 800) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -24,7 +24,7 @@ function resizeImage(file, maxWidth = 1200) {
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
+        resolve(canvas.toDataURL("image/jpeg", 0.65));
       };
       img.onerror = () => reject(new Error("Failed to load image"));
       img.src = e.target.result;
@@ -405,7 +405,7 @@ export default function AdminDeals({ admin }) {
   );
 }
 
-// ImageManager Component
+// ImageManager Component WITH CLEAR BUTTON
 function ImageManager({ mainImage, additionalImages, onMainImageChange, onAdditionalImagesChange }) {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [urlInput, setUrlInput] = useState("");
@@ -492,10 +492,65 @@ function ImageManager({ mainImage, additionalImages, onMainImageChange, onAdditi
         </div>
       )}
 
+      {/* MAIN IMAGE WITH CLEAR BUTTON */}
       <div style={{ marginBottom: "1rem" }}>
         <label style={{ ...labelStyle, marginBottom: "0.5rem" }}>MAIN IMAGE</label>
-        <div onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={(e) => handleDrop(e, true)} onClick={() => mainFileRef.current?.click()} style={{ border: `2px dashed ${dragOver ? fhjTheme.primary : "rgba(255,255,255,0.2)"}`, borderRadius: "10px", padding: mainImage ? "0.5rem" : "2rem", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: dragOver ? "rgba(0,196,140,0.05)" : "rgba(255,255,255,0.02)" }}>
-          {mainImage ? <img src={mainImage} alt="Main" style={{ maxWidth: "200px", maxHeight: "150px", borderRadius: "8px" }} /> : <><span style={{ fontSize: "2rem" }}>📸</span><p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Drop image or click to browse</p></>}
+        <div 
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} 
+          onDragLeave={() => setDragOver(false)} 
+          onDrop={(e) => handleDrop(e, true)} 
+          onClick={() => mainFileRef.current?.click()} 
+          style={{ 
+            border: `2px dashed ${dragOver ? fhjTheme.primary : "rgba(255,255,255,0.2)"}`, 
+            borderRadius: "10px", 
+            padding: mainImage ? "0.5rem" : "2rem", 
+            textAlign: "center", 
+            cursor: "pointer", 
+            transition: "all 0.2s", 
+            background: dragOver ? "rgba(0,196,140,0.05)" : "rgba(255,255,255,0.02)",
+            position: "relative"
+          }}
+        >
+          {mainImage ? (
+            <>
+              <img src={mainImage} alt="Main" style={{ maxWidth: "200px", maxHeight: "150px", borderRadius: "8px", margin: "0 auto" }} />
+              {/* CLEAR BUTTON - RED X */}
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onMainImageChange(""); 
+                }} 
+                style={{ 
+                  position: "absolute", 
+                  top: "10px", 
+                  right: "10px", 
+                  width: "32px", 
+                  height: "32px", 
+                  borderRadius: "50%", 
+                  background: "rgba(248,113,113,0.9)", 
+                  border: "none", 
+                  color: "white", 
+                  cursor: "pointer", 
+                  fontSize: "1.2rem", 
+                  fontWeight: "bold",
+                  zIndex: 10,
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => e.target.style.background = "rgba(248,113,113,1)"}
+                onMouseLeave={(e) => e.target.style.background = "rgba(248,113,113,0.9)"}
+                title="Clear image"
+              >
+                ×
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: "2rem" }}>📸</span>
+              <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.5rem 0 0" }}>
+                Drop image or click to browse
+              </p>
+            </>
+          )}
         </div>
         <input ref={mainFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleImageUpload(e.target.files[0], true)} />
       </div>
