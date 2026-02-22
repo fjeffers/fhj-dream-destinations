@@ -1,35 +1,14 @@
 // ==========================================================
-// FILE: AdminDeals.jsx — Deals Manager with Image Upload
+// FILE: AdminDeals.jsx - Complete Deals Manager with Enhanced Fields
 // Location: src/pages/AdminDeals.jsx
 // ==========================================================
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { FHJCard, FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import React, { useState, useEffect } from "react";
+import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CATEGORIES = ["Beach", "Mountain", "City", "Cruise", "Safari", "Cultural", "Adventure", "Wellness", "Exclusive"];
-
-// Resize image to max 800px and return base64
-function resizeImage(file, maxWidth = 800) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width, h = img.height;
-        if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.8));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+const DIFFICULTY_LEVELS = ["Easy", "Moderate", "Challenging"];
 
 export default function AdminDeals({ admin }) {
   const [deals, setDeals] = useState([]);
@@ -40,18 +19,41 @@ export default function AdminDeals({ admin }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Form state
-  const [form, setForm] = useState({ tripName: "", category: "Beach", price: "", imageUrl: "", notes: "", active: true });
-  const [imagePreview, setImagePreview] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef(null);
+  // Form state with all enhanced fields
+  const [form, setForm] = useState(getEmptyForm());
 
   const isAssistant = (admin?.role || admin?.Role) === "Assistant";
+
+  function getEmptyForm() {
+    return {
+      tripName: "",
+      category: "Beach",
+      price: "",
+      imageUrl: "",
+      notes: "",
+      active: true,
+      // Enhanced fields
+      duration: "",
+      location: "",
+      departureDates: "",
+      highlights: [],
+      itinerary: "",
+      inclusions: [],
+      exclusions: [],
+      additionalImages: [],
+      accommodation: "",
+      maxGuests: 2,
+      difficultyLevel: "Easy",
+      bestTimeToVisit: "",
+      depositRequired: "",
+      featured: false,
+    };
+  }
 
   const loadDeals = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/.netlify/functions/admin-deals");
+      const res = await fetch("/.netlify/functions/get-deals");
       const data = await res.json();
       setDeals(data.deals || []);
     } catch (err) {
@@ -61,69 +63,87 @@ export default function AdminDeals({ admin }) {
     }
   };
 
-  useEffect(() => { loadDeals(); }, []);
+  useEffect(() => {
+    loadDeals();
+  }, []);
 
   const resetForm = () => {
-    setForm({ tripName: "", category: "Beach", price: "", imageUrl: "", notes: "", active: true });
-    setImagePreview("");
+    setForm(getEmptyForm());
     setEditing(null);
     setShowForm(false);
     setError("");
   };
 
-  const handleEdit = (d) => {
-    const imgUrl = d.image || d.imageUrl || d["Place Image URL"] || "";
+  const handleEdit = (deal) => {
     setForm({
-      tripName: d.title || d.tripName || d["Trip Name"] || "",
-      category: d.category || d.Category || "Beach",
-      price: d.price || d.Price || "",
-      imageUrl: imgUrl,
-      notes: d.notes || d.Notes || d.description || "",
-      active: d.active !== false && d.Active !== false,
+      tripName: deal["Trip Name"] || deal.trip_name || "",
+      category: deal.Category || deal.category || "Beach",
+      price: deal.Price || deal.price || "",
+      imageUrl: deal["Place Image URL"] || deal.place_image_url || "",
+      notes: deal.Notes || deal.notes || "",
+      active: deal.Active ?? deal.active ?? true,
+      duration: deal.Duration || deal.duration || "",
+      location: deal.Location || deal.location || "",
+      departureDates: deal["Departure Dates"] || deal.departure_dates || "",
+      highlights: deal.Highlights || deal.highlights || [],
+      itinerary: deal.Itinerary || deal.itinerary || "",
+      inclusions: deal.Inclusions || deal.inclusions || [],
+      exclusions: deal.Exclusions || deal.exclusions || [],
+      additionalImages: deal["Additional Images"] || deal.additional_images || [],
+      accommodation: deal.Accommodation || deal.accommodation || "",
+      maxGuests: deal["Max Guests"] || deal.max_guests || 2,
+      difficultyLevel: deal["Difficulty Level"] || deal.difficulty_level || "Easy",
+      bestTimeToVisit: deal["Best Time to Visit"] || deal.best_time_to_visit || "",
+      depositRequired: deal["Deposit Required"] || deal.deposit_required || "",
+      featured: deal.Featured ?? deal.featured ?? false,
     });
-    setImagePreview(imgUrl);
-    setEditing(d);
+    setEditing(deal);
     setShowForm(true);
   };
 
-  const handleImageFile = useCallback(async (file) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    try {
-      const base64 = await resizeImage(file);
-      setImagePreview(base64);
-      setForm(f => ({ ...f, imageUrl: base64 }));
-    } catch (err) {
-      setError("Failed to process image.");
-    }
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleImageFile(file);
-  }, [handleImageFile]);
-
   const handleSave = async () => {
-    if (!form.tripName) { setError("Trip name is required."); return; }
+    if (!form.tripName) {
+      setError("Trip name is required.");
+      return;
+    }
+
     setSaving(true);
     setError("");
+
     try {
       const method = editing ? "PUT" : "POST";
-      const res = await fetch("/.netlify/functions/admin-deals", {
+      const payload = {
+        id: editing?.id,
+        "Trip Name": form.tripName,
+        "Category": form.category,
+        "Price": form.price,
+        "Place Image URL": form.imageUrl,
+        "Notes": form.notes,
+        "Active": form.active,
+        "Duration": form.duration,
+        "Location": form.location,
+        "Departure Dates": form.departureDates,
+        "Highlights": form.highlights,
+        "Itinerary": form.itinerary,
+        "Inclusions": form.inclusions,
+        "Exclusions": form.exclusions,
+        "Additional Images": form.additionalImages,
+        "Accommodation": form.accommodation,
+        "Max Guests": parseInt(form.maxGuests) || 2,
+        "Difficulty Level": form.difficultyLevel,
+        "Best Time to Visit": form.bestTimeToVisit,
+        "Deposit Required": form.depositRequired ? parseFloat(form.depositRequired) : null,
+        "Featured": form.featured,
+      };
+
+      const res = await fetch("/.netlify/functions/get-deals", {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editing?.id,
-          "Trip Name": form.tripName,
-          Category: form.category,
-          Price: form.price ? Number(form.price) : 0,
-          "Place Image URL": form.imageUrl,
-          Notes: form.notes,
-          Active: form.active,
-        }),
+        body: JSON.stringify(payload),
       });
+
       const data = await res.json();
+
       if (res.ok) {
         setSuccess(editing ? "Deal updated!" : "Deal created!");
         setTimeout(() => setSuccess(""), 3000);
@@ -140,10 +160,11 @@ export default function AdminDeals({ admin }) {
   };
 
   const handleDelete = async (deal) => {
-    const name = deal.title || deal.tripName || deal["Trip Name"] || "this deal";
+    const name = deal["Trip Name"] || deal.trip_name || "this deal";
     if (!window.confirm(`Delete "${name}"?`)) return;
+
     try {
-      await fetch("/.netlify/functions/admin-deals", {
+      await fetch("/.netlify/functions/get-deals", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: deal.id }),
@@ -156,12 +177,23 @@ export default function AdminDeals({ admin }) {
     }
   };
 
+  // Array field helpers
+  const addToArray = (field, value) => {
+    if (value.trim()) {
+      setForm({ ...form, [field]: [...form[field], value.trim()] });
+    }
+  };
+
+  const removeFromArray = (field, index) => {
+    setForm({ ...form, [field]: form[field].filter((_, i) => i !== index) });
+  };
+
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+    <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
-          <h1 style={{ color: fhjTheme.primary, margin: 0, fontSize: "1.6rem", fontWeight: 400 }}>Deals Manager</h1>
+          <h1 style={{ color: fhjTheme.primary, margin: 0, fontSize: "1.6rem" }}>Deals Manager</h1>
           <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.3rem" }}>{deals.length} deal{deals.length !== 1 ? "s" : ""}</p>
         </div>
         {!isAssistant && (
@@ -173,138 +205,158 @@ export default function AdminDeals({ admin }) {
       {success && <div style={{ ...msgStyle, background: "rgba(74,222,128,0.1)", borderColor: "rgba(74,222,128,0.3)", color: "#4ade80" }}>{success}</div>}
       {error && !showForm && <div style={{ ...msgStyle, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}>{error}</div>}
 
-      {/* Form */}
+      {/* Enhanced Form */}
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <FHJCard style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-              <h3 style={{ color: "white", margin: "0 0 1.25rem", fontSize: "1.1rem", fontWeight: 500 }}>
+            <FHJCard style={{ padding: "2rem", marginBottom: "1.5rem" }}>
+              <h3 style={{ color: "white", margin: "0 0 1.5rem", fontSize: "1.2rem" }}>
                 {editing ? "Edit Deal" : "New Deal"}
               </h3>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {/* Trip Name */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>TRIP NAME *</label>
-                  <input style={inputStyle} value={form.tripName} onChange={e => setForm(f => ({ ...f, tripName: e.target.value }))} placeholder="e.g., Santorini Getaway" />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label style={labelStyle}>CATEGORY</label>
-                  <select style={inputStyle} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                {/* Price */}
-                <div>
-                  <label style={labelStyle}>PRICE ($)</label>
-                  <input style={inputStyle} type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="e.g., 2500" />
-                </div>
-
-                {/* Image Upload */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>IMAGE</label>
-                  <div
-                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileRef.current?.click()}
-                    style={{
-                      border: `2px dashed ${dragOver ? fhjTheme.primary : "rgba(255,255,255,0.15)"}`,
-                      borderRadius: "10px",
-                      padding: imagePreview ? "0.5rem" : "2rem",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      background: dragOver ? "rgba(0,196,140,0.05)" : "rgba(255,255,255,0.02)",
-                      minHeight: imagePreview ? "auto" : "120px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    {imagePreview ? (
-                      <div style={{ position: "relative", display: "inline-block" }}>
-                        <img src={imagePreview} alt="Preview" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "8px", objectFit: "cover" }} />
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setImagePreview(""); setForm(f => ({ ...f, imageUrl: "" })); }}
-                          style={{ position: "absolute", top: "-8px", right: "-8px", width: "24px", height: "24px", borderRadius: "50%", background: "#f87171", border: "none", color: "white", cursor: "pointer", fontSize: "0.7rem", display: "flex", alignItems: "center", justifyContent: "center" }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: "2rem" }}>📸</span>
-                        <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
-                          Drag & drop an image, or <span style={{ color: fhjTheme.primary, fontWeight: 600 }}>click to browse</span>
-                        </p>
-                        <p style={{ color: "#475569", fontSize: "0.75rem", margin: 0 }}>JPG, PNG, WebP — max 5MB</p>
-                      </>
-                    )}
+              {/* BASIC INFO */}
+              <div style={sectionStyle}>
+                <h4 style={sectionTitle}>Basic Information</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>TRIP NAME *</label>
+                    <FHJInput value={form.tripName} onChange={(e) => setForm({ ...form, tripName: e.target.value })} placeholder="e.g., Santorini Getaway" />
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageFile(e.target.files[0])} />
 
-                  {/* OR paste URL */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.75rem" }}>
-                    <span style={{ color: "#475569", fontSize: "0.75rem" }}>OR</span>
-                    <input
-                      style={{ ...inputStyle, flex: 1, margin: 0 }}
-                      value={form.imageUrl.startsWith("data:") ? "" : form.imageUrl}
-                      onChange={e => { setForm(f => ({ ...f, imageUrl: e.target.value })); setImagePreview(e.target.value); }}
-                      placeholder="Paste image URL..."
-                    />
+                  <div>
+                    <label style={labelStyle}>CATEGORY</label>
+                    <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-                </div>
 
-                {/* Description */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>DESCRIPTION</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }}
-                    value={form.notes}
-                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                    placeholder="Describe the deal..."
-                  />
-                </div>
-
-                {/* Active toggle */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <div
-                    onClick={() => setForm(f => ({ ...f, active: !f.active }))}
-                    style={{
-                      width: "44px", height: "24px", borderRadius: "12px", cursor: "pointer",
-                      background: form.active ? fhjTheme.primary : "rgba(255,255,255,0.15)",
-                      transition: "background 0.2s", position: "relative",
-                    }}
-                  >
-                    <div style={{
-                      width: "18px", height: "18px", borderRadius: "50%", background: "white",
-                      position: "absolute", top: "3px", left: form.active ? "22px" : "4px",
-                      transition: "left 0.2s",
-                    }} />
+                  <div>
+                    <label style={labelStyle}>PRICE ($)</label>
+                    <FHJInput type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="2500" />
                   </div>
-                  <span style={{ color: form.active ? "#4ade80" : "#94a3b8", fontSize: "0.85rem", fontWeight: 500 }}>
-                    {form.active ? "Active" : "Inactive"}
-                  </span>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>MAIN IMAGE URL</label>
+                    <FHJInput value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>DESCRIPTION</label>
+                    <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Describe the trip..." />
+                  </div>
                 </div>
               </div>
 
-              {/* Error */}
-              {error && showForm && (
-                <div style={{ ...msgStyle, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#f87171", marginTop: "1rem", marginBottom: 0 }}>{error}</div>
-              )}
+              {/* TRIP DETAILS */}
+              <div style={sectionStyle}>
+                <h4 style={sectionTitle}>Trip Details</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div>
+                    <label style={labelStyle}>DURATION</label>
+                    <FHJInput value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="7 Days / 6 Nights" />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>LOCATION</label>
+                    <FHJInput value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Montego Bay, Jamaica" />
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>DEPARTURE DATES</label>
+                    <FHJInput value={form.departureDates} onChange={(e) => setForm({ ...form, departureDates: e.target.value })} placeholder="March 15, April 12, May 20" />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>MAX GUESTS</label>
+                    <FHJInput type="number" min="1" value={form.maxGuests} onChange={(e) => setForm({ ...form, maxGuests: e.target.value })} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>DIFFICULTY</label>
+                    <select style={inputStyle} value={form.difficultyLevel} onChange={(e) => setForm({ ...form, difficultyLevel: e.target.value })}>
+                      {DIFFICULTY_LEVELS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>DEPOSIT ($)</label>
+                    <FHJInput type="number" value={form.depositRequired} onChange={(e) => setForm({ ...form, depositRequired: e.target.value })} placeholder="500" />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>BEST TIME TO VISIT</label>
+                    <FHJInput value={form.bestTimeToVisit} onChange={(e) => setForm({ ...form, bestTimeToVisit: e.target.value })} placeholder="December - April" />
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>ACCOMMODATION</label>
+                    <textarea style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }} value={form.accommodation} onChange={(e) => setForm({ ...form, accommodation: e.target.value })} placeholder="Describe the hotel/resort..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* HIGHLIGHTS */}
+              <ArrayField
+                label="Highlights"
+                items={form.highlights}
+                onAdd={(val) => addToArray('highlights', val)}
+                onRemove={(idx) => removeFromArray('highlights', idx)}
+                placeholder="e.g., All-inclusive resort"
+              />
+
+              {/* INCLUSIONS */}
+              <ArrayField
+                label="What's Included"
+                items={form.inclusions}
+                onAdd={(val) => addToArray('inclusions', val)}
+                onRemove={(idx) => removeFromArray('inclusions', idx)}
+                placeholder="e.g., Round-trip flights"
+              />
+
+              {/* EXCLUSIONS */}
+              <ArrayField
+                label="What's NOT Included"
+                items={form.exclusions}
+                onAdd={(val) => addToArray('exclusions', val)}
+                onRemove={(idx) => removeFromArray('exclusions', idx)}
+                placeholder="e.g., Travel insurance"
+              />
+
+              {/* ITINERARY */}
+              <div style={sectionStyle}>
+                <h4 style={sectionTitle}>Itinerary</h4>
+                <label style={labelStyle}>DAY-BY-DAY SCHEDULE</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: "120px", resize: "vertical", fontFamily: "monospace" }}
+                  value={form.itinerary}
+                  onChange={(e) => setForm({ ...form, itinerary: e.target.value })}
+                  placeholder="Day 1: Arrival...&#10;Day 2-3: Activities...&#10;Day 7: Departure"
+                />
+              </div>
+
+              {/* ADDITIONAL IMAGES */}
+              <ArrayField
+                label="Additional Images (URLs)"
+                items={form.additionalImages}
+                onAdd={(val) => addToArray('additionalImages', val)}
+                onRemove={(idx) => removeFromArray('additionalImages', idx)}
+                placeholder="https://images.unsplash.com/..."
+              />
+
+              {/* TOGGLES */}
+              <div style={{ display: "flex", gap: "2rem", marginTop: "1.5rem" }}>
+                <Toggle label="Active" checked={form.active} onChange={(val) => setForm({ ...form, active: val })} />
+                <Toggle label="Featured Deal" checked={form.featured} onChange={(val) => setForm({ ...form, featured: val })} />
+              </div>
+
+              {error && showForm && <div style={{ ...msgStyle, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#f87171", marginTop: "1rem", marginBottom: 0 }}>{error}</div>}
 
               {/* Actions */}
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.25rem" }}>
-                <FHJButton onClick={handleSave} disabled={saving} style={{ padding: "0.6rem 2rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
+                <FHJButton onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : editing ? "Update Deal" : "Create Deal"}
                 </FHJButton>
-                <FHJButton variant="ghost" onClick={resetForm} style={{ padding: "0.6rem 1.5rem" }}>Cancel</FHJButton>
+                <FHJButton variant="ghost" onClick={resetForm}>Cancel</FHJButton>
               </div>
             </FHJCard>
           </motion.div>
@@ -313,12 +365,8 @@ export default function AdminDeals({ admin }) {
 
       {/* Deals Grid */}
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.25rem" }}>
-          {[1, 2, 3].map(i => (
-            <FHJCard key={i} style={{ height: "280px", background: "rgba(255,255,255,0.03)" }}>
-              <div style={{ width: "100%", height: "160px", borderRadius: "8px", background: "rgba(255,255,255,0.06)", animation: "pulse 1.5s infinite" }} />
-            </FHJCard>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
+          {[1, 2, 3].map(i => <FHJCard key={i} style={{ height: "280px", background: "rgba(255,255,255,0.03)" }}><div style={{ padding: "1.5rem" }}>Loading...</div></FHJCard>)}
         </div>
       ) : deals.length === 0 ? (
         <FHJCard style={{ padding: "3rem", textAlign: "center" }}>
@@ -326,50 +374,42 @@ export default function AdminDeals({ admin }) {
           <p style={{ color: "#94a3b8", marginTop: "1rem" }}>No deals yet. Click "+ Add Deal" to create your first one.</p>
         </FHJCard>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.25rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
           {deals.map(deal => {
-            const name = deal.title || deal.tripName || deal["Trip Name"] || "Untitled";
-            const cat = deal.category || deal.Category || "";
-            const price = deal.price || deal.Price || 0;
-            const img = deal.image || deal.imageUrl || deal["Place Image URL"] || "";
-            const desc = deal.notes || deal.Notes || deal.description || "";
-            const active = deal.active !== false && deal.Active !== false;
+            const name = deal["Trip Name"] || deal.trip_name || "Untitled";
+            const category = deal.Category || deal.category || "";
+            const price = deal.Price || deal.price || 0;
+            const img = deal["Place Image URL"] || deal.place_image_url || "";
+            const desc = deal.Notes || deal.notes || "";
+            const active = deal.Active ?? deal.active ?? true;
+            const featured = deal.Featured ?? deal.featured ?? false;
 
             return (
               <motion.div key={deal.id} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
                 <FHJCard style={{ overflow: "hidden", position: "relative" }}>
-                  {/* Image */}
-                  <div style={{ height: "160px", background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+                  <div style={{ height: "180px", background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
                     {img ? (
                       <img src={img} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ fontSize: "2.5rem", opacity: 0.3 }}>🏝️</span>
+                        <span style={{ fontSize: "3rem", opacity: 0.3 }}>🏝️</span>
                       </div>
                     )}
-                    {/* Status badge */}
-                    <div style={{
-                      position: "absolute", top: "8px", right: "8px",
-                      padding: "0.2rem 0.6rem", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 600,
-                      background: active ? "rgba(74,222,128,0.9)" : "rgba(148,163,184,0.9)",
-                      color: active ? "#000" : "#fff",
-                    }}>
-                      {active ? "Active" : "Inactive"}
-                    </div>
                   </div>
 
-                  {/* Info */}
                   <div style={{ padding: "1rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <h4 style={{ color: "white", margin: 0, fontSize: "1rem", fontWeight: 600 }}>{name}</h4>
-                      {price > 0 && <span style={{ color: fhjTheme.primary, fontWeight: 700, fontSize: "0.95rem" }}>${Number(price).toLocaleString()}</span>}
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      {active && <span style={badgeStyle}>Active</span>}
+                      {featured && <span style={{ ...badgeStyle, background: "rgba(251,191,36,0.2)", color: "#fbbf24" }}>Featured</span>}
                     </div>
-                    {cat && <p style={{ color: "#64748b", fontSize: "0.75rem", margin: "0.3rem 0 0", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>{cat}</p>}
-                    {desc && <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.5rem 0 0", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{desc}</p>}
 
-                    {/* Actions */}
+                    <h4 style={{ color: "white", margin: "0 0 0.25rem", fontSize: "1.1rem", fontWeight: 600 }}>{name}</h4>
+                    {category && <p style={{ color: "#64748b", fontSize: "0.75rem", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>{category}</p>}
+                    {price > 0 && <p style={{ color: fhjTheme.primary, fontWeight: 700, fontSize: "1rem", margin: "0.5rem 0" }}>${Number(price).toLocaleString()}</p>}
+                    {desc && <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.5rem 0 0", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{desc}</p>}
+
                     {!isAssistant && (
-                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
                         <button onClick={() => handleEdit(deal)} style={actionBtnStyle}>Edit</button>
                         <button onClick={() => handleDelete(deal)} style={{ ...actionBtnStyle, color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}>Delete</button>
                       </div>
@@ -385,22 +425,74 @@ export default function AdminDeals({ admin }) {
   );
 }
 
+// Sub-components
+function ArrayField({ label, items, onAdd, onRemove, placeholder }) {
+  const [input, setInput] = useState("");
+
+  const handleAdd = () => {
+    if (input.trim()) {
+      onAdd(input);
+      setInput("");
+    }
+  };
+
+  return (
+    <div style={sectionStyle}>
+      <h4 style={sectionTitle}>{label}</h4>
+      {items.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+          {items.map((item, idx) => (
+            <div key={idx} style={tagStyle}>
+              <span>{item}</span>
+              <button onClick={() => onRemove(idx)} style={removeTagBtn}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <input
+          style={{ ...inputStyle, flex: 1, margin: 0 }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())}
+          placeholder={placeholder}
+        />
+        <button onClick={handleAdd} type="button" style={addBtn}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
+      <div
+        onClick={() => onChange(!checked)}
+        style={{
+          width: "44px", height: "24px", borderRadius: "12px",
+          background: checked ? fhjTheme.primary : "rgba(255,255,255,0.15)",
+          transition: "background 0.2s", position: "relative", cursor: "pointer"
+        }}
+      >
+        <div style={{
+          width: "18px", height: "18px", borderRadius: "50%", background: "white",
+          position: "absolute", top: "3px", left: checked ? "22px" : "4px",
+          transition: "left 0.2s"
+        }} />
+      </div>
+      <span style={{ color: checked ? "#4ade80" : "#94a3b8", fontSize: "0.9rem", fontWeight: 500 }}>{label}</span>
+    </label>
+  );
+}
+
 // Styles
 const labelStyle = { display: "block", color: "#94a3b8", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.5px", marginBottom: "0.4rem" };
-
-const inputStyle = {
-  width: "100%", padding: "0.65rem 0.75rem", borderRadius: "8px",
-  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-  color: "white", fontSize: "0.9rem", outline: "none", boxSizing: "border-box",
-};
-
-const msgStyle = {
-  padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid",
-  fontSize: "0.85rem", marginBottom: "1rem",
-};
-
-const actionBtnStyle = {
-  padding: "0.35rem 0.75rem", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 500,
-  background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
-  color: "#94a3b8", cursor: "pointer", transition: "all 0.2s",
-};
+const inputStyle = { width: "100%", padding: "0.65rem 0.75rem", borderRadius: "8px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "white", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };
+const msgStyle = { padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid", fontSize: "0.85rem", marginBottom: "1rem" };
+const actionBtnStyle = { padding: "0.4rem 0.9rem", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 500, background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#94a3b8", cursor: "pointer", transition: "all 0.2s" };
+const sectionStyle = { marginBottom: "1.5rem", padding: "1.25rem", background: "rgba(255,255,255,0.02)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" };
+const sectionTitle = { color: fhjTheme.primary, fontSize: "0.95rem", margin: "0 0 1rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" };
+const tagStyle = { display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(0,196,140,0.1)", border: "1px solid rgba(0,196,140,0.3)", borderRadius: "8px", padding: "0.4rem 0.6rem", fontSize: "0.85rem", color: "#e2e8f0" };
+const removeTagBtn = { background: "none", border: "none", color: "#f87171", cursor: "pointer", padding: "0", fontSize: "1.2rem", lineHeight: 1 };
+const addBtn = { padding: "0.65rem 1.5rem", background: "rgba(0,196,140,0.2)", border: "1px solid rgba(0,196,140,0.4)", borderRadius: "8px", color: "#00c48c", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" };
+const badgeStyle = { display: "inline-block", padding: "0.25rem 0.6rem", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 600, background: "rgba(74,222,128,0.2)", color: "#4ade80" };
