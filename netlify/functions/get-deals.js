@@ -1,33 +1,31 @@
 // ==========================================================
-// FILE: get-deals.js — Deals CRUD (Supabase) - ENHANCED
+// FILE: get-deals.js — Deals CRUD (Supabase) - FIXED
 // Location: netlify/functions/get-deals.js
-//
-// Supabase columns: id, trip_name, category, price, place_image_url,
-//   notes, active, created_at, duration, location, departure_dates,
-//   highlights, itinerary, inclusions, exclusions, additional_images,
-//   accommodation, max_guests, difficulty_level, best_time_to_visit,
-//   deposit_required, featured
 // ==========================================================
 const { supabase, respond } = require("./utils");
 
-// Helper to safely parse JSON fields
+// Helper to safely parse JSON fields - ALWAYS returns empty array if invalid
 const parseJSON = (value) => {
-  if (!value) return null;
-  if (typeof value === 'object') return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object' && value !== null) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
+  return [];
 };
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
 
-  // GET — list all deals
+  // GET — list all deals or single deal
   if (event.httpMethod === "GET") {
     try {
-      // Check if requesting a single deal by ID
       const dealId = event.queryStringParameters?.id;
       
       let query = supabase.from("deals").select("*");
@@ -39,12 +37,14 @@ exports.handler = async (event) => {
       }
 
       const { data, error } = await query;
-      if (error) return respond(500, { error: error.message });
+      if (error) {
+        console.error("Supabase error:", error);
+        return respond(500, { error: error.message });
+      }
 
-      // Helper to map a single deal
+      // Map deal with proper field names and array parsing
       const mapDeal = (d) => ({
         ...d,
-        // Provide aliases so frontend can use clean names
         "Trip Name": d.trip_name,
         "Category": d.category,
         "Price": d.price,
@@ -67,14 +67,17 @@ exports.handler = async (event) => {
         "Featured": d.featured,
       });
 
-      // Return single deal or array
       if (dealId) {
-        return respond(200, { deal: mapDeal(data) });
+        const deal = mapDeal(data);
+        console.log("Returning single deal:", deal.id);
+        return respond(200, { deal });
       } else {
         const deals = (data || []).map(mapDeal);
+        console.log(`Returning ${deals.length} deals`);
         return respond(200, { deals });
       }
     } catch (err) {
+      console.error("Handler error:", err);
       return respond(500, { error: err.message });
     }
   }
@@ -85,8 +88,8 @@ exports.handler = async (event) => {
       const body = JSON.parse(event.body || "{}");
       const fields = body.fields || body;
 
-      // Helper to stringify arrays/objects
       const stringify = (val) => {
+        if (val === null || val === undefined) return null;
         if (Array.isArray(val) || typeof val === 'object') {
           return JSON.stringify(val);
         }
@@ -100,16 +103,14 @@ exports.handler = async (event) => {
         place_image_url: fields["Place Image URL"] || fields.place_image_url || fields.image || fields.image_url || "",
         notes: fields["Notes"] || fields.notes || fields.description || "",
         active: fields["Active"] !== undefined ? fields["Active"] : (fields.active !== undefined ? fields.active : true),
-        
-        // New detailed fields
         duration: fields["Duration"] || fields.duration || null,
         location: fields["Location"] || fields.location || null,
         departure_dates: fields["Departure Dates"] || fields.departure_dates || null,
-        highlights: stringify(fields["Highlights"] || fields.highlights || null),
+        highlights: stringify(fields["Highlights"] || fields.highlights || []),
         itinerary: fields["Itinerary"] || fields.itinerary || null,
-        inclusions: stringify(fields["Inclusions"] || fields.inclusions || null),
-        exclusions: stringify(fields["Exclusions"] || fields.exclusions || null),
-        additional_images: stringify(fields["Additional Images"] || fields.additional_images || null),
+        inclusions: stringify(fields["Inclusions"] || fields.inclusions || []),
+        exclusions: stringify(fields["Exclusions"] || fields.exclusions || []),
+        additional_images: stringify(fields["Additional Images"] || fields.additional_images || []),
         accommodation: fields["Accommodation"] || fields.accommodation || null,
         max_guests: fields["Max Guests"] || fields.max_guests || 2,
         difficulty_level: fields["Difficulty Level"] || fields.difficulty_level || null,
@@ -141,15 +142,14 @@ exports.handler = async (event) => {
       const fields = body.fields || body;
       const updates = {};
 
-      // Helper to stringify arrays/objects
       const stringify = (val) => {
+        if (val === null || val === undefined) return null;
         if (Array.isArray(val) || typeof val === 'object') {
           return JSON.stringify(val);
         }
         return val;
       };
 
-      // Basic fields
       if (fields["Trip Name"] || fields.trip_name || fields.tripName)
         updates.trip_name = fields["Trip Name"] || fields.trip_name || fields.tripName;
       if (fields["Category"] || fields.category)
@@ -162,8 +162,6 @@ exports.handler = async (event) => {
         updates.notes = fields["Notes"] ?? fields.notes ?? "";
       if (fields["Active"] !== undefined || fields.active !== undefined)
         updates.active = fields["Active"] ?? fields.active;
-
-      // Detailed fields
       if (fields["Duration"] !== undefined || fields.duration !== undefined)
         updates.duration = fields["Duration"] ?? fields.duration;
       if (fields["Location"] !== undefined || fields.location !== undefined)
@@ -171,15 +169,15 @@ exports.handler = async (event) => {
       if (fields["Departure Dates"] !== undefined || fields.departure_dates !== undefined)
         updates.departure_dates = fields["Departure Dates"] ?? fields.departure_dates;
       if (fields["Highlights"] !== undefined || fields.highlights !== undefined)
-        updates.highlights = stringify(fields["Highlights"] ?? fields.highlights);
+        updates.highlights = stringify(fields["Highlights"] ?? fields.highlights ?? []);
       if (fields["Itinerary"] !== undefined || fields.itinerary !== undefined)
         updates.itinerary = fields["Itinerary"] ?? fields.itinerary;
       if (fields["Inclusions"] !== undefined || fields.inclusions !== undefined)
-        updates.inclusions = stringify(fields["Inclusions"] ?? fields.inclusions);
+        updates.inclusions = stringify(fields["Inclusions"] ?? fields.inclusions ?? []);
       if (fields["Exclusions"] !== undefined || fields.exclusions !== undefined)
-        updates.exclusions = stringify(fields["Exclusions"] ?? fields.exclusions);
+        updates.exclusions = stringify(fields["Exclusions"] ?? fields.exclusions ?? []);
       if (fields["Additional Images"] !== undefined || fields.additional_images !== undefined)
-        updates.additional_images = stringify(fields["Additional Images"] ?? fields.additional_images);
+        updates.additional_images = stringify(fields["Additional Images"] ?? fields.additional_images ?? []);
       if (fields["Accommodation"] !== undefined || fields.accommodation !== undefined)
         updates.accommodation = fields["Accommodation"] ?? fields.accommodation;
       if (fields["Max Guests"] !== undefined || fields.max_guests !== undefined)
