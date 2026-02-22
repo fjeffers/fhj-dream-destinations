@@ -1,6 +1,5 @@
 // ==========================================================
-// FILE: Home.jsx  (MERGED FLOW)
-// Single "Book a Trip" CTA → /appointments (unified intake)
+// FILE: Home.jsx  (FIXED - Deal cards link to detail page)
 // Location: src/pages/Home.jsx
 // ==========================================================
 
@@ -121,7 +120,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.08 }}
               whileHover={{ scale: 1.02, y: -4 }}
-              onClick={() => navigate(`/appointments?deal=${encodeURIComponent(deal.title)}`)}
+              onClick={() => navigate(`/deal/${deal.id}`)}
               style={dealCardStyle}
             >
               <div style={{ height: "200px", overflow: "hidden", position: "relative" }}>
