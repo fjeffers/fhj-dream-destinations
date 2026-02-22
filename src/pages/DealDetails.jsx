@@ -149,10 +149,11 @@ export default function DealDetails() {
           {/* TITLE & CATEGORY */}
           <h1 style={{
             color: "white",
-            fontSize: "2.5rem",
-            fontWeight: 800,
-            marginBottom: "0.5rem",
-            textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+            fontSize: "3.5rem",
+            fontWeight: 900,
+            marginBottom: "0.75rem",
+            textShadow: "0 4px 20px rgba(0,0,0,0.8), 0 0 40px rgba(212,175,55,0.3)",
+            letterSpacing: "1px",
           }}>
             {title}
           </h1>
@@ -160,11 +161,12 @@ export default function DealDetails() {
           {category && (
             <p style={{
               color: fhjTheme.primary,
-              fontSize: "0.9rem",
+              fontSize: "1.1rem",
               textTransform: "uppercase",
-              letterSpacing: "2px",
-              fontWeight: 600,
-              marginBottom: "1.5rem",
+              letterSpacing: "3px",
+              fontWeight: 700,
+              marginBottom: "2rem",
+              textShadow: "0 2px 8px rgba(0,0,0,0.6)",
             }}>
               {category}
             </p>
@@ -236,19 +238,20 @@ export default function DealDetails() {
           {/* PRICE */}
           {price > 0 && (
             <div style={{
-              background: "rgba(0,196,140,0.1)",
-              border: "1px solid rgba(0,196,140,0.3)",
-              borderRadius: "12px",
-              padding: "1.5rem",
-              marginBottom: "2rem",
+              background: "linear-gradient(135deg, rgba(0,196,140,0.15) 0%, rgba(0,196,140,0.25) 100%)",
+              border: "2px solid rgba(0,196,140,0.5)",
+              borderRadius: "16px",
+              padding: "2rem",
+              marginBottom: "2.5rem",
+              boxShadow: "0 8px 32px rgba(0,196,140,0.2)",
             }}>
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.5rem" }}>Starting from</p>
-              <p style={{ color: fhjTheme.primary, fontSize: "2.5rem", fontWeight: 800, margin: 0 }}>
+              <p style={{ color: "#fff", fontSize: "1rem", marginBottom: "0.75rem", fontWeight: 600, letterSpacing: "1px" }}>STARTING FROM</p>
+              <p style={{ color: fhjTheme.primary, fontSize: "3.5rem", fontWeight: 900, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.3)" }}>
                 ${Number(price).toLocaleString()}
               </p>
               {depositRequired && (
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-                  ${Number(depositRequired).toLocaleString()} deposit required
+                <p style={{ color: "#e2e8f0", fontSize: "1rem", marginTop: "1rem", fontWeight: 500 }}>
+                  ${Number(depositRequired).toLocaleString()} deposit required to secure your spot
                 </p>
               )}
             </div>
@@ -264,18 +267,23 @@ export default function DealDetails() {
           {/* HIGHLIGHTS */}
           {highlights.length > 0 && (
             <Section title="Experience Highlights">
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
                 {highlights.map((highlight, idx) => (
                   <div key={idx} style={{
                     display: "flex",
-                    gap: "0.75rem",
-                    padding: "1rem",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                  }}>
-                    <span style={{ fontSize: "1.3rem" }}>✨</span>
-                    <p style={{ ...textStyle, margin: 0 }}>{highlight}</p>
+                    gap: "1rem",
+                    padding: "1.5rem",
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+                    transition: "transform 0.2s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
+                  >
+                    <span style={{ fontSize: "1.8rem", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}>✨</span>
+                    <p style={{ ...textStyle, margin: 0, fontWeight: 500 }}>{highlight}</p>
                   </div>
                 ))}
               </div>
@@ -286,17 +294,20 @@ export default function DealDetails() {
           {itinerary && (
             <Section title="Day-by-Day Itinerary">
               <div style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.05)",
-                borderRadius: "12px",
-                padding: "1.5rem",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
               }}>
                 <pre style={{
                   ...textStyle,
                   fontFamily: "inherit",
                   margin: 0,
                   whiteSpace: "pre-wrap",
-                  lineHeight: 1.8,
+                  lineHeight: 2,
+                  fontSize: "1.05rem",
+                  fontWeight: 500,
                 }}>{itinerary}</pre>
               </div>
             </Section>
@@ -312,24 +323,34 @@ export default function DealDetails() {
           {/* INCLUSIONS & EXCLUSIONS */}
           {(inclusions.length > 0 || exclusions.length > 0) && (
             <Section title="What's Included">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2.5rem" }}>
                 {inclusions.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#4ade80", fontSize: "1rem", marginBottom: "1rem", fontWeight: 600 }}>✅ Included</h4>
-                    <ul style={{ margin: 0, paddingLeft: "1.25rem", color: "#e2e8f0" }}>
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(74,222,128,0.08) 0%, rgba(74,222,128,0.04) 100%)",
+                    border: "1px solid rgba(74,222,128,0.3)",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                  }}>
+                    <h4 style={{ color: "#4ade80", fontSize: "1.3rem", marginBottom: "1.25rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>✅ Included</h4>
+                    <ul style={{ margin: 0, paddingLeft: "1.5rem", color: "#ffffff" }}>
                       {inclusions.map((item, idx) => (
-                        <li key={idx} style={{ marginBottom: "0.5rem", lineHeight: 1.6 }}>{item}</li>
+                        <li key={idx} style={{ marginBottom: "0.75rem", lineHeight: 1.8, fontSize: "1.05rem", fontWeight: 500 }}>{item}</li>
                       ))}
                     </ul>
                   </div>
                 )}
 
                 {exclusions.length > 0 && (
-                  <div>
-                    <h4 style={{ color: "#f87171", fontSize: "1rem", marginBottom: "1rem", fontWeight: 600 }}>❌ Not Included</h4>
-                    <ul style={{ margin: 0, paddingLeft: "1.25rem", color: "#e2e8f0" }}>
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(248,113,113,0.08) 0%, rgba(248,113,113,0.04) 100%)",
+                    border: "1px solid rgba(248,113,113,0.3)",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                  }}>
+                    <h4 style={{ color: "#f87171", fontSize: "1.3rem", marginBottom: "1.25rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>❌ Not Included</h4>
+                    <ul style={{ margin: 0, paddingLeft: "1.5rem", color: "#ffffff" }}>
                       {exclusions.map((item, idx) => (
-                        <li key={idx} style={{ marginBottom: "0.5rem", lineHeight: 1.6 }}>{item}</li>
+                        <li key={idx} style={{ marginBottom: "0.75rem", lineHeight: 1.8, fontSize: "1.05rem", fontWeight: 500 }}>{item}</li>
                       ))}
                     </ul>
                   </div>
@@ -368,13 +389,17 @@ export default function DealDetails() {
 // Helper Components
 function Section({ title, children }) {
   return (
-    <div style={{ marginBottom: "2.5rem" }}>
+    <div style={{ marginBottom: "3rem" }}>
       <h3 style={{
         color: fhjTheme.primary,
-        fontSize: "1.4rem",
-        fontWeight: 700,
-        marginBottom: "1.25rem",
-        letterSpacing: "0.5px",
+        fontSize: "2rem",
+        fontWeight: 800,
+        marginBottom: "1.5rem",
+        letterSpacing: "1px",
+        textTransform: "uppercase",
+        textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+        borderBottom: `3px solid ${fhjTheme.primary}`,
+        paddingBottom: "0.75rem",
       }}>
         {title}
       </h3>
@@ -388,23 +413,26 @@ function InfoPill({ icon, label }) {
     <div style={{
       display: "flex",
       alignItems: "center",
-      gap: "0.5rem",
-      background: "rgba(255,255,255,0.05)",
-      border: "1px solid rgba(255,255,255,0.1)",
+      gap: "0.75rem",
+      background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 100%)",
+      border: "1px solid rgba(255,255,255,0.25)",
       borderRadius: "999px",
-      padding: "0.6rem 1.25rem",
+      padding: "0.85rem 1.75rem",
+      boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
     }}>
-      <span style={{ fontSize: "1.2rem" }}>{icon}</span>
-      <span style={{ color: "#e2e8f0", fontSize: "0.9rem", fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: "1.4rem", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}>{icon}</span>
+      <span style={{ color: "#ffffff", fontSize: "1rem", fontWeight: 600, letterSpacing: "0.5px" }}>{label}</span>
     </div>
   );
 }
 
 // Styles
 const textStyle = {
-  color: "#e2e8f0",
-  fontSize: "1rem",
-  lineHeight: 1.7,
+  color: "#ffffff",
+  fontSize: "1.1rem",
+  lineHeight: 1.9,
+  fontWeight: 400,
+  textShadow: "0 1px 3px rgba(0,0,0,0.5)",
 };
 
 const navArrowStyle = {
