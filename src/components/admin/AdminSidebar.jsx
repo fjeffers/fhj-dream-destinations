@@ -1,11 +1,11 @@
 // ==========================================================
-// FILE: AdminSidebar.jsx (UPDATED — Added About Page)
+// FILE: AdminSidebar.jsx (FIXED import path for FHJUIKit)
 // Location: src/components/admin/AdminSidebar.jsx
 // ==========================================================
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { fhjTheme } from "../../FHJ/FHJUIKit";
+import { fhjTheme } from "../FHJ/FHJUIKit.jsx";
 
 export default function AdminSidebar({ admin, onLogout }) {
   const linkStyle = {
