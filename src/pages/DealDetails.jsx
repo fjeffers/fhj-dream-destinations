@@ -1,5 +1,5 @@
 // ==========================================================
-// FILE: DealDetails.jsx - Enhanced with Scrollbar & Close Button
+// FILE: DealDetails.jsx - BULLETPROOF VERSION (Won't Crash!)
 // Location: src/pages/DealDetails.jsx
 // ==========================================================
 
@@ -21,6 +21,7 @@ export default function DealDetails() {
       try {
         const res = await fetch(`/.netlify/functions/get-deals?id=${id}`);
         const data = await res.json();
+        console.log("Deal data loaded:", data); // Debug log
         setDeal(data.deal || data);
       } catch (err) {
         console.error("Failed to load deal:", err);
@@ -52,7 +53,21 @@ export default function DealDetails() {
     );
   }
 
-  // Extract deal data
+  // SAFE ARRAY PARSER - Prevents crashes if database returns strings instead of arrays
+  const parseArray = (field) => {
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string' && field.trim()) {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Extract deal data with safety checks
   const title = deal["Trip Name"] || deal.trip_name || "Untitled";
   const category = deal.Category || deal.category || "";
   const price = deal.Price || deal.price || 0;
@@ -61,11 +76,14 @@ export default function DealDetails() {
   const duration = deal.Duration || deal.duration || "";
   const location = deal.Location || deal.location || "";
   const departureDates = deal["Departure Dates"] || deal.departure_dates || "";
-  const highlights = deal.Highlights || deal.highlights || [];
+  
+  // Parse arrays safely
+  const highlights = parseArray(deal.Highlights || deal.highlights);
+  const inclusions = parseArray(deal.Inclusions || deal.inclusions);
+  const exclusions = parseArray(deal.Exclusions || deal.exclusions);
+  const additionalImages = parseArray(deal["Additional Images"] || deal.additional_images);
+  
   const itinerary = deal.Itinerary || deal.itinerary || "";
-  const inclusions = deal.Inclusions || deal.inclusions || [];
-  const exclusions = deal.Exclusions || deal.exclusions || [];
-  const additionalImages = deal["Additional Images"] || deal.additional_images || [];
   const accommodation = deal.Accommodation || deal.accommodation || "";
   const maxGuests = deal["Max Guests"] || deal.max_guests || 2;
   const difficultyLevel = deal["Difficulty Level"] || deal.difficulty_level || "";
@@ -76,12 +94,21 @@ export default function DealDetails() {
   // All images for gallery
   const allImages = [mainImage, ...additionalImages].filter(Boolean);
 
-  const nextImage = () => setCurrentImageIndex((currentImageIndex + 1) % allImages.length);
-  const prevImage = () => setCurrentImageIndex((currentImageIndex - 1 + allImages.length) % allImages.length);
+  const nextImage = () => {
+    if (allImages.length > 0) {
+      setCurrentImageIndex((currentImageIndex + 1) % allImages.length);
+    }
+  };
+  
+  const prevImage = () => {
+    if (allImages.length > 0) {
+      setCurrentImageIndex((currentImageIndex - 1 + allImages.length) % allImages.length);
+    }
+  };
 
   return (
     <FHJBackground page="home">
-      {/* CLOSE BUTTON - Fixed at top right */}
+      {/* CLOSE BUTTON */}
       <button
         onClick={() => navigate("/")}
         style={{
@@ -189,6 +216,10 @@ export default function DealDetails() {
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
+                }}
+                onError={(e) => {
+                  console.error("Image failed to load:", allImages[currentImageIndex]);
+                  e.target.style.display = "none";
                 }}
               />
 
