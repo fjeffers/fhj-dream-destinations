@@ -1,6 +1,6 @@
 // src/components/AdminInsightsPanel.jsx
 import React, { useState, useEffect } from "react";
-import { FHJCard, fhjTheme } from "./fhj/FHJUIKit.jsx";
+import { FHJCard, fhjTheme } from "./FHJ/FHJUIKit.jsx";
 import { LiveUpdates } from "../utils/LiveUpdates.js";
 
 export default function AdminInsightsPanel({ admin }) {
