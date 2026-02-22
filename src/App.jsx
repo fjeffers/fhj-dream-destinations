@@ -1,5 +1,5 @@
 // ==========================================================
-// FILE: App.jsx  (UPDATED — Added RSVPs admin route)
+// FILE: App.jsx  (UPDATED — Added About Page)
 // Location: src/App.jsx
 // ==========================================================
 
@@ -35,6 +35,7 @@ import AdminSearch from "./pages/AdminSearch.jsx";
 import AdminAvailability from "./pages/AdminAvailability.jsx";
 import AdminCalendar from "./pages/AdminCalendar.jsx";
 import AdminRSVPs from "./pages/AdminRSVPs.jsx";
+import AdminAbout from "./pages/AdminAbout.jsx";
 import BookingIntake from "./pages/BookingIntake.jsx";
 import ClientTimeline from "./pages/ClientTimeline.jsx";
 import Booking from "./pages/Booking.jsx";
@@ -104,6 +105,7 @@ export default function App() {
                 <Route path="bookings" element={<AdminBookings admin={admin} />} />
                 <Route path="concierge" element={<AdminConcierge admin={admin} />} />
                 <Route path="documents" element={<AdminDocuments admin={admin} />} />
+                <Route path="about" element={<AdminAbout admin={admin} />} />
                 <Route path="settings" element={<AdminSettings admin={admin} />} />
                 <Route path="activity" element={<AdminActivity admin={admin} />} />
                 <Route path="audit" element={<AdminAuditLog admin={admin} />} />
