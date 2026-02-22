@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { FHJCard, fhjTheme } from "../fhj/FHJUIKit.jsx";
+import { FHJCard, fhjTheme } from "../FHJ/FHJUIKit.jsx";
 
 export default function TripsPerMonthChart() {
   const [data, setData] = useState(null);
