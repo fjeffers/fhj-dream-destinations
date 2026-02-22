@@ -1,14 +1,38 @@
 // ==========================================================
-// FILE: AdminDeals.jsx - Complete Deals Manager with Enhanced Fields
+// FILE: AdminDeals.jsx - Complete with Image Upload & Carousel
 // Location: src/pages/AdminDeals.jsx
 // ==========================================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CATEGORIES = ["Beach", "Mountain", "City", "Cruise", "Safari", "Cultural", "Adventure", "Wellness", "Exclusive"];
 const DIFFICULTY_LEVELS = ["Easy", "Moderate", "Challenging"];
+
+// Image resize utility
+function resizeImage(file, maxWidth = 1200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = (h * maxWidth) / w; w = maxWidth; }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function AdminDeals({ admin }) {
   const [deals, setDeals] = useState([]);
@@ -19,7 +43,6 @@ export default function AdminDeals({ admin }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Form state with all enhanced fields
   const [form, setForm] = useState(getEmptyForm());
 
   const isAssistant = (admin?.role || admin?.Role) === "Assistant";
@@ -32,7 +55,6 @@ export default function AdminDeals({ admin }) {
       imageUrl: "",
       notes: "",
       active: true,
-      // Enhanced fields
       duration: "",
       location: "",
       departureDates: "",
@@ -177,7 +199,6 @@ export default function AdminDeals({ admin }) {
     }
   };
 
-  // Array field helpers
   const addToArray = (field, value) => {
     if (value.trim()) {
       setForm({ ...form, [field]: [...form[field], value.trim()] });
@@ -190,7 +211,6 @@ export default function AdminDeals({ admin }) {
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
           <h1 style={{ color: fhjTheme.primary, margin: 0, fontSize: "1.6rem" }}>Deals Manager</h1>
@@ -201,15 +221,13 @@ export default function AdminDeals({ admin }) {
         )}
       </div>
 
-      {/* Messages */}
       {success && <div style={{ ...msgStyle, background: "rgba(74,222,128,0.1)", borderColor: "rgba(74,222,128,0.3)", color: "#4ade80" }}>{success}</div>}
       {error && !showForm && <div style={{ ...msgStyle, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}>{error}</div>}
 
-      {/* Enhanced Form */}
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <FHJCard style={{ padding: "2rem", marginBottom: "1.5rem" }}>
+            <FHJCard style={{ padding: "2rem", marginBottom: "1.5rem", maxHeight: "85vh", overflowY: "auto" }}>
               <h3 style={{ color: "white", margin: "0 0 1.5rem", fontSize: "1.2rem" }}>
                 {editing ? "Edit Deal" : "New Deal"}
               </h3>
@@ -236,16 +254,19 @@ export default function AdminDeals({ admin }) {
                   </div>
 
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelStyle}>MAIN IMAGE URL</label>
-                    <FHJInput value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
-                  </div>
-
-                  <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelStyle}>DESCRIPTION</label>
                     <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Describe the trip..." />
                   </div>
                 </div>
               </div>
+
+              {/* IMAGES */}
+              <ImageManager
+                mainImage={form.imageUrl}
+                additionalImages={form.additionalImages}
+                onMainImageChange={(url) => setForm({ ...form, imageUrl: url })}
+                onAdditionalImagesChange={(images) => setForm({ ...form, additionalImages: images })}
+              />
 
               {/* TRIP DETAILS */}
               <div style={sectionStyle}>
@@ -295,55 +316,16 @@ export default function AdminDeals({ admin }) {
                 </div>
               </div>
 
-              {/* HIGHLIGHTS */}
-              <ArrayField
-                label="Highlights"
-                items={form.highlights}
-                onAdd={(val) => addToArray('highlights', val)}
-                onRemove={(idx) => removeFromArray('highlights', idx)}
-                placeholder="e.g., All-inclusive resort"
-              />
+              <ArrayField label="Highlights" items={form.highlights} onAdd={(val) => addToArray('highlights', val)} onRemove={(idx) => removeFromArray('highlights', idx)} placeholder="e.g., All-inclusive resort" />
+              <ArrayField label="What's Included" items={form.inclusions} onAdd={(val) => addToArray('inclusions', val)} onRemove={(idx) => removeFromArray('inclusions', idx)} placeholder="e.g., Round-trip flights" />
+              <ArrayField label="What's NOT Included" items={form.exclusions} onAdd={(val) => addToArray('exclusions', val)} onRemove={(idx) => removeFromArray('exclusions', idx)} placeholder="e.g., Travel insurance" />
 
-              {/* INCLUSIONS */}
-              <ArrayField
-                label="What's Included"
-                items={form.inclusions}
-                onAdd={(val) => addToArray('inclusions', val)}
-                onRemove={(idx) => removeFromArray('inclusions', idx)}
-                placeholder="e.g., Round-trip flights"
-              />
-
-              {/* EXCLUSIONS */}
-              <ArrayField
-                label="What's NOT Included"
-                items={form.exclusions}
-                onAdd={(val) => addToArray('exclusions', val)}
-                onRemove={(idx) => removeFromArray('exclusions', idx)}
-                placeholder="e.g., Travel insurance"
-              />
-
-              {/* ITINERARY */}
               <div style={sectionStyle}>
                 <h4 style={sectionTitle}>Itinerary</h4>
                 <label style={labelStyle}>DAY-BY-DAY SCHEDULE</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: "120px", resize: "vertical", fontFamily: "monospace" }}
-                  value={form.itinerary}
-                  onChange={(e) => setForm({ ...form, itinerary: e.target.value })}
-                  placeholder="Day 1: Arrival...&#10;Day 2-3: Activities...&#10;Day 7: Departure"
-                />
+                <textarea style={{ ...inputStyle, minHeight: "120px", resize: "vertical", fontFamily: "monospace" }} value={form.itinerary} onChange={(e) => setForm({ ...form, itinerary: e.target.value })} placeholder="Day 1: Arrival...&#10;Day 2-3: Activities...&#10;Day 7: Departure" />
               </div>
 
-              {/* ADDITIONAL IMAGES */}
-              <ArrayField
-                label="Additional Images (URLs)"
-                items={form.additionalImages}
-                onAdd={(val) => addToArray('additionalImages', val)}
-                onRemove={(idx) => removeFromArray('additionalImages', idx)}
-                placeholder="https://images.unsplash.com/..."
-              />
-
-              {/* TOGGLES */}
               <div style={{ display: "flex", gap: "2rem", marginTop: "1.5rem" }}>
                 <Toggle label="Active" checked={form.active} onChange={(val) => setForm({ ...form, active: val })} />
                 <Toggle label="Featured Deal" checked={form.featured} onChange={(val) => setForm({ ...form, featured: val })} />
@@ -351,7 +333,6 @@ export default function AdminDeals({ admin }) {
 
               {error && showForm && <div style={{ ...msgStyle, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#f87171", marginTop: "1rem", marginBottom: 0 }}>{error}</div>}
 
-              {/* Actions */}
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
                 <FHJButton onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : editing ? "Update Deal" : "Create Deal"}
@@ -363,7 +344,6 @@ export default function AdminDeals({ admin }) {
         )}
       </AnimatePresence>
 
-      {/* Deals Grid */}
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
           {[1, 2, 3].map(i => <FHJCard key={i} style={{ height: "280px", background: "rgba(255,255,255,0.03)" }}><div style={{ padding: "1.5rem" }}>Loading...</div></FHJCard>)}
@@ -425,38 +405,136 @@ export default function AdminDeals({ admin }) {
   );
 }
 
-// Sub-components
-function ArrayField({ label, items, onAdd, onRemove, placeholder }) {
-  const [input, setInput] = useState("");
+// ImageManager Component
+function ImageManager({ mainImage, additionalImages, onMainImageChange, onAdditionalImagesChange }) {
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [urlInput, setUrlInput] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const mainFileRef = useRef(null);
+  const additionalFileRef = useRef(null);
 
-  const handleAdd = () => {
-    if (input.trim()) {
-      onAdd(input);
-      setInput("");
+  const allImages = [mainImage, ...additionalImages].filter(Boolean);
+
+  const handleImageUpload = async (file, isMain) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    
+    try {
+      const base64 = await resizeImage(file);
+      if (isMain) {
+        onMainImageChange(base64);
+      } else {
+        onAdditionalImagesChange([...additionalImages, base64]);
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
     }
   };
 
+  const handleDrop = (e, isMain) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleImageUpload(file, isMain);
+  };
+
+  const addImageUrl = () => {
+    if (urlInput.trim() && urlInput.startsWith("http")) {
+      onAdditionalImagesChange([...additionalImages, urlInput.trim()]);
+      setUrlInput("");
+    }
+  };
+
+  const removeImage = (index) => {
+    if (index === 0) {
+      onMainImageChange(additionalImages[0] || "");
+      onAdditionalImagesChange(additionalImages.slice(1));
+      setPreviewIndex(0);
+    } else {
+      onAdditionalImagesChange(additionalImages.filter((_, i) => i !== index - 1));
+      if (previewIndex >= allImages.length - 1) setPreviewIndex(Math.max(0, allImages.length - 2));
+    }
+  };
+
+  return (
+    <div style={sectionStyle}>
+      <h4 style={sectionTitle}>Images</h4>
+
+      {allImages.length > 0 && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <div style={{ position: "relative", aspectRatio: "16/9", borderRadius: "12px", overflow: "hidden", background: "#000" }}>
+            <img src={allImages[previewIndex]} alt={`Preview ${previewIndex + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            
+            {allImages.length > 1 && (
+              <>
+                <button onClick={() => setPreviewIndex((previewIndex - 1 + allImages.length) % allImages.length)} style={{ ...navArrowStyle, left: "10px" }}>←</button>
+                <button onClick={() => setPreviewIndex((previewIndex + 1) % allImages.length)} style={{ ...navArrowStyle, right: "10px" }}>→</button>
+              </>
+            )}
+
+            <button onClick={() => removeImage(previewIndex)} style={{ position: "absolute", top: "10px", right: "10px", width: "32px", height: "32px", borderRadius: "50%", background: "rgba(248,113,113,0.9)", border: "none", color: "white", cursor: "pointer", fontSize: "1.2rem" }}>×</button>
+
+            <div style={{ position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.7)", padding: "0.3rem 0.8rem", borderRadius: "20px", color: "white", fontSize: "0.85rem" }}>
+              {previewIndex + 1} / {allImages.length}
+              {previewIndex === 0 && <span style={{ marginLeft: "0.5rem", color: fhjTheme.primary }}>• Main</span>}
+            </div>
+          </div>
+
+          {allImages.length > 1 && (
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", overflow: "auto", padding: "0.5rem 0" }}>
+              {allImages.map((img, idx) => (
+                <div key={idx} onClick={() => setPreviewIndex(idx)} style={{ width: "80px", height: "60px", borderRadius: "6px", overflow: "hidden", cursor: "pointer", border: idx === previewIndex ? `2px solid ${fhjTheme.primary}` : "2px solid transparent", opacity: idx === previewIndex ? 1 : 0.6, transition: "all 0.2s", flexShrink: 0, position: "relative" }}>
+                  <img src={img} alt={`Thumb ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {idx === 0 && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,196,140,0.9)", color: "white", fontSize: "0.6rem", textAlign: "center", padding: "2px" }}>MAIN</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ ...labelStyle, marginBottom: "0.5rem" }}>MAIN IMAGE</label>
+        <div onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={(e) => handleDrop(e, true)} onClick={() => mainFileRef.current?.click()} style={{ border: `2px dashed ${dragOver ? fhjTheme.primary : "rgba(255,255,255,0.2)"}`, borderRadius: "10px", padding: mainImage ? "0.5rem" : "2rem", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: dragOver ? "rgba(0,196,140,0.05)" : "rgba(255,255,255,0.02)" }}>
+          {mainImage ? <img src={mainImage} alt="Main" style={{ maxWidth: "200px", maxHeight: "150px", borderRadius: "8px" }} /> : <><span style={{ fontSize: "2rem" }}>📸</span><p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Drop image or click to browse</p></>}
+        </div>
+        <input ref={mainFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleImageUpload(e.target.files[0], true)} />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ ...labelStyle, marginBottom: "0.5rem" }}>ADDITIONAL IMAGES</label>
+        <div onClick={() => additionalFileRef.current?.click()} style={{ border: "2px dashed rgba(255,255,255,0.15)", borderRadius: "10px", padding: "1.5rem", textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}>
+          <span style={{ fontSize: "1.5rem" }}>🖼️</span>
+          <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.5rem 0 0" }}>Click to add more images</p>
+        </div>
+        <input ref={additionalFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleImageUpload(e.target.files[0], false)} />
+      </div>
+
+      <div>
+        <label style={labelStyle}>OR PASTE IMAGE URL</label>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <input style={{ ...inputStyle, flex: 1, margin: 0 }} value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addImageUrl())} placeholder="https://images.unsplash.com/..." />
+          <button onClick={addImageUrl} type="button" style={addBtn}>Add URL</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArrayField({ label, items, onAdd, onRemove, placeholder }) {
+  const [input, setInput] = useState("");
+  const handleAdd = () => { if (input.trim()) { onAdd(input); setInput(""); } };
   return (
     <div style={sectionStyle}>
       <h4 style={sectionTitle}>{label}</h4>
       {items.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
           {items.map((item, idx) => (
-            <div key={idx} style={tagStyle}>
-              <span>{item}</span>
-              <button onClick={() => onRemove(idx)} style={removeTagBtn}>×</button>
-            </div>
+            <div key={idx} style={tagStyle}><span>{item}</span><button onClick={() => onRemove(idx)} style={removeTagBtn}>×</button></div>
           ))}
         </div>
       )}
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <input
-          style={{ ...inputStyle, flex: 1, margin: 0 }}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())}
-          placeholder={placeholder}
-        />
+        <input style={{ ...inputStyle, flex: 1, margin: 0 }} value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())} placeholder={placeholder} />
         <button onClick={handleAdd} type="button" style={addBtn}>Add</button>
       </div>
     </div>
@@ -466,26 +544,14 @@ function ArrayField({ label, items, onAdd, onRemove, placeholder }) {
 function Toggle({ label, checked, onChange }) {
   return (
     <label style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
-      <div
-        onClick={() => onChange(!checked)}
-        style={{
-          width: "44px", height: "24px", borderRadius: "12px",
-          background: checked ? fhjTheme.primary : "rgba(255,255,255,0.15)",
-          transition: "background 0.2s", position: "relative", cursor: "pointer"
-        }}
-      >
-        <div style={{
-          width: "18px", height: "18px", borderRadius: "50%", background: "white",
-          position: "absolute", top: "3px", left: checked ? "22px" : "4px",
-          transition: "left 0.2s"
-        }} />
+      <div onClick={() => onChange(!checked)} style={{ width: "44px", height: "24px", borderRadius: "12px", background: checked ? fhjTheme.primary : "rgba(255,255,255,0.15)", transition: "background 0.2s", position: "relative", cursor: "pointer" }}>
+        <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px", left: checked ? "22px" : "4px", transition: "left 0.2s" }} />
       </div>
       <span style={{ color: checked ? "#4ade80" : "#94a3b8", fontSize: "0.9rem", fontWeight: 500 }}>{label}</span>
     </label>
   );
 }
 
-// Styles
 const labelStyle = { display: "block", color: "#94a3b8", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.5px", marginBottom: "0.4rem" };
 const inputStyle = { width: "100%", padding: "0.65rem 0.75rem", borderRadius: "8px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "white", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };
 const msgStyle = { padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid", fontSize: "0.85rem", marginBottom: "1rem" };
@@ -496,3 +562,4 @@ const tagStyle = { display: "flex", alignItems: "center", gap: "0.5rem", backgro
 const removeTagBtn = { background: "none", border: "none", color: "#f87171", cursor: "pointer", padding: "0", fontSize: "1.2rem", lineHeight: 1 };
 const addBtn = { padding: "0.65rem 1.5rem", background: "rgba(0,196,140,0.2)", border: "1px solid rgba(0,196,140,0.4)", borderRadius: "8px", color: "#00c48c", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" };
 const badgeStyle = { display: "inline-block", padding: "0.25rem 0.6rem", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 600, background: "rgba(74,222,128,0.2)", color: "#4ade80" };
+const navArrowStyle = { position: "absolute", top: "50%", transform: "translateY(-50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none", color: "white", fontSize: "1.5rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" };
