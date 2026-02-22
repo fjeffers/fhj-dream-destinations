@@ -1,7 +1,7 @@
 // src/components/RealtimeToasts.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { LiveUpdates } from "../utils/LiveUpdates.js";
-import { FHJCard } from "./fhj/FHJUIKit.jsx";
+import { FHJCard } from "./FHJ/FHJUIKit.jsx";
 
 let audioInstance = null;
 
