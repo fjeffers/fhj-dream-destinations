@@ -5,7 +5,7 @@ import {
   FHJButton,
   FHJInput,
   fhjTheme,
-} from "./fhj/FHJUIKit.jsx";
+} from "./FHJ/FHJUIKit.jsx";
 
 export default function AdminAssistantPanel({ admin }) {
   const [query, setQuery] = useState("");
