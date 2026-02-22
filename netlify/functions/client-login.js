@@ -1,35 +1,22 @@
 // ==========================================================
-// 📄 FILE: client-login.js  (PHASE 1 FIX)
-// ⭐ FIX: Removed duplicate handler definition
-//    Previously had two exports.handler in the same file,
-//    second one silently overwrote the first.
+// FILE: client-login.js - Supabase Version
+// Location: netlify/functions/client-login.js
 // ==========================================================
+const { supabase, respond } = require("./utils");
 
-const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
-
-exports.handler = withFHJ(async (event) => {
-  // 1. Only allow POST requests
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return respond(200, {});
+  
   if (event.httpMethod !== "POST") {
     return respond(405, { error: "Method not allowed" });
   }
 
   try {
-    // 2. Safely parse the body
-    let body = {};
-    try {
-      body = JSON.parse(event.body);
-    } catch (parseError) {
-      return respond(400, {
-        success: false,
-        error: "Invalid request format.",
-      });
-    }
+    const body = JSON.parse(event.body || "{}");
+    const email = body.email?.toLowerCase().trim();
+    const accessCode = body.accessCode?.trim();
 
-    const email = body.email;
-    const accessCode = body.accessCode;
-
-    // 3. Check if they typed both in
+    // Validate input
     if (!email || !accessCode) {
       return respond(400, {
         success: false,
@@ -37,32 +24,43 @@ exports.handler = withFHJ(async (event) => {
       });
     }
 
-    // 4. Query Airtable
-    // Using exact column names "Client Email" and "Client PIN"
-    const formula = `AND(LOWER({Client Email})='${String(email).toLowerCase()}', {Client PIN}='${accessCode}')`;
+    console.log("Login attempt:", email);
 
-    // Querying the "Client Login" table
-    const records = await selectRecords("Client Login", formula, {
-      maxRecords: 1,
-    });
+    // Query Supabase client_login table
+    const { data, error } = await supabase
+      .from("client_login")
+      .select("*")
+      .ilike("email", email)
+      .eq("token", accessCode)
+      .single();
 
-    // 5. Did we find them?
-    if (records && records.length > 0) {
-      const record = records[0];
+    if (error) {
+      console.error("Supabase error:", error);
+      
+      if (error.code === 'PGRST116') {
+        // No rows found
+        return respond(401, {
+          success: false,
+          error: "Invalid email or access code.",
+        });
+      }
+      
+      return respond(500, {
+        success: false,
+        error: "Database error. Please try again.",
+      });
+    }
 
-      // Build the client object
-      // Handle both flattened (normalizer applied) and nested field formats
-      const fields = record.fields || record;
-
+    if (data) {
+      // Build client object
       const client = {
-        id: record.id,
-        email: fields["Client Email"] || email,
-        fullName:
-          fields["Full Name"] ||
-          fields["Client Name"] ||
-          "Traveler",
-        phone: fields["Phone"] || "",
+        id: data.id,
+        email: data.email,
+        fullName: data.full_name || "Traveler",
+        phone: data.phone || "",
       };
+
+      console.log("Login successful:", client.email);
 
       return respond(200, { success: true, client });
     } else {
@@ -78,4 +76,4 @@ exports.handler = withFHJ(async (event) => {
       error: "Server error. Please try again later.",
     });
   }
-});
+};
