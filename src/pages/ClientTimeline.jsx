@@ -8,8 +8,9 @@ import {
 export default function ClientTimeline({ admin, client }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const isAssistant = admin.Role === "Assistant";
+  const isAssistant = admin?.Role === "Assistant";
   const loadTimeline = async () => {
+    if (!client?.id) return;
     setLoading(true);
     const res = await fetch("/.netlify/functions/client-timeline", {
       method: "POST",
@@ -39,6 +40,14 @@ export default function ClientTimeline({ admin, client }) {
         return "•";
     }
   };
+  if (!client) {
+    return (
+      <FHJCard style={{ padding: "2rem" }}>
+        <p style={{ opacity: 0.7 }}>No client data available.</p>
+      </FHJCard>
+    );
+  }
+
   return (
     <FHJCard style={{ padding: "2rem" }}>
       <h2>Client Timeline</h2>

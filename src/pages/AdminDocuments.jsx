@@ -9,7 +9,7 @@ export default function AdminDocuments({ admin }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
-  const isAssistant = admin.Role === "Assistant";
+  const isAssistant = (admin?.role ?? admin?.Role) === "Assistant";
   const loadDocuments = async () => {
     setLoading(true);
     const res = await fetch("/.netlify/functions/admin-documents");
