@@ -39,6 +39,8 @@ import AdminAbout from "./pages/AdminAbout.jsx";
 import BookingIntake from "./pages/BookingIntake.jsx";
 import ClientTimeline from "./pages/ClientTimeline.jsx";
 import Booking from "./pages/Booking.jsx";
+import BookAppointment from "./pages/BookAppointment.jsx";
+import AdminAppointmentsPage from "./pages/AdminAppointmentsPage.jsx";
 
 // Components used as pages
 import EventPage from "./components/EventPage.jsx";
@@ -78,6 +80,7 @@ export default function App() {
                 <Route path="/deal/:id" element={<DealDetails />} />
                 <Route path="/booking" element={<Booking />} />
                 <Route path="/intake" element={<BookingIntake />} />
+                <Route path="/book-appointment" element={<BookAppointment />} />
                 <Route path="/client/login" element={<ClientPortal />} />
                 <Route path="/client/portal" element={<ClientPortal />} />
                 <Route path="/client/timeline" element={<ClientTimeline />} />
@@ -112,8 +115,8 @@ export default function App() {
                 {/* Keep existing bookings route */}
                 <Route path="bookings" element={<AdminBookings admin={admin} />} />
 
-                {/* Also accept /admin/appointments (alias) and render the same bookings page */}
-                <Route path="appointments" element={<AdminBookings admin={admin} />} />
+                {/* Also accept /admin/appointments with dedicated calendar page */}
+                <Route path="appointments" element={<AdminAppointmentsPage admin={admin} />} />
 
                 <Route path="concierge" element={<AdminConcierge admin={admin} />} />
                 <Route path="documents" element={<AdminDocuments admin={admin} />} />
