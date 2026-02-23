@@ -1,5 +1,5 @@
 // ==========================================================
-// FILE: AdminSidebar.jsx (FIXED import path for FHJUIKit)
+// FILE: AdminSidebar.jsx
 // Location: src/components/admin/AdminSidebar.jsx
 // ==========================================================
 
@@ -19,18 +19,29 @@ export default function AdminSidebar({ admin, onLogout }) {
     display: "block",
     transition: "0.25s ease",
   };
-  
+
   const activeStyle = {
     background: "rgba(255,255,255,0.15)",
     backdropFilter: "blur(12px)",
     borderLeft: `3px solid ${fhjTheme.primary}`,
     boxShadow: "0 0 12px rgba(212,175,55,0.25)",
   };
-  
+
   const hoverStyle = {
     background: "rgba(255,255,255,0.08)",
   };
-  
+
+  const navItems = [
+    { to: "/admin/dashboard", label: "Dashboard" },
+    { to: "/admin/deals", label: "Deals" },
+    { to: "/admin/clients", label: "Clients" },
+    { to: "/admin/trips", label: "Trips" },
+    { to: "/admin/events", label: "Events" },
+    { to: "/admin/concierge", label: "Concierge Inbox" },
+    { to: "/admin/about", label: "About Page" },
+    { to: "/admin/appointments", label: "Appointments" }, // <-- Appointments nav item added
+  ];
+
   return (
     <div
       style={{
@@ -45,20 +56,10 @@ export default function AdminSidebar({ admin, onLogout }) {
         borderRight: "1px solid rgba(255,255,255,0.1)",
       }}
     >
-      <h2 style={{ marginBottom: "2rem", fontWeight: 600 }}>
-        FHJ Admin
-      </h2>
-      
+      <h2 style={{ marginBottom: "2rem", fontWeight: 600 }}>FHJ Admin</h2>
+
       {/* NAVIGATION */}
-      {[
-        { to: "/admin/dashboard", label: "Dashboard" },
-        { to: "/admin/deals", label: "Deals" },
-        { to: "/admin/clients", label: "Clients" },
-        { to: "/admin/trips", label: "Trips" },
-        { to: "/admin/events", label: "Events" },
-        { to: "/admin/concierge", label: "Concierge Inbox" },
-        { to: "/admin/about", label: "About Page" },
-      ].map((item) => (
+      {navItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -72,9 +73,9 @@ export default function AdminSidebar({ admin, onLogout }) {
           {item.label}
         </NavLink>
       ))}
-      
+
       {/* OWNER-ONLY SETTINGS */}
-      {admin.Role === "Owner" && (
+      {admin && admin.Role === "Owner" && (
         <NavLink
           to="/admin/settings"
           style={({ isActive }) => ({
@@ -87,9 +88,9 @@ export default function AdminSidebar({ admin, onLogout }) {
           Admin Settings
         </NavLink>
       )}
-      
+
       <div style={{ flexGrow: 1 }} />
-      
+
       {/* LOGOUT */}
       <button
         onClick={onLogout}
@@ -97,6 +98,7 @@ export default function AdminSidebar({ admin, onLogout }) {
           ...linkStyle,
           background: "rgba(255,80,80,0.2)",
           border: "1px solid rgba(255,80,80,0.4)",
+          textAlign: "left",
         }}
       >
         Logout
