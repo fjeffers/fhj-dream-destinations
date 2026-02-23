@@ -27,11 +27,27 @@ function injectAssets() {
   }
 }
 
+const ACCESS_CODE = "FHJ2025";
+
 export default function AppointmentPage() {
   const navigate = useNavigate();
   const [selection, setSelection] = useState("");
+  const [unlocked, setUnlocked] = useState(
+    () => sessionStorage.getItem("fhj_apt_auth") === "1"
+  );
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
 
   useEffect(() => { injectAssets(); }, []);
+
+  const handlePinSubmit = () => {
+    if (pin === ACCESS_CODE) {
+      sessionStorage.setItem("fhj_apt_auth", "1");
+      setUnlocked(true);
+    } else {
+      setPinError(true);
+    }
+  };
 
   const handleDropdownChange = (e) => {
     const val = e.target.value;
@@ -42,6 +58,95 @@ export default function AppointmentPage() {
       navigate("/appointments?reason=appointment");
     }
   };
+
+  if (!unlocked) {
+    return (
+      <FHJBackground page="appointment">
+        <div style={S.accentTop} />
+
+        <div style={S.content}>
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            style={S.logoWrap}
+          >
+            <img
+              src="/fhj_logo.png"
+              alt="FHJ Dream Destinations"
+              style={S.logo}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          </motion.div>
+
+          {/* Ornament */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            style={S.ornament}
+          >
+            <span style={S.ornLine} />
+            <span style={{ color: "#00c48c", fontSize: "0.5rem" }}>◆</span>
+            <span style={S.ornLine} />
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={S.heading}
+          >
+            Restricted Access
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            style={S.subheading}
+          >
+            Enter your access code to continue.
+          </motion.p>
+
+          {/* PIN input */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            style={{ width: "100%", maxWidth: "380px" }}
+          >
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value); setPinError(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handlePinSubmit(); }}
+              placeholder="Access code"
+              style={S.pinInput}
+            />
+            <button onClick={handlePinSubmit} style={S.pinButton}>
+              Continue
+            </button>
+            {pinError && (
+              <p style={S.pinError}>Incorrect access code.</p>
+            )}
+          </motion.div>
+
+          {/* Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            style={S.footer}
+          >
+            <p style={S.footerText}>FHJ Dream Destinations</p>
+            <p style={S.footerSub}>Creating unforgettable travel experiences</p>
+          </motion.div>
+        </div>
+      </FHJBackground>
+    );
+  }
 
   return (
     <FHJBackground page="appointment">
@@ -205,6 +310,37 @@ const S = {
   footerSub: {
     color: "rgba(255,255,255,0.25)", fontSize: "0.65rem",
     letterSpacing: "0.1em", textTransform: "uppercase",
+  },
+  pinInput: {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.12)",
+    border: "1px solid rgba(255,255,255,0.25)",
+    color: "#e5e7eb",
+    fontSize: "1rem",
+    outline: "none",
+    boxSizing: "border-box",
+    marginBottom: "1rem",
+    letterSpacing: "0.15em",
+    textAlign: "center",
+  },
+  pinButton: {
+    background: "linear-gradient(135deg, #00c48c, #00a676)",
+    color: "#0f172a",
+    border: "none",
+    borderRadius: 16,
+    padding: "12px 32px",
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    cursor: "pointer",
+    letterSpacing: "0.04em",
+    width: "100%",
+  },
+  pinError: {
+    color: "#f87171",
+    fontSize: "0.875rem",
+    marginTop: "0.5rem",
   },
 };
 
