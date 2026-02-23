@@ -1,53 +1,178 @@
 // ==========================================================
-// FILE: AppointmentPage.jsx — Appointment Gateway
+// FILE: AppointmentPage.jsx — Single-Page Booking Form
 // Location: src/pages/AppointmentPage.jsx
 // Route: /appointment
-//
-// Dropdown:
-//   "New Client"          → /appointments (full intake)
-//   "Make an Appointment" → /appointments?reason=appointment (simple form)
 // ==========================================================
 
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import FHJBackground from "../components/FHJ/FHJBackground.jsx";
+import {
+  fhjTheme,
+  FHJCard,
+  FHJButton,
+  FHJInput,
+} from "../components/FHJ/FHJUIKit.jsx";
 
-const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap";
+const PRIMARY = fhjTheme.primary;
 
-function injectAssets() {
-  if (typeof document === "undefined") return;
-  if (!document.getElementById("apt-fonts")) {
-    const link = document.createElement("link");
-    link.id = "apt-fonts";
-    link.rel = "stylesheet";
-    link.href = FONT_URL;
-    document.head.appendChild(link);
+// Generate time slots: 4:30 PM – 10:30 PM every 30 minutes
+function generateTimeSlots() {
+  const slots = [];
+  // Start at 16:30, end at 22:30, step 30 min
+  for (let totalMin = 16 * 60 + 30; totalMin <= 22 * 60 + 30; totalMin += 30) {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const hour12 = h > 12 ? h - 12 : h;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const minStr = m === 0 ? "00" : String(m);
+    slots.push(`${hour12}:${minStr} ${ampm}`);
   }
+  return slots;
+}
+
+function formatDateReadable(date) {
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
+const TIME_SLOTS = generateTimeSlots();
+
+function toYMD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function MiniCalendar({ selectedDate, onSelectDate }) {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
+  }
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div style={{ userSelect: "none" }}>
+      {/* Month nav */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <button onClick={prevMonth} style={S.calNav}>‹</button>
+        <span style={{ color: "#fff", fontWeight: 600, fontSize: "0.95rem" }}>
+          {MONTHS[viewMonth]} {viewYear}
+        </span>
+        <button onClick={nextMonth} style={S.calNav}>›</button>
+      </div>
+      {/* Day headers */}
+      <div style={S.calGrid}>
+        {DAYS.map(d => (
+          <div key={d} style={S.calDayHeader}>{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e-${i}`} />;
+          const date = new Date(viewYear, viewMonth, day);
+          date.setHours(0, 0, 0, 0);
+          const isPast = date < today;
+          const isToday = isSameDay(date, today);
+          const isSelected = selectedDate && isSameDay(date, selectedDate);
+          return (
+            <button
+              key={day}
+              disabled={isPast}
+              onClick={() => onSelectDate(date)}
+              style={{
+                ...S.calDay,
+                ...(isPast ? S.calDayPast : {}),
+                ...(isToday && !isSelected ? S.calDayToday : {}),
+                ...(isSelected ? S.calDaySelected : {}),
+              }}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function AppointmentPage() {
-  const navigate = useNavigate();
-  const [selection, setSelection] = useState("");
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => { injectAssets(); }, []);
-
-  const handleDropdownChange = (e) => {
-    const val = e.target.value;
-    setSelection(val);
-    if (val === "new-client") {
-      navigate("/appointments");
-    } else if (val === "make-appointment") {
-      navigate("/appointments?reason=appointment");
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!selectedDate || !selectedTime) {
+      setError("Please select a date and time.");
+      return;
     }
-  };
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/.netlify/functions/appointment-book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          date: toYMD(selectedDate),
+          time: selectedTime,
+          notes,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Booking failed. Please try again.");
+      }
+      setSuccess(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <FHJBackground page="appointment">
       <div style={S.accentTop} />
-
-      <div style={S.content}>
+      <div style={S.page}>
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -63,143 +188,290 @@ export default function AppointmentPage() {
           />
         </motion.div>
 
-        {/* Ornament */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          style={S.ornament}
-        >
-          <span style={S.ornLine} />
-          <span style={{ color: "#00c48c", fontSize: "0.5rem" }}>◆</span>
-          <span style={S.ornLine} />
-        </motion.div>
-
         <motion.h1
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
           style={S.heading}
         >
-          How Can We Help?
+          Book an Appointment
         </motion.h1>
-
         <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          style={S.subheading}
-        >
-          Select an option below to get started.
-        </motion.p>
-
-        {/* Dropdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          style={S.dropdownWrap}
-        >
-          <select
-            value={selection}
-            onChange={handleDropdownChange}
-            style={S.dropdown}
-          >
-            <option value="" disabled>Choose an option...</option>
-            <option value="new-client">New Client</option>
-            <option value="make-appointment">Make an Appointment</option>
-          </select>
-          <div style={S.dropdownArrow}>▾</div>
-        </motion.div>
-
-        {/* Footer */}
-        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          style={S.footer}
+          transition={{ delay: 0.25 }}
+          style={S.subheading}
         >
+          Choose a date, time, and share your details.
+        </motion.p>
+
+        {success ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <FHJCard style={S.card}>
+              <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+                <h2 style={{ color: PRIMARY, marginBottom: "0.5rem", fontFamily: "'Playfair Display', Georgia, serif" }}>
+                  Appointment Booked!
+                </h2>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.95rem" }}>
+                  Thank you, <strong style={{ color: "#fff" }}>{name}</strong>. We'll reach out to confirm your appointment on{" "}
+                  <strong style={{ color: PRIMARY }}>{formatDateReadable(selectedDate)}</strong> at{" "}
+                  <strong style={{ color: PRIMARY }}>{selectedTime}</strong>.
+                </p>
+              </div>
+            </FHJCard>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            style={{ width: "100%" }}
+          >
+            <FHJCard style={S.card}>
+              <form onSubmit={handleSubmit}>
+                {/* Step 1: Date */}
+                <h3 style={S.sectionLabel}>Select a Date</h3>
+                <MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+
+                {/* Step 2: Time */}
+                <h3 style={{ ...S.sectionLabel, marginTop: "1.5rem" }}>Select a Time</h3>
+                <div style={S.timeGrid}>
+                  {TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedTime(slot)}
+                      style={{
+                        ...S.timePill,
+                        ...(selectedTime === slot ? S.timePillSelected : {}),
+                      }}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Step 3: Details */}
+                <h3 style={{ ...S.sectionLabel, marginTop: "1.5rem" }}>Your Details</h3>
+                <div style={S.fieldStack}>
+                  <FHJInput
+                    type="text"
+                    placeholder="Full Name *"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                  <FHJInput
+                    type="email"
+                    placeholder="Email Address *"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <FHJInput
+                    type="tel"
+                    placeholder="Phone (optional)"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <textarea
+                    placeholder="Tell us what you have in mind..."
+                    aria-label="Description / Notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    style={S.textarea}
+                  />
+                </div>
+
+                {error && (
+                  <div style={S.errorMsg}>{error}</div>
+                )}
+
+                <FHJButton
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  style={{ marginTop: "1.5rem" }}
+                  disabled={loading}
+                >
+                  {loading ? "Booking…" : "Book Appointment"}
+                </FHJButton>
+              </form>
+            </FHJCard>
+          </motion.div>
+        )}
+
+        <div style={S.footer}>
           <p style={S.footerText}>FHJ Dream Destinations</p>
           <p style={S.footerSub}>Creating unforgettable travel experiences</p>
-        </motion.div>
+        </div>
       </div>
     </FHJBackground>
   );
 }
 
-const green = "#00c48c";
-
 const S = {
   accentTop: {
     position: "fixed", top: 0, left: 0, right: 0, height: "3px", zIndex: 10,
-    background: `linear-gradient(90deg, transparent, ${green}, transparent)`,
+    background: `linear-gradient(90deg, transparent, ${PRIMARY}, transparent)`,
   },
-  content: {
-    position: "relative", zIndex: 5,
-    maxWidth: "560px", margin: "0 auto",
-    padding: "3rem 1.5rem 3rem",
-    display: "flex", flexDirection: "column", alignItems: "center",
+  page: {
+    maxWidth: "500px",
+    margin: "0 auto",
+    padding: "2rem 1.25rem 3rem",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
     minHeight: "100vh",
     fontFamily: "'Montserrat', sans-serif",
   },
-  logoWrap: { marginBottom: "1.5rem", marginTop: "2rem" },
+  logoWrap: { marginBottom: "1.25rem", marginTop: "1.5rem" },
   logo: {
-    height: "90px",
+    height: "80px",
     filter: "drop-shadow(0 0 15px rgba(0,0,0,0.5))",
     mixBlendMode: "screen",
   },
-  ornament: {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    gap: "1rem", marginBottom: "1rem",
-  },
-  ornLine: {
-    display: "block", width: "50px", height: "1px",
-    background: `linear-gradient(90deg, transparent, ${green}, transparent)`,
-  },
   heading: {
     fontFamily: "'Playfair Display', Georgia, serif",
-    fontSize: "2.4rem", fontWeight: 700, color: "#fff",
-    textAlign: "center", margin: "0 0 0.5rem",
+    fontSize: "2.1rem", fontWeight: 700, color: "#fff",
+    textAlign: "center", margin: "0 0 0.4rem",
     textShadow: "0 2px 15px rgba(0,0,0,0.4)",
   },
   subheading: {
-    color: "rgba(255,255,255,0.5)", fontSize: "1rem",
-    textAlign: "center", marginBottom: "2.5rem",
+    color: "rgba(255,255,255,0.5)", fontSize: "0.95rem",
+    textAlign: "center", marginBottom: "1.5rem",
   },
-  dropdownWrap: {
-    position: "relative",
-    width: "100%", maxWidth: "380px",
-  },
-  dropdown: {
+  card: {
     width: "100%",
-    padding: "1rem 3rem 1rem 1.25rem",
-    borderRadius: "14px",
-    background: "rgba(255,255,255,0.06)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.15)",
-    color: "white",
-    fontSize: "1rem",
-    fontFamily: "'Montserrat', sans-serif",
-    fontWeight: 500,
-    appearance: "none",
-    WebkitAppearance: "none",
-    cursor: "pointer",
-    outline: "none",
-    transition: "border-color 0.2s",
+    maxWidth: "480px",
+    padding: "1.75rem",
   },
-  dropdownArrow: {
-    position: "absolute", right: "1.25rem", top: "50%",
-    transform: "translateY(-50%)",
-    color: green, fontSize: "1.1rem",
-    pointerEvents: "none",
+  sectionLabel: {
+    color: PRIMARY,
+    fontSize: "0.8rem",
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    marginBottom: "0.75rem",
+    marginTop: 0,
+  },
+  // Calendar styles
+  calGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    gap: "4px",
+  },
+  calNav: {
+    background: "transparent",
+    border: `1px solid rgba(255,255,255,0.2)`,
+    color: "#fff",
+    borderRadius: "8px",
+    width: "30px",
+    height: "30px",
+    cursor: "pointer",
+    fontSize: "1.1rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calDayHeader: {
+    textAlign: "center",
+    fontSize: "0.7rem",
+    color: "rgba(255,255,255,0.4)",
+    padding: "4px 0",
+    fontWeight: 600,
+  },
+  calDay: {
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid transparent",
+    borderRadius: "8px",
+    color: "rgba(255,255,255,0.85)",
+    fontSize: "0.8rem",
+    padding: "6px 0",
+    cursor: "pointer",
+    textAlign: "center",
+    transition: "all 0.15s",
+  },
+  calDayPast: {
+    color: "rgba(255,255,255,0.2)",
+    cursor: "not-allowed",
+    background: "transparent",
+  },
+  calDayToday: {
+    border: `1px solid ${PRIMARY}`,
+    color: PRIMARY,
+  },
+  calDaySelected: {
+    background: PRIMARY,
+    color: "#0f172a",
+    fontWeight: 700,
+    border: `1px solid ${PRIMARY}`,
+  },
+  // Time slots
+  timeGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+  },
+  timePill: {
+    background: "rgba(255,255,255,0.07)",
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: "999px",
+    color: "rgba(255,255,255,0.8)",
+    fontSize: "0.8rem",
+    padding: "6px 14px",
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  timePillSelected: {
+    background: PRIMARY,
+    border: `1px solid ${PRIMARY}`,
+    color: "#0f172a",
+    fontWeight: 700,
+  },
+  // Form fields
+  fieldStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  textarea: {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "16px",
+    background: "rgba(255,255,255,0.12)",
+    border: "1px solid rgba(255,255,255,0.25)",
+    color: "#e5e7eb",
+    fontSize: "1rem",
+    outline: "none",
+    boxSizing: "border-box",
+    resize: "vertical",
+    fontFamily: "'Montserrat', sans-serif",
+    transition: "border 0.2s ease",
+  },
+  errorMsg: {
+    marginTop: "1rem",
+    padding: "10px 14px",
+    borderRadius: "10px",
+    background: "rgba(248,113,113,0.15)",
+    border: "1px solid rgba(248,113,113,0.4)",
+    color: "#f87171",
+    fontSize: "0.88rem",
   },
   footer: {
-    marginTop: "auto", paddingTop: "3rem",
+    marginTop: "auto",
+    paddingTop: "2.5rem",
     textAlign: "center",
   },
   footerText: {
     fontFamily: "'Playfair Display', Georgia, serif",
-    fontSize: "0.9rem", fontWeight: 600, color: green,
+    fontSize: "0.9rem", fontWeight: 600, color: PRIMARY,
     letterSpacing: "0.04em", marginBottom: "0.2rem",
   },
   footerSub: {
@@ -207,16 +479,3 @@ const S = {
     letterSpacing: "0.1em", textTransform: "uppercase",
   },
 };
-
-if (typeof document !== "undefined") {
-  const id = "apt-page-styles";
-  if (!document.getElementById(id)) {
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = `
-      select option { background: #1a1a2e; color: white; padding: 8px; }
-      select:focus { border-color: #00c48c !important; }
-    `;
-    document.head.appendChild(style);
-  }
-}
