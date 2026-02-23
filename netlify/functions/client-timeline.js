@@ -1,86 +1,62 @@
 // netlify/functions/client-timeline.js
-const { respond } = require("./utils");
-const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
+const { supabase, respond } = require("./utils");
 
-exports.handler = withFHJ(async (event) => {
-  const { clientId } = JSON.parse(event.body || "{}");
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return respond(200, {});
+  if (event.httpMethod !== "POST") return respond(405, { error: "Method not allowed" });
 
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
+  let body;
+  try { body = JSON.parse(event.body || "{}"); } catch { return respond(400, { error: "Invalid body" }); }
 
-  // Fetch all related records
-  const trips = await base("Trips")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+  const { clientId } = body;
+  if (!clientId) return respond(400, { error: "clientId required" });
 
-  const bookings = await base("Bookings")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+  try {
+    const [tripsRes, bookingsRes, conciergeRes] = await Promise.allSettled([
+      supabase.from("trips").select("id, destination, start_date, end_date, status, created_at").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("trips").select("id, consultation_date, consultation_time, status, created_at").eq("client_id", clientId).not("consultation_date", "is", null).order("consultation_date", { ascending: false }),
+      supabase.from("concierge_messages").select("id, message, created_at").eq("client_id", clientId).order("created_at", { ascending: false }),
+    ]);
 
-  const payments = await base("Payments")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+    const events = [];
 
-  const documents = await base("Documents")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+    if (tripsRes.status === "fulfilled" && !tripsRes.value.error) {
+      (tripsRes.value.data || []).forEach((t) => {
+        events.push({
+          type: "Trip",
+          date: t.start_date || t.created_at,
+          title: `Trip to ${t.destination || "destination"}`,
+          details: t.start_date && t.end_date ? `${t.start_date} → ${t.end_date}` : (t.status || ""),
+        });
+      });
+    }
 
-  const concierge = await base("Concierge")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+    if (bookingsRes.status === "fulfilled" && !bookingsRes.value.error) {
+      (bookingsRes.value.data || []).forEach((b) => {
+        events.push({
+          type: "Booking",
+          date: b.consultation_date || b.created_at,
+          title: "Appointment scheduled",
+          details: b.consultation_time ? `Time: ${b.consultation_time}` : "",
+        });
+      });
+    }
 
-  // Normalize into timeline events
-  const events = [];
+    if (conciergeRes.status === "fulfilled" && !conciergeRes.value.error) {
+      (conciergeRes.value.data || []).forEach((c) => {
+        events.push({
+          type: "Concierge",
+          date: c.created_at,
+          title: "Concierge message",
+          details: (c.message || "").slice(0, 120),
+        });
+      });
+    }
 
-  trips.forEach((t) =>
-    events.push({
-      type: "Trip",
-      date: t.get("StartDate"),
-      title: `Trip to ${t.get("Destination")}`,
-      details: `${t.get("StartDate")} → ${t.get("EndDate")}`,
-    })
-  );
-
-  bookings.forEach((b) =>
-    events.push({
-      type: "Booking",
-      date: b.get("CreatedAt"),
-      title: `Booking created`,
-      details: `Total: $${b.get("TotalPrice")}`,
-    })
-  );
-
-  payments.forEach((p) =>
-    events.push({
-      type: "Payment",
-      date: p.get("Date"),
-      title: `Payment received`,
-      details: `$${p.get("Amount")}`,
-    })
-  );
-
-  documents.forEach((d) =>
-    events.push({
-      type: "Document",
-      date: d.get("UploadedAt"),
-      title: `Document uploaded`,
-      details: d.get("Name"),
-    })
-  );
-
-  concierge.forEach((c) =>
-    events.push({
-      type: "Concierge",
-      date: c.get("CreatedAt"),
-      title: `Concierge message`,
-      details: c.get("Message"),
-    })
-  );
-
-  // Sort chronologically
-  events.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  return respond(200, { events });
-});
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return respond(200, { events });
+  } catch (err) {
+    console.error("client-timeline error:", err);
+    return respond(500, { error: err.message });
+  }
+};
