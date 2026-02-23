@@ -17,7 +17,9 @@
     "airtable": "^0.12.2",
     "qrcode": "^1.5.3",
     "resend": "^3.0.0",
-    "recharts": "^2.10.0"
+    "recharts": "^2.10.0",
+    "react-big-calendar": "^1.8.5",
+    "moment-timezone": "^0.5.45"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
