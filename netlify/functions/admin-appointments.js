@@ -1,9 +1,23 @@
-// Admin Netlify function — detects whether bookings has end_time or end column
-import supabase from "../../utils/supabaseServer.js";
+// ==========================================================
+// FILE: admin-appointments.js — Admin Booking CRUD
+// Location: netlify/functions/admin-appointments.js
+//
+// GET    ?start=ISO&end=ISO  → returns bookings + blocked_slots
+// POST   { start, end, client_name, client_email, ... } → create
+// PUT    { id, ...updates } → update
+// DELETE ?id=X              → delete
+// ==========================================================
+
+const { supabase, respond } = require("./utils");
+const {
+  sendEmail,
+  ADMIN_EMAIL,
+  appointmentClientEmail,
+  appointmentAdminEmail,
+} = require("./email-utils");
 
 /**
- * Returns 'end_time' if that column exists, otherwise 'end'.
- * Uses information_schema.columns (requires service-role DB access).
+ * Returns 'end_time' if that column exists in bookings, otherwise 'end'.
  */
 async function getEndColumn() {
   try {
@@ -15,30 +29,31 @@ async function getEndColumn() {
 
     if (error) {
       console.warn("information_schema query error:", error);
-      return "end"; // fallback
+      return "end_time"; // fallback
     }
 
     const cols = (data || []).map((c) => c.column_name);
     if (cols.includes("end_time")) return "end_time";
     if (cols.includes("end")) return "end";
-    return "end";
+    return "end_time";
   } catch (err) {
     console.warn("getEndColumn failed:", err);
-    return "end";
+    return "end_time";
   }
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return respond(200, {});
+
   try {
     const method = event.httpMethod;
     const endCol = await getEndColumn();
 
-    // GET: ?start=ISO&end=ISO  => returns bookings (mapped to include `end`) and blocked_slots
+    // ── GET ─────────────────────────────────────────────────────
     if (method === "GET") {
       const { start, end } = event.queryStringParameters || {};
-      if (!start || !end) return { statusCode: 400, body: JSON.stringify({ error: "start and end required" }) };
+      if (!start || !end) return respond(400, { error: "start and end required" });
 
-      // Overlap query: booking.start < end AND booking.[endCol] > start
       const { data: bookings, error: bErr } = await supabase
         .from("bookings")
         .select("*")
@@ -47,7 +62,6 @@ export const handler = async (event) => {
 
       if (bErr) throw bErr;
 
-      // blocked_slots: try to use end_time if available, otherwise fall back to end (or assuming start/end_time)
       const { data: blocks, error: blErr } = await supabase
         .from("blocked_slots")
         .select("*")
@@ -55,24 +69,27 @@ export const handler = async (event) => {
         .gt("end_time", start);
 
       if (blErr) {
-        // If blocked_slots doesn't have end_time, ignore the blocks fetch error but continue
         console.warn("blocked_slots fetch error (ignored):", blErr);
       }
 
-      // Map rows so frontend always gets `end` property (calendar expects event.end)
       const bookingsMapped = (bookings || []).map((b) => ({
         ...b,
         end: b[endCol] || b.end_time || b.end,
       }));
 
-      return { statusCode: 200, body: JSON.stringify({ bookings: bookingsMapped, blocked_slots: blocks || [] }) };
+      return respond(200, { bookings: bookingsMapped, blocked_slots: blocks || [] });
     }
 
-    // POST: create booking (admin)
+    // ── POST ─────────────────────────────────────────────────────
     if (method === "POST") {
       const payload = JSON.parse(event.body || "{}");
-      const { start, end, client_id, client_name, client_email, client_phone, deal_id, notes, type = "appointment" } = payload;
-      if (!start || !end) return { statusCode: 400, body: JSON.stringify({ error: "start and end required" }) };
+      const {
+        start, end,
+        client_id, client_name, client_email, client_phone,
+        deal_id, notes, type = "appointment",
+      } = payload;
+
+      if (!start || !end) return respond(400, { error: "start and end required" });
 
       // Conflict check
       const { data: conflicts, error: cErr } = await supabase
@@ -83,10 +100,9 @@ export const handler = async (event) => {
 
       if (cErr) throw cErr;
       if (conflicts && conflicts.length > 0) {
-        return { statusCode: 409, body: JSON.stringify({ error: "Conflict with existing booking.", conflicts }) };
+        return respond(409, { error: "Conflict with existing booking.", conflicts });
       }
 
-      // Build insert object dynamically to set correct end column name
       const insertObj = {
         client_id: client_id || null,
         client_name: client_name || null,
@@ -99,47 +115,110 @@ export const handler = async (event) => {
         status: "confirmed",
         created_at: new Date().toISOString(),
       };
-      insertObj[endCol] = end; // set either end_time or end
+      insertObj[endCol] = end;
 
-      const { data: created, error: iErr } = await supabase.from("bookings").insert([insertObj]).select().single();
+      const { data: created, error: iErr } = await supabase
+        .from("bookings")
+        .insert([insertObj])
+        .select()
+        .single();
       if (iErr) throw iErr;
 
-      // Ensure returned object includes `end`
       const createdMapped = { ...created, end: created[endCol] || created.end_time || created.end };
-      return { statusCode: 201, body: JSON.stringify({ booking: createdMapped }) };
+
+      // Send confirmation emails if client email is provided and it's an appointment
+      if (client_email && type !== "block") {
+        const dateStr = start.split("T")[0];
+        const timeStr = (() => {
+          const t = start.split("T")[1] || "";
+          const [hh, mm] = t.split(":");
+          const h = parseInt(hh);
+          const ampm = h < 12 ? "AM" : "PM";
+          const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          return `${h12}:${mm} ${ampm}`;
+        })();
+
+        try {
+          await sendEmail({
+            to: client_email,
+            subject: "Appointment Confirmed — FHJ Dream Destinations",
+            html: appointmentClientEmail({
+              clientName: client_name || "Valued Client",
+              date: dateStr,
+              time: timeStr,
+              reason: "consultation",
+              destination: "",
+            }),
+          });
+        } catch (e) {
+          console.warn("Client confirmation email failed (non-fatal):", e.message);
+        }
+
+        try {
+          await sendEmail({
+            to: [ADMIN_EMAIL, "chjeffers20@gmail.com"],
+            subject: `New Appointment: ${client_name || "Client"} — ${dateStr} at ${timeStr}`,
+            html: appointmentAdminEmail({
+              clientName: client_name || "Unknown",
+              clientEmail: client_email,
+              clientPhone: client_phone || "",
+              date: dateStr,
+              time: timeStr,
+              reason: "consultation",
+              destination: "",
+              notes: notes || "",
+            }),
+          });
+        } catch (e) {
+          console.warn("Admin notification email failed (non-fatal):", e.message);
+        }
+      }
+
+      return respond(201, { booking: createdMapped });
     }
 
-    // PUT: update booking (minimal)
+    // ── PUT ──────────────────────────────────────────────────────
     if (method === "PUT") {
       const payload = JSON.parse(event.body || "{}");
       const { id, ...updates } = payload;
-      if (!id) return { statusCode: 400, body: JSON.stringify({ error: "id required" }) };
+      if (!id) return respond(400, { error: "id required" });
 
-      // If client passed `end`, map it to the correct column
       if (updates.end) {
         updates[endCol] = updates.end;
         delete updates.end;
       }
 
-      const { data, error } = await supabase.from("bookings").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase
+        .from("bookings")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
 
       const mapped = { ...data, end: data[endCol] || data.end_time || data.end };
-      return { statusCode: 200, body: JSON.stringify({ booking: mapped }) };
+      return respond(200, { booking: mapped });
     }
 
-    // DELETE
+    // ── DELETE ───────────────────────────────────────────────────
     if (method === "DELETE") {
       const { id } = event.queryStringParameters || {};
-      if (!id) return { statusCode: 400, body: JSON.stringify({ error: "id required" }) };
-      const { data, error } = await supabase.from("bookings").delete().eq("id", id).select().single();
+      if (!id) return respond(400, { error: "id required" });
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
-      return { statusCode: 200, body: JSON.stringify({ deleted: data }) };
+
+      return respond(200, { deleted: data });
     }
 
-    return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
+    return respond(405, { error: "Method not allowed" });
   } catch (err) {
     console.error("admin-appointments error:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
+    return respond(500, { error: err.message || String(err) });
   }
 };

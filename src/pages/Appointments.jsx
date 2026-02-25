@@ -77,6 +77,8 @@ export default function Appointments() {
   const [blockedDates, setBlockedDates] = useState([]);
   const [blockedTimes, setBlockedTimes] = useState({});
   const [blockingLoaded, setBlockingLoaded] = useState(false);
+  // Booked slots from admin-appointments (keyed by dateStr → Set of time labels)
+  const [bookedTimes, setBookedTimes] = useState({});
 
   // Booking state
   const dealFromUrl = searchParams.get("deal") || "";
@@ -120,6 +122,38 @@ export default function Appointments() {
     }
   }, [dealFromUrl]);
 
+  // Fetch booked slots from admin-appointments when date changes
+  useEffect(() => {
+    if (!selectedDate) return;
+    async function loadBooked() {
+      try {
+        const start = `${selectedDate}T00:00:00`;
+        const end = `${selectedDate}T23:59:59`;
+        const res = await fetch(
+          `/.netlify/functions/admin-appointments?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const bookings = data.bookings || [];
+        const times = new Set();
+        for (const b of bookings) {
+          if (b.start && (b.start || "").startsWith(selectedDate)) {
+            const t = b.start.split("T")[1] || "";
+            const [hh, mm] = t.split(":");
+            const h = parseInt(hh);
+            const ampm = h < 12 ? "AM" : "PM";
+            const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+            times.add(`${h12}:${mm} ${ampm}`);
+          }
+        }
+        setBookedTimes((prev) => ({ ...prev, [selectedDate]: times }));
+      } catch (err) {
+        console.warn("Could not load booked slots:", err);
+      }
+    }
+    loadBooked();
+  }, [selectedDate]);
+
   const updateForm = (key, val) => setForm((f) => ({ ...f, [key]: val }));
   const updateSimple = (key, val) => setSimpleForm((f) => ({ ...f, [key]: val }));
 
@@ -129,9 +163,19 @@ export default function Appointments() {
     if (!selectedDate) return [];
     const allSlots = generateTimeSlots(selectedDate);
     const blocked = blockedTimes[selectedDate];
-    if (!blocked || blocked.length === 0) return allSlots;
-    const blockedSet = new Set(blocked.map((b) => (typeof b === "string" ? b : b.time)));
-    return allSlots.filter((slot) => !blockedSet.has(slot));
+    const booked = bookedTimes[selectedDate] || new Set();
+    const blockedSet = new Set((blocked || []).map((b) => (typeof b === "string" ? b : b.time)));
+    return allSlots.filter((slot) => !blockedSet.has(slot) && !booked.has(slot));
+  };
+
+  // Returns booked (but not blocked) slots to show as disabled pills
+  const getBookedSlotsForDate = () => {
+    if (!selectedDate) return [];
+    const allSlots = generateTimeSlots(selectedDate);
+    const blocked = blockedTimes[selectedDate];
+    const booked = bookedTimes[selectedDate] || new Set();
+    const blockedSet = new Set((blocked || []).map((b) => (typeof b === "string" ? b : b.time)));
+    return allSlots.filter((slot) => !blockedSet.has(slot) && booked.has(slot));
   };
 
   useEffect(() => {
@@ -197,8 +241,9 @@ export default function Appointments() {
     : "";
 
   const availableSlots = getAvailableTimeSlots();
+  const bookedSlotsForDate = getBookedSlotsForDate();
   const allSlotsForDate = selectedDate ? generateTimeSlots(selectedDate) : [];
-  const blockedTimeCount = allSlotsForDate.length - availableSlots.length;
+  const blockedTimeCount = allSlotsForDate.length - availableSlots.length - bookedSlotsForDate.length;
 
   // Page text
   const pageTitle = isSimple ? "Make an Appointment" : (dealFromUrl ? `Book: ${dealFromUrl}` : "Plan Your Trip");
@@ -289,7 +334,7 @@ export default function Appointments() {
                         {blockedTimeCount} time slot{blockedTimeCount > 1 ? "s" : ""} unavailable for this date
                       </p>
                     )}
-                    {availableSlots.length === 0 ? (
+                    {availableSlots.length === 0 && bookedSlotsForDate.length === 0 ? (
                       <div style={{ textAlign: "center", padding: "2rem", color: "#f87171" }}>
                         <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>No available times on this date.</p>
                         <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>Please go back and choose another date.</p>
@@ -312,6 +357,25 @@ export default function Appointments() {
                           >
                             {slot}
                           </motion.button>
+                        ))}
+                        {bookedSlotsForDate.map((slot) => (
+                          <div
+                            key={slot}
+                            style={{
+                              ...timeSlotBtn,
+                              background: "rgba(255,255,255,0.02)",
+                              color: "rgba(255,255,255,0.25)",
+                              borderColor: "rgba(255,255,255,0.05)",
+                              cursor: "not-allowed",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "2px",
+                            }}
+                          >
+                            <span>{slot}</span>
+                            <span style={{ fontSize: "0.6rem", color: "#f87171", fontWeight: 600 }}>Booked</span>
+                          </div>
                         ))}
                       </div>
                     )}

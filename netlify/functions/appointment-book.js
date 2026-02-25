@@ -95,6 +95,34 @@ exports.handler = async (event) => {
 
     console.log("Trip saved:", trip?.id);
 
+    // ── 1b. Write to bookings table to auto-block the time slot ──
+    try {
+      const [timePart, ampm] = time.split(" ");
+      const [hourStr, minuteStr] = timePart.split(":");
+      let hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr || "0");
+      if (ampm === "PM" && hour !== 12) hour += 12;
+      if (ampm === "AM" && hour === 12) hour = 0;
+      const startISO = `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`;
+      const endHour = hour + 1;
+      const endISO = `${date}T${String(endHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`;
+
+      await supabase.from("bookings").insert([{
+        client_name: name.trim(),
+        client_email: email.trim(),
+        client_phone: phone || "",
+        start: startISO,
+        end_time: endISO,
+        type: "appointment",
+        status: "confirmed",
+        notes: `Trip ID: ${trip.id}`,
+        created_at: new Date().toISOString(),
+      }]);
+      console.log("Booking slot created in bookings table for:", startISO);
+    } catch (bookingErr) {
+      console.warn("Could not write to bookings table (non-fatal):", bookingErr.message);
+    }
+
     // ── 2. Upsert client record ──────────────────────
     try {
       const { data: existing } = await supabase
