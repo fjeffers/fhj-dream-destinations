@@ -186,7 +186,7 @@ export default function AdminCalendar() {
 
                   {blocked && !hasApts && (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ width: "5px", height: "5px", borderRadius: "50%, background: "#f87171", margin: "0 auto" }} />
+                      <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#f87171", margin: "0 auto" }} />
                     </div>
                   )}
                 </motion.div>
@@ -197,13 +197,13 @@ export default function AdminCalendar() {
           {/* Legend */}
           <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", marginTop: "1rem", fontSize: "0.7rem", color: "#64748b" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%, background: fhjTheme.primary }} /> Today
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: fhjTheme.primary }} /> Today
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%, background: "#3b82f6" }} /> Appointment
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} /> Appointment
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%, background: "#f87171" }} /> Blocked
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f87171" }} /> Blocked
             </span>
           </div>
         </FHJCard>
@@ -226,6 +226,7 @@ export default function AdminCalendar() {
                   </div>
                 )}
 
+                {/* Blocked times */}
                 {selectedBlockedTimes.length > 0 && (
                   <div style={{ marginBottom: "0.75rem" }}>
                     <p style={{ color: "#f59e0b", fontSize: "0.72rem", fontWeight: 600, marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -248,6 +249,7 @@ export default function AdminCalendar() {
                   </div>
                 )}
 
+                {/* Appointments */}
                 {selectedApts.length === 0 && !selectedBlocked ? (
                   <div style={{ textAlign: "center", padding: "1.5rem 0", color: "#64748b" }}>
                     <p style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>📅</p>
@@ -267,7 +269,7 @@ export default function AdminCalendar() {
                         const dest = trip.Destination || trip.destination || "";
                         const status = trip.Status || trip.status || "";
                         const tripType = trip["Trip Type"] || trip.tripType || "";
-                        const email = trip["email"] || trip["client_email"] || trip["Client_email"] || trip.clientEmail || "";
+                        const email = trip["client_email"] || trip["Client_email"] || trip.clientEmail || "";
                         const phone = trip.Phone || trip.phone || "";
 
                         return (
@@ -320,10 +322,11 @@ export default function AdminCalendar() {
           Upcoming Appointments
         </h3>
         {(() => {
+          const todayStrLocal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
           const upcoming = trips
             .filter(t => {
               const d = t.consultationDate || t.startDate || t["Start Date"] || t["Consultation Date"] || "";
-              return d >= todayStr;
+              return d >= todayStrLocal;
             })
             .sort((a, b) => {
               const dA = a.consultationDate || a.startDate || a["Start Date"] || a["Consultation Date"] || "";
@@ -351,21 +354,15 @@ export default function AdminCalendar() {
                     background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
                   }}>
                     <div style={{ minWidth: "80px" }}>
-                      <p style={{ color: fhjTheme.primary, fontSize: "0.75rem", fontWeight: 600, margin: 0 }}>
-                        {new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </p>
-                      {time && <p style={{ color: "#64748b", fontSize: "0.7rem", margin: "0.1rem 0 0" }}>{time}</p>}
+                      <p style={{ color: fhjTheme.primary, fontSize: "0.78rem", fontWeight: 600, margin: 0 }}>{d}</p>
+                      {time && <p style={{ color: "#3b82f6", fontSize: "0.7rem", margin: "0.1rem 0 0" }}>{time}</p>}
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ color: "white", fontSize: "0.85rem", fontWeight: 500, margin: 0 }}>{name}</p>
                       {dest && dest !== "TBD — Consultation Requested" && (
-                        <p style={{ color: "#94a3b8", fontSize: "0.75rem", margin: "0.1rem 0 0" }}>{dest}</p>
+                        <p style={{ color: "#64748b", fontSize: "0.73rem", margin: "0.1rem 0 0" }}>{dest}</p>
                       )}
                     </div>
-                    <span style={{
-                      padding: "0.15rem 0.5rem", borderRadius: "999px", fontSize: "0.6rem",
-                      background: "rgba(59,130,246,0.1)", color: "#3b82f6", fontWeight: 600,
-                    }}>{trip["Trip Type"] || trip.tripType || "Appointment"}</span>
                   </div>
                 );
               })}
@@ -377,5 +374,19 @@ export default function AdminCalendar() {
   );
 }
 
-const calGrid = { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px" };
-const navBtn = { background: "none", border: "none", color: "white", fontSize: "1.5rem", cursor: "pointer", padding: "4px 12px" };
+const navBtn = {
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "white",
+  width: "32px", height: "32px",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "1.1rem",
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
+
+const calGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  gap: "4px",
+};
