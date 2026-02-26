@@ -26,14 +26,16 @@ export default function AdminCalendar() {
       const endDay = new Date(year, month + 1, 0).getDate();
       const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
 
-      const res = await fetch(
-        `/.netlify/functions/admin-appointments?start=${startDate}&end=${endDate}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const [aptsRes, blockedRes] = await Promise.all([
+        fetch(`/.netlify/functions/admin-appointments?start=${startDate}&end=${endDate}`),
+        fetch("/.netlify/functions/get-blocked-slots"),
+      ]);
+
+      if (!aptsRes.ok) throw new Error(`HTTP ${aptsRes.status}`);
+      const data = await aptsRes.json();
+      const blockedJson = blockedRes.ok ? await blockedRes.json() : { blockedDates: [], blockedTimes: {}, holidays: [] };
 
       const bookings = data.bookings || [];
-      const blocked = data.blocked_slots || [];
 
       const normalizedTrips = bookings.map(b => ({
         ...b,
@@ -44,12 +46,9 @@ export default function AdminCalendar() {
 
       setTrips(normalizedTrips);
       setBlockedData({
-        blockedDates: blocked.map(bs => ({
-          date: bs.date || (bs.start ? bs.start.split("T")[0] : ""),
-          reason: bs.reason || bs.notes || "",
-        })),
-        blockedTimes: {},
-        holidays: [],
+        blockedDates: blockedJson.blockedDates || [],
+        blockedTimes: blockedJson.blockedTimes || {},
+        holidays: blockedJson.holidays || [],
       });
     } catch (err) {
       console.error("Failed to load calendar data:", err);
