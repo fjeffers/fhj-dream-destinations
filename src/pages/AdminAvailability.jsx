@@ -27,15 +27,39 @@ export default function AdminAvailability() {
   const loadSlots = async () => {
     setLoading(true);
     try {
-      // Load from admin endpoint (returns Airtable records with IDs)
-      const res = await fetch("/.netlify/functions/admin-blocked-slots");
+      const res = await fetch("/.netlify/functions/get-blocked-slots");
       const data = await res.json();
-      setSlots(data.slots || []);
 
-      // Also load holidays
-      const res2 = await fetch("/.netlify/functions/get-blocked-slots");
-      const data2 = await res2.json();
-      setHolidays(data2.holidays || []);
+      const holidayDates = new Set((data.holidays || []).map((h) => h.date || h));
+      const allSlots = [];
+
+      // All-day blocks (exclude holidays — shown separately below)
+      (data.blockedDates || []).forEach((item) => {
+        if (!holidayDates.has(item.date)) {
+          allSlots.push({
+            id: `allday_${item.date}`,
+            date: item.date,
+            block_type: "all_day",
+            reason: item.reason || "",
+          });
+        }
+      });
+
+      // Time-specific blocks
+      Object.entries(data.blockedTimes || {}).forEach(([date, times]) => {
+        times.forEach((t) => {
+          allSlots.push({
+            id: `time_${date}_${t.time}`,
+            date,
+            block_type: "time",
+            time: t.time,
+            reason: t.reason || "",
+          });
+        });
+      });
+
+      setSlots(allSlots);
+      setHolidays((data.holidays || []).map((h) => h.date || h));
     } catch (err) {
       console.error("Failed to load blocked slots:", err);
     } finally {
@@ -50,31 +74,46 @@ export default function AdminAvailability() {
     setSaving(true);
     setError("");
     try {
-      const body = {
-        date: blockDate,
-        allDay: blockAllDay,
-        reason: blockReason || "Blocked by admin",
-      };
-      if (!blockAllDay && blockTimes.length > 0) {
-        body.time = blockTimes;
-      }
-      const res = await fetch("/.netlify/functions/admin-blocked-slots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setBlockDate("");
-        setBlockTimes([]);
-        setBlockReason("");
-        setShowForm(false);
-        setError("");
-        await loadSlots();
+      const reason = blockReason || "Blocked by admin";
+
+      if (blockAllDay || blockTimes.length === 0) {
+        // All-day block — single POST
+        const res = await fetch("/.netlify/functions/get-blocked-slots", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: blockDate, reason, block_type: "all_day" }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.error || `Save failed (${res.status})`);
+          console.error("Block save error:", data);
+          return;
+        }
       } else {
-        setError(data.error || `Save failed (${res.status})`);
-        console.error("Block save error:", data);
+        // Time-specific blocks — one POST per selected time (in parallel)
+        const results = await Promise.all(
+          blockTimes.map((time) =>
+            fetch("/.netlify/functions/get-blocked-slots", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ date: blockDate, time, reason, block_type: "time" }),
+            }).then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+          )
+        );
+        const failed = results.find((r) => !r.ok || !r.data.success);
+        if (failed) {
+          setError(failed.data.error || "Save failed");
+          console.error("Block save error:", failed.data);
+          return;
+        }
       }
+
+      setBlockDate("");
+      setBlockTimes([]);
+      setBlockReason("");
+      setShowForm(false);
+      setError("");
+      await loadSlots();
     } catch (err) {
       setError("Network error: " + err.message);
       console.error("Failed to add block:", err);
@@ -83,14 +122,12 @@ export default function AdminAvailability() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (slot) => {
     if (!confirm("Remove this blocked slot?")) return;
     try {
-      await fetch("/.netlify/functions/admin-blocked-slots", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
+      let url = `/.netlify/functions/get-blocked-slots?date=${encodeURIComponent(slot.date)}`;
+      if (slot.time) url += `&time=${encodeURIComponent(slot.time)}`;
+      await fetch(url, { method: "DELETE" });
       await loadSlots();
     } catch (err) {
       console.error("Failed to delete:", err);
@@ -254,11 +291,10 @@ export default function AdminAvailability() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {slots.map((slot) => {
-              const date = slot.Date || slot.date || "";
-              const time = slot.Time || slot.time || "";
-              const allDay = slot["All Day"] || slot.AllDay || slot.allDay || false;
-              const reason = slot.Reason || slot.reason || "";
-              const active = slot.Active ?? slot.active ?? true;
+              const date = slot.date || "";
+              const time = slot.time || "";
+              const allDay = slot.block_type === "all_day";
+              const reason = slot.reason || "";
 
               return (
                 <div
@@ -266,8 +302,8 @@ export default function AdminAvailability() {
                   style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "0.75rem 1rem", borderRadius: "10px",
-                    background: active ? "rgba(248,113,113,0.06)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${active ? "rgba(248,113,113,0.15)" : "rgba(255,255,255,0.06)"}`,
+                    background: "rgba(248,113,113,0.06)",
+                    border: "1px solid rgba(248,113,113,0.15)",
                   }}
                 >
                   <div style={{ flex: 1 }}>
@@ -280,12 +316,11 @@ export default function AdminAvailability() {
                       ) : time ? (
                         <span style={badgeSt("#f59e0b")}>{time}</span>
                       ) : null}
-                      {!active && <span style={badgeSt("#64748b")}>Inactive</span>}
                     </div>
                     {reason && <p style={{ color: "#94a3b8", fontSize: "0.78rem", margin: "0.25rem 0 0" }}>{reason}</p>}
                   </div>
                   <button
-                    onClick={() => handleDelete(slot.id)}
+                    onClick={() => handleDelete(slot)}
                     style={{
                       background: "none", border: "none", color: "#64748b", cursor: "pointer",
                       padding: "0.4rem", fontSize: "1.1rem", transition: "color 0.2s",
