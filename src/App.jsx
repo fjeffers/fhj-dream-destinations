@@ -112,8 +112,8 @@ export default function App() {
                 {/* Keep existing bookings route */}
                 <Route path="bookings" element={<AdminBookings admin={admin} />} />
 
-                {/* Also accept /admin/appointments (alias) and render the same bookings page */}
-                <Route path="appointments" element={<AdminBookings admin={admin} />} />
+                {/* appointments route renders the calendar view */}
+                <Route path="appointments" element={<AdminCalendar admin={admin} />} />
 
                 <Route path="concierge" element={<AdminConcierge admin={admin} />} />
                 <Route path="documents" element={<AdminDocuments admin={admin} />} />
