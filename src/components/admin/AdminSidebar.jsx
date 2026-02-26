@@ -36,10 +36,12 @@ export default function AdminSidebar({ admin, onLogout }) {
     { to: "/admin/deals", label: "Deals" },
     { to: "/admin/clients", label: "Clients" },
     { to: "/admin/trips", label: "Trips" },
+    { to: "/admin/bookings", label: "Bookings" },
     { to: "/admin/events", label: "Events" },
     { to: "/admin/concierge", label: "Concierge Inbox" },
     { to: "/admin/about", label: "About Page" },
-    { to: "/admin/appointments", label: "Appointments" }, // <-- Appointments nav item added
+    { to: "/admin/appointments", label: "Appointments" },
+    { to: "/admin/availability", label: "Availability" },
   ];
 
   return (
