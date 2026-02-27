@@ -151,7 +151,6 @@ exports.handler = async (event) => {
           full_name: name.trim(),
           email: normalizedEmail,
           phone: phone || "",
-          status: "Active",
         }]).select().single();
         if (clientInsertErr) {
           console.warn("Client insert error:", clientInsertErr.message);
