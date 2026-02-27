@@ -28,15 +28,15 @@ exports.handler = async (event) => {
 
       rows.forEach((row) => {
         if (row.block_type === "holiday") {
-          holidays.push({ date: row.date, name: row.reason || "Holiday" });
-          blockedDates.push({ date: row.date, reason: row.reason || "Holiday" });
+          holidays.push({ id: row.id, date: row.date, name: row.reason || "Holiday" });
+          blockedDates.push({ id: row.id, date: row.date, reason: row.reason || "Holiday" });
         } else if (row.time) {
           // Time-specific block
           if (!blockedTimes[row.date]) blockedTimes[row.date] = [];
-          blockedTimes[row.date].push({ time: row.time, reason: row.reason || "" });
+          blockedTimes[row.date].push({ id: row.id, time: row.time, reason: row.reason || "" });
         } else {
           // Full day block
-          blockedDates.push({ date: row.date, reason: row.reason || "Blocked" });
+          blockedDates.push({ id: row.id, date: row.date, reason: row.reason || "Blocked" });
         }
       });
 
