@@ -13,7 +13,12 @@ if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars");
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 // ==========================================================
 // Table name mapping: Airtable names → Supabase table names
