@@ -40,6 +40,8 @@ export default function AdminSidebar({ admin, onLogout }) {
     { to: "/admin/concierge", label: "Concierge Inbox" },
     { to: "/admin/about", label: "About Page" },
     { to: "/admin/appointments", label: "Appointments" }, // <-- Appointments nav item added
+    { to: "/admin/bookings", label: "Bookings" },
+    { to: "/admin/availability", label: "Availability" },
   ];
 
   return (
