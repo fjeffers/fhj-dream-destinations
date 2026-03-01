@@ -9,13 +9,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fhjTheme } from "../FHJ/FHJUIKit.jsx";
 import ConciergeToggleButton from "./ConciergeToggleButton.jsx";
 
+const placeholders = {
+  name: "Your name…",
+  email: "Your email address…",
+  phone: "Your phone number…",
+  message: "Tell us about your dream trip…",
+};
+
 export default function ConciergeChat() {
   const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState("name");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
   const [messages, setMessages] = useState([
     {
       id: "welcome",
       from: "concierge",
-      text: "Welcome to FHJ Dream Destinations. How can I enhance your experience today?",
+      text: "Welcome to FHJ Dream Destinations! How can we help make your travel dreams a reality? ✈️ First, what's your name?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -38,35 +49,85 @@ export default function ConciergeChat() {
     const userMsg = { id: `user-${Date.now()}`, from: "user", text: trimmed };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+
+    if (step === "name") {
+      setUserName(trimmed);
+      setStep("email");
+      const reply = {
+        id: `concierge-${Date.now()}`,
+        from: "concierge",
+        text: `Nice to meet you, ${trimmed}! What's your email address so we can follow up with you?`,
+      };
+      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      return;
+    }
+
+    if (step === "email") {
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+      if (!emailValid) {
+        const errReply = {
+          id: `concierge-${Date.now()}`,
+          from: "concierge",
+          text: "That doesn't look like a valid email address. Please try again.",
+        };
+        setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
+        return;
+      }
+      setUserEmail(trimmed);
+      setStep("phone");
+      const reply = {
+        id: `concierge-${Date.now()}`,
+        from: "concierge",
+        text: "Great! What's the best phone number to reach you?",
+      };
+      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      return;
+    }
+
+    if (step === "phone") {
+      setUserPhone(trimmed);
+      setStep("message");
+      const reply = {
+        id: `concierge-${Date.now()}`,
+        from: "concierge",
+        text: "Perfect! What can we help you with today? Tell us about your dream destination or any questions you have.",
+      };
+      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      return;
+    }
+
+    // step === "message"
     setSending(true);
 
     try {
-      // Submit to backend
       const res = await fetch("/.netlify/functions/concierge-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: userName,
+          email: userEmail,
+          phone: userPhone,
           message: trimmed,
+          source: "Chat Widget",
           context: "Concierge Chat Widget",
-          source: "FHJ Portal Chat",
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        // Confirmation reply
+        setStep("done");
         const reply = {
           id: `concierge-${Date.now()}`,
           from: "concierge",
-          text: "Thank you! Your message has been received. A member of the FHJ team will follow up with you shortly.",
+          text: `Thank you, ${userName}! 🌴 Your message has been received and we'll reach out to you at ${userEmail} shortly. We look forward to crafting your perfect journey!`,
         };
         setTimeout(() => setMessages((prev) => [...prev, reply]), 600);
       } else {
         const errReply = {
           id: `err-${Date.now()}`,
           from: "concierge",
-          text: "I'm sorry, something went wrong. Please try again or reach out to us directly.",
+          text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
         };
         setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
       }
@@ -74,7 +135,7 @@ export default function ConciergeChat() {
       const errReply = {
         id: `err-${Date.now()}`,
         from: "concierge",
-        text: "Connection issue. Please check your internet and try again.",
+        text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
       };
       setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
     } finally {
@@ -130,26 +191,28 @@ export default function ConciergeChat() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSubmit} style={inputRowStyle}>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask the concierge anything…"
-                disabled={sending}
-                style={inputFieldStyle}
-              />
-              <button
-                type="submit"
-                disabled={sending || !input.trim()}
-                style={{
-                  ...sendBtnStyle,
-                  opacity: sending || !input.trim() ? 0.4 : 1,
-                }}
-              >
-                Send
-              </button>
-            </form>
+            {step !== "done" && (
+              <form onSubmit={handleSubmit} style={inputRowStyle}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={placeholders[step] || "…"}
+                  disabled={sending}
+                  style={inputFieldStyle}
+                />
+                <button
+                  type="submit"
+                  disabled={sending || !input.trim()}
+                  style={{
+                    ...sendBtnStyle,
+                    opacity: sending || !input.trim() ? 0.4 : 1,
+                  }}
+                >
+                  Send
+                </button>
+              </form>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
