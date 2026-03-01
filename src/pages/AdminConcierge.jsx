@@ -17,8 +17,7 @@ export default function AdminConcierge({ admin }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unresolved | resolved
   const [selected, setSelected] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -44,48 +43,44 @@ export default function AdminConcierge({ admin }) {
 
   const unresolvedCount = messages.filter((m) => m.status !== "Resolved").length;
 
-  // Toggle resolve
-  const toggleResolve = async (msg) => {
+  // Update status (Resolved, Archived, New)
+  const updateStatus = async (msg, newStatus) => {
+    setActionLoading(true);
     try {
-      const newStatus = msg.status === "Resolved" ? "New" : "Resolved";
-      await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+      const res = await fetch("/.netlify/functions/admin-concierge", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, status: newStatus }),
       });
-      toast.success(newStatus === "Resolved" ? "Marked as resolved." : "Reopened message.");
+      if (!res.ok) throw new Error("Update failed");
+      toast.success(`Status updated to ${newStatus}.`);
       loadMessages();
       if (selected?.id === msg.id) {
         setSelected({ ...selected, status: newStatus });
       }
     } catch (err) {
       toast.error("Failed to update status.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // Send reply
-  const handleReply = async () => {
-    if (!replyText.trim() || !selected) return;
-    setSending(true);
+  // Delete message
+  const handleDelete = async (msg) => {
+    if (!window.confirm(`Delete this message from ${msg.name || "Unknown"}?`)) return;
+    setActionLoading(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          parentId: selected.id,
-          email: selected.email,
-          name: admin?.Name || admin?.Email || "Admin",
-          message: replyText,
-          source: "Admin Reply",
-        }),
+      const res = await fetch(`/.netlify/functions/admin-concierge?id=${encodeURIComponent(msg.id)}`, {
+        method: "DELETE",
       });
-      toast.success("Reply sent!");
-      setReplyText("");
+      if (!res.ok) throw new Error("Delete failed");
+      toast.success("Message deleted.");
+      setSelected(null);
       loadMessages();
     } catch (err) {
-      toast.error("Failed to send reply.");
+      toast.error("Failed to delete message.");
     } finally {
-      setSending(false);
+      setActionLoading(false);
     }
   };
 
@@ -202,13 +197,47 @@ export default function AdminConcierge({ admin }) {
                   </p>
                 </div>
 
-                <FHJButton
-                  variant={selected.status === "Resolved" ? "ghost" : "success"}
-                  size="sm"
-                  onClick={() => toggleResolve(selected)}
-                >
-                  {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
-                </FHJButton>
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {selected.status !== "Resolved" && (
+                    <FHJButton
+                      variant="success"
+                      size="sm"
+                      disabled={actionLoading}
+                      onClick={() => updateStatus(selected, "Resolved")}
+                    >
+                      Resolve
+                    </FHJButton>
+                  )}
+                  {selected.status === "Resolved" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={actionLoading}
+                      onClick={() => updateStatus(selected, "New")}
+                    >
+                      Reopen
+                    </FHJButton>
+                  )}
+                  {selected.status !== "Archived" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={actionLoading}
+                      onClick={() => updateStatus(selected, "Archived")}
+                    >
+                      Archive
+                    </FHJButton>
+                  )}
+                  <FHJButton
+                    variant="danger"
+                    size="sm"
+                    disabled={actionLoading}
+                    onClick={() => handleDelete(selected)}
+                  >
+                    Delete
+                  </FHJButton>
+                </div>
               </div>
 
               {/* Status Badge */}
@@ -219,9 +248,11 @@ export default function AdminConcierge({ admin }) {
                   fontSize: "0.8rem",
                   fontWeight: 600,
                   background: selected.status === "Resolved" ? "rgba(148,163,184,0.15)" :
+                              selected.status === "Archived" ? "rgba(99,102,241,0.15)" :
                               selected.status === "In Progress" ? "rgba(251,191,36,0.15)" :
                               "rgba(248,113,113,0.15)",
                   color: selected.status === "Resolved" ? "#94a3b8" :
+                         selected.status === "Archived" ? "#818cf8" :
                          selected.status === "In Progress" ? "#fbbf24" :
                          "#f87171",
                 }}>
@@ -241,30 +272,9 @@ export default function AdminConcierge({ admin }) {
                 )}
               </div>
 
-              {/* Reply Section */}
-              <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Reply to {selected.name}</p>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type your reply..."
-                    style={replyTextareaStyle}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleReply();
-                      }
-                    }}
-                  />
-                  <FHJButton
-                    onClick={handleReply}
-                    disabled={sending || !replyText.trim()}
-                    style={{ alignSelf: "flex-end" }}
-                  >
-                    {sending ? "Sending..." : "Reply"}
-                  </FHJButton>
-                </div>
+              {/* Conversation Thread */}
+              <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                <ConciergeThread conciergeId={selected.id} refreshParent={loadMessages} />
               </div>
             </motion.div>
           )}
@@ -334,18 +344,4 @@ const messageContentStyle = {
   background: "rgba(255,255,255,0.03)",
   borderRadius: "10px",
   border: "1px solid rgba(255,255,255,0.06)",
-};
-
-const replyTextareaStyle = {
-  flex: 1,
-  padding: "0.75rem",
-  borderRadius: "10px",
-  background: "rgba(0,0,0,0.3)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  color: "white",
-  fontSize: "0.9rem",
-  resize: "none",
-  minHeight: "60px",
-  boxSizing: "border-box",
-  colorScheme: "dark",
 };
