@@ -203,9 +203,8 @@ export const BOOKING_FIELDS = [
   { key: "clientName", label: "Client Name", required: true },
   { key: "email", label: "Email", type: "email", required: true },
   { key: "tripName", label: "Trip / Destination", required: true },
-  { key: "travelDates", label: "Travel Dates" },
-  { key: "status", label: "Status", type: "select", options: ["Upcoming", "Confirmed", "In Progress", "Completed", "Cancelled"] },
-  { key: "price", label: "Total Price", type: "number" },
+  { key: "travelDates", label: "Appointment Date", type: "date" },
+  { key: "status", label: "Status", type: "select", options: ["Pending", "Upcoming", "Confirmed", "In Progress", "Completed", "Cancelled"] },
 ];
 
 // -------------------------------------------------------

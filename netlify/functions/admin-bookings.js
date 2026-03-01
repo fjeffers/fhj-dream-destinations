@@ -5,8 +5,11 @@ const {
 
 const { withFHJ } = require('./middleware');
 
-// Supabase bookings table columns:
-// id, client_name, client_email, trip_name, travel_dates, status, price, created_at
+// Supabase bookings table columns (actual schema):
+// id, client_name, client_email, client_phone, client_id, date, time, destination,
+// status, notes, reason, type, trip_type, occasion, group_size, budget_range,
+// flexible_dates, vacation_start, vacation_end, duration_minutes, is_returning,
+// end_time, created_at
 
 exports.handler = withFHJ(async (event) => {
   const method = event.httpMethod;
@@ -26,10 +29,9 @@ exports.handler = withFHJ(async (event) => {
       id: row.id,
       clientName: row.client_name || row.client_email || 'Unknown',
       email: row.client_email || '',
-      tripName: row.trip_name || 'Unspecified',
-      travelDates: row.travel_dates || 'TBD',
-      status: row.status || 'Upcoming',
-      price: String(row.price || '0'),
+      tripName: row.destination || 'Unspecified',
+      travelDates: row.date || 'TBD',
+      status: row.status || 'Pending',
     }));
 
     return respond(200, { bookings });
@@ -46,10 +48,9 @@ exports.handler = withFHJ(async (event) => {
       .insert([{
         client_name: payload.clientName || payload.email,
         client_email: payload.email,
-        trip_name: payload.tripName,
-        travel_dates: payload.travelDates || null,
-        status: payload.status || 'Upcoming',
-        price: payload.price ? String(payload.price) : '0',
+        destination: payload.tripName,
+        date: payload.travelDates || null,
+        status: payload.status || 'Pending',
       }])
       .select()
       .single();
@@ -65,10 +66,9 @@ exports.handler = withFHJ(async (event) => {
     const updates = {};
     if (payload.clientName !== undefined) updates.client_name = payload.clientName;
     if (payload.email !== undefined) updates.client_email = payload.email;
-    if (payload.tripName !== undefined) updates.trip_name = payload.tripName;
-    if (payload.travelDates !== undefined) updates.travel_dates = payload.travelDates;
+    if (payload.tripName !== undefined) updates.destination = payload.tripName;
+    if (payload.travelDates !== undefined) updates.date = payload.travelDates;
     if (payload.status !== undefined) updates.status = payload.status;
-    if (payload.price !== undefined) updates.price = String(payload.price);
 
     if (Object.keys(updates).length === 0) {
       return respond(400, { error: 'No fields to update' });

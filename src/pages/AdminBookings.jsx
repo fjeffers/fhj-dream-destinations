@@ -50,7 +50,6 @@ export default function AdminBookings({ admin }) {
           tripName: formData.tripName,
           travelDates: formData.travelDates,
           status: formData.status,
-          price: formData.price,
         }),
       });
       toast.success(editingBooking ? "Booking updated!" : "Booking created!");
@@ -90,7 +89,6 @@ export default function AdminBookings({ admin }) {
       tripName: booking.tripName || "",
       travelDates: booking.travelDates || "",
       status: booking.status || "",
-      price: booking.price || "",
     });
     setModalOpen(true);
   };
@@ -111,11 +109,13 @@ export default function AdminBookings({ admin }) {
           fontWeight: 600,
           background: val === "Confirmed" ? "rgba(74,222,128,0.15)" :
                       val === "Upcoming" ? "rgba(96,165,250,0.15)" :
+                      val === "Pending" ? "rgba(251,191,36,0.15)" :
                       val === "Completed" ? "rgba(148,163,184,0.15)" :
                       val === "Cancelled" ? "rgba(248,113,113,0.15)" :
                       "rgba(255,255,255,0.08)",
           color: val === "Confirmed" ? "#4ade80" :
                  val === "Upcoming" ? "#60a5fa" :
+                 val === "Pending" ? "#fbbf24" :
                  val === "Completed" ? "#94a3b8" :
                  val === "Cancelled" ? "#f87171" :
                  "#94a3b8",
@@ -124,40 +124,20 @@ export default function AdminBookings({ admin }) {
         </span>
       ),
     },
-    {
-      key: "price",
-      label: "Total",
-      render: (val) => val ? `$${Number(val).toLocaleString()}` : "—",
-    },
-    {
-      key: "balanceDue",
-      label: "Balance",
-      render: (val) => {
-        const num = Number(val) || 0;
-        return (
-          <span style={{ color: num > 0 ? "#f87171" : "#4ade80", fontWeight: 600 }}>
-            {num > 0 ? `$${num.toLocaleString()}` : "Paid"}
-          </span>
-        );
-      },
-    },
   ];
 
   const tableData = bookings.map((b) => ({
     id: b.id,
-    clientName: b.ClientName || b.clientName || "—",
-    email: b.Email || b.email || "—",
-    tripName: b.Destination || b.tripName || "—",
-    travelDates: b.StartDate || b.travelDates || "—",
-    status: b.Status || b.status || "—",
-    price: b.TotalPrice || b.price || 0,
-    balanceDue: b.BalanceDue || b.balanceDue || 0,
+    clientName: b.clientName || "—",
+    email: b.email || "—",
+    tripName: b.tripName || "—",
+    travelDates: b.travelDates || "—",
+    status: b.status || "—",
   }));
 
   // Summary stats
-  const totalRevenue = tableData.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
-  const outstandingBalance = tableData.reduce((sum, b) => sum + (Number(b.balanceDue) || 0), 0);
   const confirmedCount = tableData.filter((b) => b.status === "Confirmed" || b.status === "Upcoming").length;
+  const pendingCount = tableData.filter((b) => b.status === "Pending").length;
 
   return (
     <FHJCard style={{ padding: "2rem", minHeight: "80vh" }}>
@@ -188,14 +168,8 @@ export default function AdminBookings({ admin }) {
             <span style={{ color: "#4ade80", fontSize: "1.6rem", fontWeight: 800 }}>{confirmedCount}</span>
           </div>
           <div style={summaryCard}>
-            <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Revenue</span>
-            <span style={{ color: "white", fontSize: "1.6rem", fontWeight: 800 }}>${totalRevenue.toLocaleString()}</span>
-          </div>
-          <div style={summaryCard}>
-            <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Outstanding</span>
-            <span style={{ color: outstandingBalance > 0 ? "#f87171" : "#4ade80", fontSize: "1.6rem", fontWeight: 800 }}>
-              ${outstandingBalance.toLocaleString()}
-            </span>
+            <span style={{ color: "#94a3b8", fontSize: "0.75rem", textTransform: "uppercase" }}>Pending</span>
+            <span style={{ color: "#fbbf24", fontSize: "1.6rem", fontWeight: 800 }}>{pendingCount}</span>
           </div>
         </div>
       )}
