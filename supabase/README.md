@@ -19,16 +19,18 @@ npx supabase db push
 
 ## Required migrations
 
-### `20260301000000_fix_admins_rls.sql`
-**Problem:** "new row violates row-level security policy for table admins" when
-adding or removing admin users from the Admin Settings page.
+### `20260301000000_fix_service_role_rls.sql`
+**Problem:** "new row violates row-level security policy for table admins" (and
+potentially any other table) when adding, editing, or deleting records via the
+admin panel.
 
 **Fix:** Grants the `service_role` (used by all Netlify backend functions) explicit
-`INSERT / UPDATE / DELETE` access to the `admins` table while keeping direct
-anonymous client access blocked.
+`FOR ALL` access to every table in the project, while keeping direct anonymous
+client access blocked.  Tables covered: `about_page`, `admins`, `audit_log`,
+`blocked_slots`, `bookings`, `client_login`, `clients`, `concierge`,
+`concierge_messages`, `deals`, `documents`, `events`, `payments`, `rsvps`, `trips`.
 
-**Must be run if:** You cannot add, edit, or delete admin users via the
-Admin → Settings page.
+**Must be run if:** You cannot add, edit, or delete records via any admin page.
 
 ---
 
