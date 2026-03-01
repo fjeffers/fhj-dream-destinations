@@ -4,6 +4,7 @@
 // Location: src/pages/AdminConcierge.jsx
 // ==========================================================
 
+import ConciergeThread from "../components/ConciergeThread.jsx";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
