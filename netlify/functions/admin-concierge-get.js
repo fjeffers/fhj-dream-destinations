@@ -25,9 +25,9 @@ exports.handler = withFHJ(async () => {
     phone: r.phone || "",
     status: r.status || "New",
     created: r.created_at || "",
-    updated: r.updated_at || "",
     source: r.source || "",
     context: r.context || "",
+    reply: r.reply || "",
   }));
 
   return respond(200, { success: true, data: records });

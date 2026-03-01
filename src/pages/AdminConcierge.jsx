@@ -27,9 +27,12 @@ export default function AdminConcierge({ admin }) {
       setLoading(true);
       const res = await fetch("/.netlify/functions/admin-concierge-get");
       const data = await res.json();
-      setMessages(data.data || []);
+      const msgs = data.data || [];
+      setMessages(msgs);
+      return msgs;
     } catch (err) {
       toast.error("Failed to load concierge messages.");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -139,20 +142,20 @@ export default function AdminConcierge({ admin }) {
     if (!replyText.trim() || !selected) return;
     setSending(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
+      const res = await fetch("/.netlify/functions/admin-concierge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           parentId: selected.id,
-          email: selected.email,
-          name: admin?.Name || admin?.Email || "Admin",
           message: replyText,
-          source: "Admin Reply",
         }),
       });
+      if (!res.ok) throw new Error("Reply request failed");
       toast.success("Reply sent!");
       setReplyText("");
-      loadMessages();
+      const updated = await loadMessages();
+      const refreshed = updated.find((m) => m.id === selected.id);
+      if (refreshed) setSelected(refreshed);
     } catch (err) {
       toast.error("Failed to send reply.");
     } finally {
@@ -414,6 +417,16 @@ export default function AdminConcierge({ admin }) {
                   <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "1rem" }}>
                     Context: {selected.context}
                   </p>
+                )}
+                {selected.reply && (
+                  <div style={{ marginTop: "1rem", padding: "0.85rem 1rem", borderRadius: "8px", background: "rgba(0,196,140,0.06)", border: "1px solid rgba(0,196,140,0.15)" }}>
+                    <p style={{ color: "#94a3b8", fontSize: "0.75rem", fontWeight: 600, margin: "0 0 0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      Admin Reply
+                    </p>
+                    <p style={{ color: "#e5e7eb", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap", fontSize: "0.9rem" }}>
+                      {selected.reply}
+                    </p>
+                  </div>
                 )}
               </div>
 

@@ -29,9 +29,9 @@ exports.handler = withFHJ(async (event) => {
       phone: r.phone || "",
       status: r.status || "New",
       created: r.created_at || "",
-      updated: r.updated_at || "",
       source: r.source || "",
       context: r.context || "",
+      reply: r.reply || "",
     }));
 
     return respond(200, { success: true, data: records });
@@ -39,23 +39,35 @@ exports.handler = withFHJ(async (event) => {
 
   const payload = JSON.parse(event.body || "{}");
 
-  // 🟡 POST: Create a reply message
+  // 🟡 POST: Store admin reply on the parent message row
   if (method === "POST") {
-    const { parentId, email, name, message, source } = payload;
+    const { parentId, message } = payload;
 
     if (!message) {
       return respond(400, { error: "Message is required" });
     }
 
+    // When replying to an existing message, update its `reply` column
+    if (parentId) {
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ reply: message })
+        .eq("id", parentId);
+
+      if (error) throw new Error(error.message);
+
+      return respond(200, { success: true });
+    }
+
+    // Standalone message (no parent) — insert new row
     const { data, error } = await supabase
       .from(TABLE)
       .insert([{
-        email: email || "",
-        name: name || "Admin",
+        email: payload.email || "",
+        name: payload.name || "Admin",
         message,
-        source: source || "Admin Reply",
+        source: payload.source || "Admin",
         status: "New",
-        context: parentId ? `Reply to ${parentId}` : "",
       }])
       .select()
       .single();
