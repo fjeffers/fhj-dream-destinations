@@ -306,32 +306,32 @@ export default function AdminConcierge({ admin }) {
               animate={{ opacity: 1, y: 0 }}
               style={{ flex: 1, display: "flex", flexDirection: "column" }}
             >
-              {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-                <div>
+              {/* Header: name + contact info (left) · status buttons (right) */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <h3 style={{ color: "white", margin: "0 0 0.5rem", fontSize: "1.3rem" }}>
                     {selected.name || "Unknown"}
                   </h3>
                   {/* Contact info — phone prominently labeled */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1.5rem" }}>
-                    <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1.25rem" }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
                       📧 {selected.email || "—"}
                     </span>
                     <span style={{
-                      fontSize: "0.875rem",
+                      fontSize: "0.85rem",
                       color: selected.phone ? "#94a3b8" : "#475569",
                       fontStyle: selected.phone ? "normal" : "italic",
                     }}>
                       📞 {selected.phone || "No phone on file"}
                     </span>
-                    <span style={{ color: "#475569", fontSize: "0.875rem" }}>
+                    <span style={{ color: "#475569", fontSize: "0.85rem" }}>
                       {selected.source || "Portal"} · {formatDate(selected.created)}
                     </span>
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {/* Status management buttons only — keeps the header uncluttered */}
+                <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, marginLeft: "1rem" }}>
                   {selected.status === "New" && (
                     <FHJButton variant="ghost" size="sm" onClick={() => markInProgress(selected)}>
                       In Progress
@@ -342,35 +342,14 @@ export default function AdminConcierge({ admin }) {
                     size="sm"
                     onClick={() => toggleResolve(selected)}
                   >
-                    {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
+                    {selected.status === "Resolved" ? "Reopen" : "✓ Resolved"}
                   </FHJButton>
-                  {selected.status !== "Archived" && (
-                    <FHJButton variant="ghost" size="sm" onClick={() => handleArchive(selected)}>
-                      📦 Archive
-                    </FHJButton>
-                  )}
-                  {/* Two-step delete confirmation */}
-                  {!showDeleteConfirm ? (
-                    <FHJButton variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)}
-                      style={{ color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}>
-                      🗑️ Delete
-                    </FHJButton>
-                  ) : (
-                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                      <span style={{ color: "#f87171", fontSize: "0.8rem" }}>Permanently delete?</span>
-                      <FHJButton variant="danger" size="sm" onClick={() => handleDelete(selected)}>
-                        Confirm
-                      </FHJButton>
-                      <FHJButton variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-                        Cancel
-                      </FHJButton>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Status Badge */}
-              <div style={{ marginBottom: "1rem" }}>
+              {/* Status Badge + Archive / Delete action bar */}
+              <div style={actionBarStyle}>
+                {/* Status badge (left) */}
                 <span style={{
                   padding: "0.3rem 0.85rem",
                   borderRadius: "20px",
@@ -387,6 +366,43 @@ export default function AdminConcierge({ admin }) {
                 }}>
                   {selected.status || "New"}
                 </span>
+
+                {/* Archive + Delete always visible on the right */}
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  {selected.status !== "Archived" && (
+                    <button
+                      onClick={() => handleArchive(selected)}
+                      style={archiveBtnStyle}
+                      aria-label="Archive this conversation"
+                      title="Archive this conversation"
+                    >
+                      📦 Archive
+                    </button>
+                  )}
+
+                  {!showDeleteConfirm ? (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      style={deleteBtnStyle}
+                      aria-label="Delete this conversation"
+                      title="Permanently delete this conversation"
+                    >
+                      🗑️ Delete
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                      <span style={{ color: "#f87171", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                        Permanently delete?
+                      </span>
+                      <button onClick={() => handleDelete(selected)} style={confirmDeleteBtnStyle}>
+                        Confirm
+                      </button>
+                      <button onClick={() => setShowDeleteConfirm(false)} style={cancelBtnStyle}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Message Content */}
@@ -519,6 +535,72 @@ const messageContentStyle = {
   borderRadius: "10px",
   border: "1px solid rgba(255,255,255,0.06)",
   overflowY: "auto",
+};
+
+// Action bar: status badge (left) + Archive & Delete (right)
+const actionBarStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "1rem",
+  padding: "0.6rem 0.85rem",
+  borderRadius: "10px",
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(255,255,255,0.06)",
+};
+
+const archiveBtnStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.3rem",
+  padding: "0.4rem 0.85rem",
+  borderRadius: "8px",
+  background: "rgba(148,163,184,0.1)",
+  border: "1px solid rgba(148,163,184,0.25)",
+  color: "#94a3b8",
+  fontSize: "0.82rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  whiteSpace: "nowrap",
+};
+
+const deleteBtnStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.3rem",
+  padding: "0.4rem 0.85rem",
+  borderRadius: "8px",
+  background: "rgba(248,113,113,0.08)",
+  border: "1px solid rgba(248,113,113,0.3)",
+  color: "#f87171",
+  fontSize: "0.82rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  whiteSpace: "nowrap",
+};
+
+const confirmDeleteBtnStyle = {
+  padding: "0.35rem 0.75rem",
+  borderRadius: "8px",
+  background: "rgba(248,113,113,0.15)",
+  border: "1px solid rgba(248,113,113,0.4)",
+  color: "#f87171",
+  fontSize: "0.8rem",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const cancelBtnStyle = {
+  padding: "0.35rem 0.75rem",
+  borderRadius: "8px",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  color: "#94a3b8",
+  fontSize: "0.8rem",
+  fontWeight: 600,
+  cursor: "pointer",
 };
 
 const replyTextareaStyle = {
