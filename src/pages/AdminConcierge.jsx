@@ -1,6 +1,6 @@
 // ==========================================================
-// 📄 FILE: AdminConcierge.jsx  (PHASE 4 — BUILD OUT)
-// Concierge inbox with message threads, replies, filters
+// 📄 FILE: AdminConcierge.jsx
+// Concierge inbox — replies, filters, archive, delete
 // Location: src/pages/AdminConcierge.jsx
 // ==========================================================
 
@@ -14,12 +14,13 @@ export default function AdminConcierge({ admin }) {
   const toast = useToast();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all | unresolved | resolved
+  const [filter, setFilter] = useState("all"); // all | unresolved | resolved | archived
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -36,12 +37,16 @@ export default function AdminConcierge({ admin }) {
 
   useEffect(() => { loadMessages(); }, []);
 
+  // Reset delete confirm whenever selected message changes
+  useEffect(() => { setShowDeleteConfirm(false); }, [selected]);
+
   // Filter messages
   const filtered = messages
     .filter((m) => {
-      if (filter === "unresolved") return m.status !== "Resolved";
+      if (filter === "archived") return m.status === "Archived";
+      if (filter === "unresolved") return m.status !== "Resolved" && m.status !== "Archived";
       if (filter === "resolved") return m.status === "Resolved";
-      return true;
+      return m.status !== "Archived"; // "all" excludes archived
     })
     .filter((m) => {
       if (!search.trim()) return true;
@@ -49,11 +54,12 @@ export default function AdminConcierge({ admin }) {
       return (
         (m.name || "").toLowerCase().includes(q) ||
         (m.email || "").toLowerCase().includes(q) ||
+        (m.phone || "").toLowerCase().includes(q) ||
         (m.message || "").toLowerCase().includes(q)
       );
     });
 
-  const unresolvedCount = messages.filter((m) => m.status !== "Resolved").length;
+  const unresolvedCount = messages.filter((m) => m.status !== "Resolved" && m.status !== "Archived").length;
 
   // Toggle resolve
   const toggleResolve = async (msg) => {
@@ -90,6 +96,41 @@ export default function AdminConcierge({ admin }) {
       }
     } catch (err) {
       toast.error("Failed to update status.");
+    }
+  };
+
+  // Archive conversation
+  const handleArchive = async (msg) => {
+    try {
+      const res = await fetch("/.netlify/functions/admin-concierge", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id, status: "Archived" }),
+      });
+      if (!res.ok) throw new Error("Archive request failed");
+      toast.success("Conversation archived.");
+      setSelected(null);
+      loadMessages();
+    } catch (err) {
+      toast.error("Failed to archive conversation.");
+    }
+  };
+
+  // Delete conversation permanently
+  const handleDelete = async (msg) => {
+    try {
+      const res = await fetch("/.netlify/functions/admin-concierge", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id }),
+      });
+      if (!res.ok) throw new Error("Delete request failed");
+      toast.success("Conversation deleted.");
+      setSelected(null);
+      setShowDeleteConfirm(false);
+      loadMessages();
+    } catch (err) {
+      toast.error("Failed to delete conversation.");
     }
   };
 
@@ -165,13 +206,13 @@ export default function AdminConcierge({ admin }) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, or message…"
+          placeholder="Search by name, email, phone, or message…"
           style={searchInputStyle}
         />
 
         {/* Filter Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          {["all", "unresolved", "resolved"].map((f) => (
+        <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+          {["all", "unresolved", "resolved", "archived"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -212,7 +253,10 @@ export default function AdminConcierge({ admin }) {
                   width: "8px",
                   height: "8px",
                   borderRadius: "50%",
-                  background: msg.status === "Resolved" ? "#94a3b8" : msg.status === "In Progress" ? "#fbbf24" : "#f87171",
+                  background: msg.status === "Resolved" ? "#94a3b8"
+                             : msg.status === "In Progress" ? "#fbbf24"
+                             : msg.status === "Archived" ? "#475569"
+                             : "#f87171",
                   flexShrink: 0,
                   marginTop: "6px",
                 }} />
@@ -226,9 +270,14 @@ export default function AdminConcierge({ admin }) {
                       {formatDate(msg.created)}
                     </span>
                   </div>
-                  <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.25rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.2rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {msg.message}
                   </p>
+                  {msg.phone && (
+                    <p style={{ color: "#475569", fontSize: "0.75rem", margin: "0.1rem 0 0" }}>
+                      📞 {msg.phone}
+                    </p>
+                  )}
                 </div>
               </motion.div>
             ))
@@ -260,21 +309,31 @@ export default function AdminConcierge({ admin }) {
               {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
                 <div>
-                  <h3 style={{ color: "white", margin: "0 0 0.25rem", fontSize: "1.3rem" }}>
+                  <h3 style={{ color: "white", margin: "0 0 0.5rem", fontSize: "1.3rem" }}>
                     {selected.name || "Unknown"}
                   </h3>
-                  <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9rem" }}>
-                    {selected.email}{selected.phone ? ` · ${selected.phone}` : ""} · {selected.source || "Portal"} · {formatDate(selected.created)}
-                  </p>
+                  {/* Contact info — phone prominently labeled */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1.5rem" }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                      📧 {selected.email || "—"}
+                    </span>
+                    <span style={{
+                      fontSize: "0.875rem",
+                      color: selected.phone ? "#94a3b8" : "#475569",
+                      fontStyle: selected.phone ? "normal" : "italic",
+                    }}>
+                      📞 {selected.phone || "No phone on file"}
+                    </span>
+                    <span style={{ color: "#475569", fontSize: "0.875rem" }}>
+                      {selected.source || "Portal"} · {formatDate(selected.created)}
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                {/* Action buttons */}
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                   {selected.status === "New" && (
-                    <FHJButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markInProgress(selected)}
-                    >
+                    <FHJButton variant="ghost" size="sm" onClick={() => markInProgress(selected)}>
                       In Progress
                     </FHJButton>
                   )}
@@ -285,6 +344,28 @@ export default function AdminConcierge({ admin }) {
                   >
                     {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
                   </FHJButton>
+                  {selected.status !== "Archived" && (
+                    <FHJButton variant="ghost" size="sm" onClick={() => handleArchive(selected)}>
+                      📦 Archive
+                    </FHJButton>
+                  )}
+                  {/* Two-step delete confirmation */}
+                  {!showDeleteConfirm ? (
+                    <FHJButton variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)}
+                      style={{ color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}>
+                      🗑️ Delete
+                    </FHJButton>
+                  ) : (
+                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                      <span style={{ color: "#f87171", fontSize: "0.8rem" }}>Permanently delete?</span>
+                      <FHJButton variant="danger" size="sm" onClick={() => handleDelete(selected)}>
+                        Confirm
+                      </FHJButton>
+                      <FHJButton variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                        Cancel
+                      </FHJButton>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -297,9 +378,11 @@ export default function AdminConcierge({ admin }) {
                   fontWeight: 600,
                   background: selected.status === "Resolved" ? "rgba(148,163,184,0.15)" :
                               selected.status === "In Progress" ? "rgba(251,191,36,0.15)" :
+                              selected.status === "Archived" ? "rgba(71,85,105,0.15)" :
                               "rgba(248,113,113,0.15)",
                   color: selected.status === "Resolved" ? "#94a3b8" :
                          selected.status === "In Progress" ? "#fbbf24" :
+                         selected.status === "Archived" ? "#64748b" :
                          "#f87171",
                 }}>
                   {selected.status || "New"}
@@ -308,7 +391,7 @@ export default function AdminConcierge({ admin }) {
 
               {/* Message Content */}
               <div style={messageContentStyle}>
-                <p style={{ color: "#e5e7eb", lineHeight: 1.7, margin: 0 }}>
+                <p style={{ color: "#e5e7eb", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
                   {selected.message}
                 </p>
                 {selected.context && (
@@ -410,10 +493,10 @@ const searchInputStyle = {
 };
 
 const filterBtn = {
-  padding: "0.35rem 0.75rem",
+  padding: "0.3rem 0.65rem",
   borderRadius: "999px",
   border: "1px solid",
-  fontSize: "0.8rem",
+  fontSize: "0.78rem",
   cursor: "pointer",
   transition: "all 0.2s ease",
   fontWeight: 500,
@@ -435,6 +518,7 @@ const messageContentStyle = {
   background: "rgba(255,255,255,0.03)",
   borderRadius: "10px",
   border: "1px solid rgba(255,255,255,0.06)",
+  overflowY: "auto",
 };
 
 const replyTextareaStyle = {

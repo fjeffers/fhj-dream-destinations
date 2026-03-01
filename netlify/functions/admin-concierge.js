@@ -8,6 +8,7 @@ const {
   selectRecords,
   submitToAirtable,
   updateAirtableRecord,
+  deleteAirtableRecord,
   respond,
 } = require("./utils");
 const { withFHJ } = require("./middleware");
@@ -59,7 +60,7 @@ exports.handler = withFHJ(async (event) => {
     return respond(200, { success: true, id: record.id });
   }
 
-  // 🟠 PUT: Update status (resolve/reopen)
+  // 🟠 PUT: Update status (resolve/reopen/archive)
   if (method === "PUT") {
     const { id, status } = payload;
 
@@ -68,6 +69,17 @@ exports.handler = withFHJ(async (event) => {
     await updateAirtableRecord("Concierge", id, {
       Status: status || "Resolved",
     });
+
+    return respond(200, { success: true });
+  }
+
+  // 🔴 DELETE: Remove a message permanently
+  if (method === "DELETE") {
+    const { id } = payload;
+
+    if (!id) return respond(400, { error: "Missing message ID" });
+
+    await deleteAirtableRecord("Concierge", id);
 
     return respond(200, { success: true });
   }
