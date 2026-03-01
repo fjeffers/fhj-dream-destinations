@@ -1,17 +1,18 @@
 // src/components/FHJ/FHJBackground.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 export default function FHJBackground({ children, page = "default" }) {
-  
+
+  // WebP images (optimized — dramatically smaller than original PNGs)
   const backgrounds = {
-    home: "url('/fhj-home.png')",       
-    book: "url('/fhj-book.png')",
-    deals: "url('/fhj-deals.png')",
-    appointment: "url('/fhj-appointment.png')",
-    default: "url('/fhj-hero.png')"
+    home: "/fhj-home.webp",
+    book: "/fhj-book.webp",
+    deals: "/fhj-book.webp",
+    appointment: "/fhj-appointment.webp",
+    default: "/fhj-hero1.png",
   };
 
-  // Fallback gradient per page in case image is missing
+  // Fallback gradient per page shown instantly while the image loads
   const fallbacks = {
     home: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
     book: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
@@ -20,13 +21,23 @@ export default function FHJBackground({ children, page = "default" }) {
     default: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
   };
 
-  const bgImage = backgrounds[page] || backgrounds.default;
+  const bgSrc = backgrounds[page] || backgrounds.default;
   const fallback = fallbacks[page] || fallbacks.default;
+
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    setImgLoaded(false);
+    const img = new Image();
+    img.onload = () => setImgLoaded(true);
+    img.onerror = () => setImgLoaded(false);
+    img.src = bgSrc;
+  }, [bgSrc]);
 
   return (
     <div style={{ width: "100%", minHeight: "100vh", position: "relative" }}>
-      
-      {/* LAYER 0: FALLBACK COLOR (always visible behind image) */}
+
+      {/* LAYER 0: FALLBACK GRADIENT (always visible, shows instantly) */}
       <div
         style={{
           position: "fixed",
@@ -36,15 +47,17 @@ export default function FHJBackground({ children, page = "default" }) {
         }}
       />
 
-      {/* LAYER 1: BACKGROUND IMAGE (Fixed to screen) */}
+      {/* LAYER 1: BACKGROUND IMAGE — fades in once loaded to prevent black flash */}
       <div
         style={{
           position: "fixed",
           top: 0, left: 0, width: "100%", height: "100%",
-          backgroundImage: bgImage,
+          backgroundImage: imgLoaded ? `url('${bgSrc}')` : "none",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          opacity: imgLoaded ? 1 : 0,
+          transition: "opacity 0.6s ease",
           zIndex: 0,
         }}
       />
