@@ -12,6 +12,7 @@ import ConciergeToggleButton from "./ConciergeToggleButton.jsx";
 const placeholders = {
   name: "Your name…",
   email: "Your email address…",
+  phone: "Your phone number…",
   message: "Tell us about your dream trip…",
 };
 
@@ -20,6 +21,7 @@ export default function ConciergeChat() {
   const [step, setStep] = useState("name");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
   const [messages, setMessages] = useState([
     {
       id: "welcome",
@@ -72,6 +74,18 @@ export default function ConciergeChat() {
         return;
       }
       setUserEmail(trimmed);
+      setStep("phone");
+      const reply = {
+        id: `concierge-${Date.now()}`,
+        from: "concierge",
+        text: "Great! What's the best phone number to reach you?",
+      };
+      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      return;
+    }
+
+    if (step === "phone") {
+      setUserPhone(trimmed);
       setStep("message");
       const reply = {
         id: `concierge-${Date.now()}`,
@@ -92,6 +106,7 @@ export default function ConciergeChat() {
         body: JSON.stringify({
           name: userName,
           email: userEmail,
+          phone: userPhone,
           message: trimmed,
           source: "Chat Widget",
           context: "Concierge Chat Widget",
@@ -105,14 +120,14 @@ export default function ConciergeChat() {
         const reply = {
           id: `concierge-${Date.now()}`,
           from: "concierge",
-          text: `Thank you, ${userName}! 🌴 Your message has been received and we'll reach out to ${userEmail} shortly. We look forward to crafting your perfect journey!`,
+          text: `Thank you, ${userName}! 🌴 Your message has been received and we'll reach out to you at ${userEmail} shortly. We look forward to crafting your perfect journey!`,
         };
         setTimeout(() => setMessages((prev) => [...prev, reply]), 600);
       } else {
         const errReply = {
           id: `err-${Date.now()}`,
           from: "concierge",
-          text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@dreamdestinations.com",
+          text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
         };
         setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
       }
@@ -120,7 +135,7 @@ export default function ConciergeChat() {
       const errReply = {
         id: `err-${Date.now()}`,
         from: "concierge",
-        text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@dreamdestinations.com",
+        text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
       };
       setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
     } finally {
