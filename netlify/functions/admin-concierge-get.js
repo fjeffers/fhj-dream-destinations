@@ -1,26 +1,34 @@
-// netlify/functions/admin-concierge-get.js
-const { selectRecords, respond } = require("./utils");
+// ==========================================================
+// 📄 FILE: admin-concierge-get.js
+// GET all concierge messages — Supabase direct edition
+// Location: netlify/functions/admin-concierge-get.js
+// ==========================================================
+
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
 
+const TABLE = "concierge";
+
 exports.handler = withFHJ(async () => {
-  const TABLE = "Concierge";
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  const records = await selectRecords(TABLE);
+  if (error) throw new Error(error.message);
 
-  const data = records
-    .map((r) => ({
-      id: r.id,
-      message: r.message || r.Message || "",
-      email: r.email || r.Email || "",
-      name: r.name || r.Name || "",
-      phone: r.phone || r.Phone || "",
-      status: r.status || r.Status || "New",
-      created: r.created_at || r.created || r.Created || "",
-      updated: r.updated_at || r.updated || r.Updated || "",
-      source: r.source || r.Source || "",
-      context: r.context || r.Context || "",
-    }))
-    .sort((a, b) => new Date(b.created) - new Date(a.created));
+  const records = (data || []).map((r) => ({
+    id: r.id,
+    message: r.message || "",
+    email: r.email || "",
+    name: r.name || "",
+    phone: r.phone || "",
+    status: r.status || "New",
+    created: r.created_at || "",
+    updated: r.updated_at || "",
+    source: r.source || "",
+    context: r.context || "",
+  }));
 
-  return respond(200, { success: true, data });
+  return respond(200, { success: true, data: records });
 });

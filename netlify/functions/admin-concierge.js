@@ -1,41 +1,40 @@
 // ==========================================================
-// 📄 FILE: admin-concierge.js  (BUILD OUT)
-// Full CRUD for concierge messages — used by AdminConcierge.jsx
+// 📄 FILE: admin-concierge.js
+// Full CRUD for concierge messages — Supabase direct edition
 // Location: netlify/functions/admin-concierge.js
 // ==========================================================
 
-const {
-  selectRecords,
-  submitToAirtable,
-  updateAirtableRecord,
-  deleteAirtableRecord,
-  respond,
-} = require("./utils");
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
+
+const TABLE = "concierge";
 
 exports.handler = withFHJ(async (event) => {
   const method = event.httpMethod;
 
   // 🟢 GET: Fetch all concierge messages
   if (method === "GET") {
-    const records = await selectRecords("Concierge", "", { normalizer: true });
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    const data = records
-      .map((r) => ({
-        id: r.id,
-        message: r.Message || "",
-        email: r.Email || "",
-        name: r.Name || "",
-        phone: r.Phone || r.phone || "",
-        status: r.Status || "New",
-        created: r.Created || r.createdTime || "",
-        updated: r.Updated || r.Update || "",
-        source: r.Source || "",
-        context: r.Context || "",
-      }))
-      .sort((a, b) => new Date(b.created) - new Date(a.created));
+    if (error) throw new Error(error.message);
 
-    return respond(200, { success: true, data });
+    const records = (data || []).map((r) => ({
+      id: r.id,
+      message: r.message || "",
+      email: r.email || "",
+      name: r.name || "",
+      phone: r.phone || "",
+      status: r.status || "New",
+      created: r.created_at || "",
+      updated: r.updated_at || "",
+      source: r.source || "",
+      context: r.context || "",
+    }));
+
+    return respond(200, { success: true, data: records });
   }
 
   const payload = JSON.parse(event.body || "{}");
@@ -48,27 +47,36 @@ exports.handler = withFHJ(async (event) => {
       return respond(400, { error: "Message is required" });
     }
 
-    const record = await submitToAirtable("Concierge", {
-      Email: email || "",
-      Name: name || "Admin",
-      Message: message,
-      Source: source || "Admin Reply",
-      Status: "New",
-      Context: parentId ? `Reply to ${parentId}` : "",
-    });
+    const { data, error } = await supabase
+      .from(TABLE)
+      .insert([{
+        email: email || "",
+        name: name || "Admin",
+        message,
+        source: source || "Admin Reply",
+        status: "New",
+        context: parentId ? `Reply to ${parentId}` : "",
+      }])
+      .select()
+      .single();
 
-    return respond(200, { success: true, id: record.id });
+    if (error) throw new Error(error.message);
+
+    return respond(200, { success: true, id: data.id });
   }
 
-  // 🟠 PUT: Update status (resolve/reopen/archive)
+  // 🟠 PUT: Update status (resolve / reopen / archive)
   if (method === "PUT") {
     const { id, status } = payload;
 
     if (!id) return respond(400, { error: "Missing message ID" });
 
-    await updateAirtableRecord("Concierge", id, {
-      Status: status || "Resolved",
-    });
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ status: status || "Resolved" })
+      .eq("id", id);
+
+    if (error) throw new Error(error.message);
 
     return respond(200, { success: true });
   }
@@ -79,7 +87,12 @@ exports.handler = withFHJ(async (event) => {
 
     if (!id) return respond(400, { error: "Missing message ID" });
 
-    await deleteAirtableRecord("Concierge", id);
+    const { error } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq("id", id);
+
+    if (error) throw new Error(error.message);
 
     return respond(200, { success: true });
   }
