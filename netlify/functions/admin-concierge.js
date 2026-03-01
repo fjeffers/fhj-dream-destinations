@@ -25,6 +25,7 @@ exports.handler = withFHJ(async (event) => {
         message: r.Message || "",
         email: r.Email || "",
         name: r.Name || "",
+        phone: r.Phone || r.phone || "",
         status: r.Status || "New",
         created: r.Created || r.createdTime || "",
         updated: r.Updated || r.Update || "",

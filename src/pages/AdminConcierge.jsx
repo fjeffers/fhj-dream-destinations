@@ -18,6 +18,7 @@ export default function AdminConcierge({ admin }) {
   const [selected, setSelected] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -85,6 +86,33 @@ export default function AdminConcierge({ admin }) {
       toast.error("Failed to send reply.");
     } finally {
       setSending(false);
+    }
+  };
+
+  // Generate AI reply suggestion
+  const handleGenerateReply = async () => {
+    if (!selected) return;
+    setGenerating(true);
+    try {
+      const res = await fetch("/.netlify/functions/generate-concierge-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selected.name || "Guest",
+          message: selected.message,
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        setReplyText(data.reply);
+        toast.success("Reply suggestion generated.");
+      } else {
+        toast.error("Could not generate a reply.");
+      }
+    } catch (err) {
+      toast.error("Failed to generate reply.");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -197,7 +225,7 @@ export default function AdminConcierge({ admin }) {
                     {selected.name || "Unknown"}
                   </h3>
                   <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9rem" }}>
-                    {selected.email} · {selected.source || "Portal"} · {formatDate(selected.created)}
+                    {selected.email}{selected.phone ? ` · ${selected.phone}` : ""} · {selected.source || "Portal"} · {formatDate(selected.created)}
                   </p>
                 </div>
 
@@ -242,7 +270,17 @@ export default function AdminConcierge({ admin }) {
 
               {/* Reply Section */}
               <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Reply to {selected.name}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                  <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>Reply to {selected.name}</p>
+                  <FHJButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleGenerateReply}
+                    disabled={generating}
+                  >
+                    {generating ? "Generating…" : "✨ Generate Reply"}
+                  </FHJButton>
+                </div>
                 <div style={{ display: "flex", gap: "0.75rem" }}>
                   <textarea
                     value={replyText}

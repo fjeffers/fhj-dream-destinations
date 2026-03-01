@@ -13,6 +13,7 @@ exports.handler = withFHJ(async () => {
       message: r.message || r.Message || "",
       email: r.email || r.Email || "",
       name: r.name || r.Name || "",
+      phone: r.phone || r.Phone || "",
       status: r.status || r.Status || "New",
       created: r.created_at || r.created || r.Created || "",
       updated: r.updated_at || r.updated || r.Updated || "",
