@@ -15,6 +15,7 @@ export default function AdminConcierge({ admin }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unresolved | resolved
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
@@ -36,11 +37,21 @@ export default function AdminConcierge({ admin }) {
   useEffect(() => { loadMessages(); }, []);
 
   // Filter messages
-  const filtered = messages.filter((m) => {
-    if (filter === "unresolved") return m.status !== "Resolved";
-    if (filter === "resolved") return m.status === "Resolved";
-    return true;
-  });
+  const filtered = messages
+    .filter((m) => {
+      if (filter === "unresolved") return m.status !== "Resolved";
+      if (filter === "resolved") return m.status === "Resolved";
+      return true;
+    })
+    .filter((m) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        (m.name || "").toLowerCase().includes(q) ||
+        (m.email || "").toLowerCase().includes(q) ||
+        (m.message || "").toLowerCase().includes(q)
+      );
+    });
 
   const unresolvedCount = messages.filter((m) => m.status !== "Resolved").length;
 
@@ -57,6 +68,25 @@ export default function AdminConcierge({ admin }) {
       loadMessages();
       if (selected?.id === msg.id) {
         setSelected({ ...selected, status: newStatus });
+      }
+    } catch (err) {
+      toast.error("Failed to update status.");
+    }
+  };
+
+  // Mark as In Progress
+  const markInProgress = async (msg) => {
+    if (msg.status === "In Progress") return;
+    try {
+      await fetch("/.netlify/functions/admin-concierge", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id, status: "In Progress" }),
+      });
+      toast.success("Marked as In Progress.");
+      loadMessages();
+      if (selected?.id === msg.id) {
+        setSelected({ ...selected, status: "In Progress" });
       }
     } catch (err) {
       toast.error("Failed to update status.");
@@ -129,6 +159,15 @@ export default function AdminConcierge({ admin }) {
             <span style={badgeStyle}>{unresolvedCount}</span>
           )}
         </div>
+
+        {/* Search */}
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, or message…"
+          style={searchInputStyle}
+        />
 
         {/* Filter Tabs */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
@@ -229,13 +268,24 @@ export default function AdminConcierge({ admin }) {
                   </p>
                 </div>
 
-                <FHJButton
-                  variant={selected.status === "Resolved" ? "ghost" : "success"}
-                  size="sm"
-                  onClick={() => toggleResolve(selected)}
-                >
-                  {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
-                </FHJButton>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  {selected.status === "New" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => markInProgress(selected)}
+                    >
+                      In Progress
+                    </FHJButton>
+                  )}
+                  <FHJButton
+                    variant={selected.status === "Resolved" ? "ghost" : "success"}
+                    size="sm"
+                    onClick={() => toggleResolve(selected)}
+                  >
+                    {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
+                  </FHJButton>
+                </div>
               </div>
 
               {/* Status Badge */}
@@ -343,6 +393,20 @@ const badgeStyle = {
   borderRadius: "20px",
   minWidth: "24px",
   textAlign: "center",
+};
+
+const searchInputStyle = {
+  width: "100%",
+  padding: "0.5rem 0.85rem",
+  borderRadius: "8px",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "white",
+  fontSize: "0.85rem",
+  outline: "none",
+  marginBottom: "0.75rem",
+  boxSizing: "border-box",
+  colorScheme: "dark",
 };
 
 const filterBtn = {
