@@ -1,5 +1,5 @@
 // ==========================================================
-// FILE: Home.jsx - OPTIMIZED for Fast Loading
+// FILE: Home.jsx
 // Location: src/pages/Home.jsx
 // ==========================================================
 
@@ -14,12 +14,8 @@ export default function Home() {
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bgLoaded, setBgLoaded] = useState(false);
 
   useEffect(() => {
-    // Show page immediately, load data in background
-    const timer = setTimeout(() => setBgLoaded(true), 100);
-    
     async function load() {
       try {
         const data = await fetchDeals();
@@ -31,23 +27,17 @@ export default function Home() {
       }
     }
     load();
-    
-    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      background: bgLoaded ? "transparent" : "#000",
-      transition: "background 0.3s ease"
-    }}>
+    <div style={{ minHeight: "100vh" }}>
       <FHJBackground page="home">
 
         {/* --- HERO --- */}
         <div style={heroStyle}>
 
           <motion.img
-            src="/fhj_logo.png"
+            src="/fhj_logo.webp"
             alt="FHJ Dream Destinations"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
