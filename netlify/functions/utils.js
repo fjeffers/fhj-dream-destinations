@@ -7,16 +7,31 @@
 const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+// Accept either the Supabase dashboard standard name (SUPABASE_SERVICE_ROLE_KEY)
+// or the legacy name used in this project (SUPABASE_SERVICE_KEY).
+// The service_role key bypasses Row Level Security (RLS) on all tables.
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars");
+  console.error(
+    "Missing required env vars: SUPABASE_URL and either " +
+    "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY"
+  );
 }
 
+// Using the service_role key ensures all Supabase operations bypass RLS.
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
+  },
+  global: {
+    headers: {
+      // Explicitly send the service role key as the Authorization header
+      // so PostgREST recognises the 'service_role' JWT claim and bypasses RLS.
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
   },
 });
 
