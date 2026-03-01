@@ -10,14 +10,14 @@ exports.handler = withFHJ(async () => {
   const data = records
     .map((r) => ({
       id: r.id,
-      message: r.Message,
-      email: r.Email,
-      name: r.Name,
-      status: r.Status,
-      created: r.Created,
-      updated: r.Updated,
-      source: r.Source,
-      context: r.Context,
+      message: r.message || r.Message || "",
+      email: r.email || r.Email || "",
+      name: r.name || r.Name || "",
+      status: r.status || r.Status || "New",
+      created: r.created_at || r.created || r.Created || "",
+      updated: r.updated_at || r.updated || r.Updated || "",
+      source: r.source || r.Source || "",
+      context: r.context || r.Context || "",
     }))
     .sort((a, b) => new Date(b.created) - new Date(a.created));
 

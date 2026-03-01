@@ -9,6 +9,7 @@ import { Outlet, useLocation, Link } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar.jsx";
 import FHJPageTransition from "./components/FHJ/FHJPageTransition.jsx";
+import ConciergeChat from "./components/concierge/ConciergeChat.jsx";
 
 export default function AppShell() {
   const location = useLocation();
@@ -49,6 +50,8 @@ export default function AppShell() {
           •
         </Link>
       </footer>
+      {/* Floating concierge chat widget — appears on all public pages */}
+      <ConciergeChat />
     </div>
   );
 }
