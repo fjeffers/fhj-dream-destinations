@@ -75,7 +75,7 @@ export default function AdminDeals({ admin }) {
   const loadDeals = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/.netlify/functions/get-deals");
+      const res = await fetch("/.netlify/functions/admin-deals");
       const data = await res.json();
       setDeals(data.deals || []);
     } catch (err) {
@@ -158,7 +158,7 @@ export default function AdminDeals({ admin }) {
         "Featured": form.featured,
       };
 
-      const res = await fetch("/.netlify/functions/get-deals", {
+      const res = await fetch("/.netlify/functions/admin-deals", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -186,7 +186,7 @@ export default function AdminDeals({ admin }) {
     if (!window.confirm(`Delete "${name}"?`)) return;
 
     try {
-      await fetch("/.netlify/functions/get-deals", {
+      await fetch("/.netlify/functions/admin-deals", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: deal.id }),

@@ -1,80 +1,98 @@
 const {
-  selectRecords,
-  submitToAirtable,
-  updateAirtableRecord,
-  deleteAirtableRecord,
+  supabase,
   respond,
 } = require('./utils');
 
 const { withFHJ } = require('./middleware');
 
+// Supabase bookings table columns:
+// id, client_name, client_email, trip_name, travel_dates, status, price, created_at
+
 exports.handler = withFHJ(async (event) => {
   const method = event.httpMethod;
-  
-  // Safe Parse Body
   const payload = method !== 'GET' ? JSON.parse(event.body || '{}') : {};
-  const TABLE_NAME = 'Client_Bookings'; // Ensure this matches your Airtable tab name exactly
 
-  // 🟢 GET: Fetch & Format for Frontend
+  // 🟢 GET: Fetch all bookings
   if (method === 'GET') {
-    const rawRecords = await selectRecords(TABLE_NAME, '', { normalizer: true });
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    // Map Airtable columns to Frontend props (AdminBookings.jsx)
-    const bookings = rawRecords.map(record => ({
-      id: record.id,
-      ClientName: record["Client Name"] || record["Client Email"] || "Unknown",
-      Email: record["Client Email"] || "",
-      Destination: record["Trip Name"] || "Unspecified",
-      StartDate: record["Travel Dates"] || "TBD",
-      EndDate: "", // Add if you have this column
-      Status: record["Trip Status"] || "Upcoming",
-      TotalPrice: record["Budget"] || record["Price"] || "0",
-      BalanceDue: record["Balance"] || "0"
+    if (error) return respond(500, { error: error.message });
+
+    // Return camelCase shape that AdminBookings.jsx expects
+    const bookings = (data || []).map(row => ({
+      id: row.id,
+      clientName: row.client_name || row.client_email || 'Unknown',
+      email: row.client_email || '',
+      tripName: row.trip_name || 'Unspecified',
+      travelDates: row.travel_dates || 'TBD',
+      status: row.status || 'Upcoming',
+      price: String(row.price || '0'),
     }));
 
     return respond(200, { bookings });
   }
 
-  // 🟡 POST: Create New Booking
+  // 🟡 POST: Create new booking
   if (method === 'POST') {
     if (!payload.email || !payload.tripName) {
-        return respond(400, { error: "Missing required fields (email, tripName)" });
+      return respond(400, { error: 'Missing required fields (email, tripName)' });
     }
 
-    const record = await submitToAirtable(TABLE_NAME, {
-      "Client Email": payload.email,
-      "Client Name": payload.clientName || payload.email,
-      "Trip Name": payload.tripName,         // Maps to 'Destination'
-      "Travel Dates": payload.travelDates,   // Maps to 'StartDate'
-      "Trip Status": payload.status || "Upcoming",
-      "Budget": payload.price || 0
-    });
-    
-    return respond(200, { success: true, id: record.id });
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([{
+        client_name: payload.clientName || payload.email,
+        client_email: payload.email,
+        trip_name: payload.tripName,
+        travel_dates: payload.travelDates || null,
+        status: payload.status || 'Upcoming',
+        price: payload.price ? String(payload.price) : '0',
+      }])
+      .select()
+      .single();
+
+    if (error) return respond(500, { error: error.message });
+    return respond(200, { success: true, id: data.id });
   }
 
-  // 🟠 PUT: Update Booking
+  // 🟠 PUT: Update booking
   if (method === 'PUT') {
-    if (!payload.id) return respond(400, { error: "Missing Booking ID" });
+    if (!payload.id) return respond(400, { error: 'Missing Booking ID' });
 
-    // Only include fields that are actually defined in payload
     const updates = {};
-    if (payload.email) updates["Client Email"] = payload.email;
-    if (payload.clientName) updates["Client Name"] = payload.clientName;
-    if (payload.tripName) updates["Trip Name"] = payload.tripName;
-    if (payload.travelDates) updates["Travel Dates"] = payload.travelDates;
-    if (payload.status) updates["Trip Status"] = payload.status;
-    if (payload.price) updates["Budget"] = payload.price;
+    if (payload.clientName !== undefined) updates.client_name = payload.clientName;
+    if (payload.email !== undefined) updates.client_email = payload.email;
+    if (payload.tripName !== undefined) updates.trip_name = payload.tripName;
+    if (payload.travelDates !== undefined) updates.travel_dates = payload.travelDates;
+    if (payload.status !== undefined) updates.status = payload.status;
+    if (payload.price !== undefined) updates.price = String(payload.price);
 
-    await updateAirtableRecord(TABLE_NAME, payload.id, updates);
+    if (Object.keys(updates).length === 0) {
+      return respond(400, { error: 'No fields to update' });
+    }
+
+    const { error } = await supabase
+      .from('bookings')
+      .update(updates)
+      .eq('id', payload.id);
+
+    if (error) return respond(500, { error: error.message });
     return respond(200, { success: true });
   }
 
-  // 🔴 DELETE: Remove Booking
+  // 🔴 DELETE: Remove booking
   if (method === 'DELETE') {
-    if (!payload.id) return respond(400, { error: "Missing Booking ID" });
+    if (!payload.id) return respond(400, { error: 'Missing Booking ID' });
 
-    await deleteAirtableRecord(TABLE_NAME, payload.id);
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', payload.id);
+
+    if (error) return respond(500, { error: error.message });
     return respond(200, { success: true });
   }
 
