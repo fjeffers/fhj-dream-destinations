@@ -7,7 +7,7 @@
 import ConciergeThread from "../components/ConciergeThread.jsx";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import { FHJCard, FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import FHJSkeleton from "../components/FHJ/FHJSkeleton.jsx";
 import { useToast } from "../components/FHJ/FHJToast.jsx";
 
@@ -15,10 +15,9 @@ export default function AdminConcierge({ admin }) {
   const toast = useToast();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all | unresolved | resolved
+  const [filter, setFilter] = useState("all"); // all | unresolved | resolved | archived
   const [selected, setSelected] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [actioning, setActioning] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -37,55 +36,52 @@ export default function AdminConcierge({ admin }) {
 
   // Filter messages
   const filtered = messages.filter((m) => {
-    if (filter === "unresolved") return m.status !== "Resolved";
+    if (filter === "unresolved") return m.status !== "Resolved" && m.status !== "Archived";
     if (filter === "resolved") return m.status === "Resolved";
+    if (filter === "archived") return m.status === "Archived";
     return true;
   });
 
-  const unresolvedCount = messages.filter((m) => m.status !== "Resolved").length;
+  const unresolvedCount = messages.filter((m) => m.status !== "Resolved" && m.status !== "Archived").length;
 
-  // Toggle resolve
-  const toggleResolve = async (msg) => {
+  // Patch status via admin-concierge PATCH
+  const patchStatus = async (msg, newStatus) => {
+    setActioning(true);
     try {
-      const newStatus = msg.status === "Resolved" ? "New" : "Resolved";
-      await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+      const res = await fetch("/.netlify/functions/admin-concierge", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, status: newStatus }),
       });
-      toast.success(newStatus === "Resolved" ? "Marked as resolved." : "Reopened message.");
+      if (!res.ok) throw new Error("Request failed");
+      toast.success(`Status updated to ${newStatus}.`);
       loadMessages();
       if (selected?.id === msg.id) {
         setSelected({ ...selected, status: newStatus });
       }
     } catch (err) {
       toast.error("Failed to update status.");
+    } finally {
+      setActioning(false);
     }
   };
 
-  // Send reply
-  const handleReply = async () => {
-    if (!replyText.trim() || !selected) return;
-    setSending(true);
+  // Delete via admin-concierge DELETE
+  const handleDelete = async (msg) => {
+    if (!window.confirm(`Delete message from ${msg.name || msg.email}? This cannot be undone.`)) return;
+    setActioning(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          parentId: selected.id,
-          email: selected.email,
-          name: admin?.Name || admin?.Email || "Admin",
-          message: replyText,
-          source: "Admin Reply",
-        }),
+      const res = await fetch(`/.netlify/functions/admin-concierge?id=${encodeURIComponent(msg.id)}`, {
+        method: "DELETE",
       });
-      toast.success("Reply sent!");
-      setReplyText("");
+      if (!res.ok) throw new Error("Request failed");
+      toast.success("Message deleted.");
+      setSelected(null);
       loadMessages();
     } catch (err) {
-      toast.error("Failed to send reply.");
+      toast.error("Failed to delete message.");
     } finally {
-      setSending(false);
+      setActioning(false);
     }
   };
 
@@ -104,8 +100,8 @@ export default function AdminConcierge({ admin }) {
         </div>
 
         {/* Filter Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          {["all", "unresolved", "resolved"].map((f) => (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+          {["all", "unresolved", "resolved", "archived"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -146,7 +142,7 @@ export default function AdminConcierge({ admin }) {
                   width: "8px",
                   height: "8px",
                   borderRadius: "50%",
-                  background: msg.status === "Resolved" ? "#94a3b8" : msg.status === "In Progress" ? "#fbbf24" : "#f87171",
+                  background: getStatusColor(msg.status).text,
                   flexShrink: 0,
                   marginTop: "6px",
                 }} />
@@ -170,7 +166,7 @@ export default function AdminConcierge({ admin }) {
         </div>
       </FHJCard>
 
-      {/* RIGHT: Message Detail */}
+      {/* RIGHT: Message Detail + Thread */}
       <FHJCard style={{ flex: 1, padding: "1.5rem", display: "flex", flexDirection: "column" }}>
         <AnimatePresence mode="wait">
           {!selected ? (
@@ -192,7 +188,7 @@ export default function AdminConcierge({ admin }) {
               style={{ flex: 1, display: "flex", flexDirection: "column" }}
             >
               {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                 <div>
                   <h3 style={{ color: "white", margin: "0 0 0.25rem", fontSize: "1.3rem" }}>
                     {selected.name || "Unknown"}
@@ -202,13 +198,57 @@ export default function AdminConcierge({ admin }) {
                   </p>
                 </div>
 
-                <FHJButton
-                  variant={selected.status === "Resolved" ? "ghost" : "success"}
-                  size="sm"
-                  onClick={() => toggleResolve(selected)}
-                >
-                  {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
-                </FHJButton>
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {selected.status !== "Resolved" && (
+                    <FHJButton
+                      variant="success"
+                      size="sm"
+                      disabled={actioning}
+                      onClick={() => patchStatus(selected, "Resolved")}
+                    >
+                      Resolve
+                    </FHJButton>
+                  )}
+                  {selected.status === "Resolved" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={actioning}
+                      onClick={() => patchStatus(selected, "New")}
+                    >
+                      Reopen
+                    </FHJButton>
+                  )}
+                  {selected.status !== "Archived" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={actioning}
+                      onClick={() => patchStatus(selected, "Archived")}
+                    >
+                      Archive
+                    </FHJButton>
+                  )}
+                  {selected.status === "Archived" && (
+                    <FHJButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={actioning}
+                      onClick={() => patchStatus(selected, "New")}
+                    >
+                      Unarchive
+                    </FHJButton>
+                  )}
+                  <FHJButton
+                    variant="danger"
+                    size="sm"
+                    disabled={actioning}
+                    onClick={() => handleDelete(selected)}
+                  >
+                    Delete
+                  </FHJButton>
+                </div>
               </div>
 
               {/* Status Badge */}
@@ -218,18 +258,14 @@ export default function AdminConcierge({ admin }) {
                   borderRadius: "20px",
                   fontSize: "0.8rem",
                   fontWeight: 600,
-                  background: selected.status === "Resolved" ? "rgba(148,163,184,0.15)" :
-                              selected.status === "In Progress" ? "rgba(251,191,36,0.15)" :
-                              "rgba(248,113,113,0.15)",
-                  color: selected.status === "Resolved" ? "#94a3b8" :
-                         selected.status === "In Progress" ? "#fbbf24" :
-                         "#f87171",
+                  background: getStatusColor(selected.status).bg,
+                  color: getStatusColor(selected.status).text,
                 }}>
                   {selected.status || "New"}
                 </span>
               </div>
 
-              {/* Message Content */}
+              {/* Original Message */}
               <div style={messageContentStyle}>
                 <p style={{ color: "#e5e7eb", lineHeight: 1.7, margin: 0 }}>
                   {selected.message}
@@ -241,30 +277,12 @@ export default function AdminConcierge({ admin }) {
                 )}
               </div>
 
-              {/* Reply Section */}
-              <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Reply to {selected.name}</p>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type your reply..."
-                    style={replyTextareaStyle}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleReply();
-                      }
-                    }}
-                  />
-                  <FHJButton
-                    onClick={handleReply}
-                    disabled={sending || !replyText.trim()}
-                    style={{ alignSelf: "flex-end" }}
-                  >
-                    {sending ? "Sending..." : "Reply"}
-                  </FHJButton>
-                </div>
+              {/* Threaded Conversation */}
+              <div style={{ marginTop: "1.25rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.25rem" }}>
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem", margin: "0 0 0.75rem" }}>
+                  Conversation Thread
+                </p>
+                <ConciergeThread conciergeId={selected.id} refreshParent={loadMessages} />
               </div>
             </motion.div>
           )}
@@ -277,6 +295,17 @@ export default function AdminConcierge({ admin }) {
 // -------------------------------------------------------
 // Helpers
 // -------------------------------------------------------
+const STATUS_COLORS = {
+  Resolved: { bg: "rgba(74,222,128,0.15)", text: "#4ade80" },
+  Archived: { bg: "rgba(100,116,139,0.15)", text: "#94a3b8" },
+  "In Progress": { bg: "rgba(251,191,36,0.15)", text: "#fbbf24" },
+};
+const DEFAULT_STATUS_COLOR = { bg: "rgba(248,113,113,0.15)", text: "#f87171" };
+
+function getStatusColor(status) {
+  return STATUS_COLORS[status] || DEFAULT_STATUS_COLOR;
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return "";
   try {
@@ -329,23 +358,8 @@ const messageItemStyle = {
 };
 
 const messageContentStyle = {
-  flex: 1,
   padding: "1.25rem",
   background: "rgba(255,255,255,0.03)",
   borderRadius: "10px",
   border: "1px solid rgba(255,255,255,0.06)",
-};
-
-const replyTextareaStyle = {
-  flex: 1,
-  padding: "0.75rem",
-  borderRadius: "10px",
-  background: "rgba(0,0,0,0.3)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  color: "white",
-  fontSize: "0.9rem",
-  resize: "none",
-  minHeight: "60px",
-  boxSizing: "border-box",
-  colorScheme: "dark",
 };
