@@ -52,7 +52,7 @@ export default function AdminAssistantPanel({ admin }) {
           <h4>{response.label}</h4>
 
           {response.type === "text" && (
-            <p style={{ opacity: 0.7 }}>{response.label}</p>
+            <p style={{ opacity: 0.7 }}>{response.answer || response.label}</p>
           )}
 
           {response.type === "list" && (
