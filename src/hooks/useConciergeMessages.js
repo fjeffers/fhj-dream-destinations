@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 export default function useConciergeMessages() {
-  const [threads, setThreads] = useState([]); // each thread = { id, clientName, subject, status, lastMessageAt, messages: [...] }
+  const [threads, setThreads] = useState([]); // each thread = { id, name, email, phone, message, status, source, context, created }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -11,10 +11,10 @@ export default function useConciergeMessages() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/concierge");
+      const res = await fetch("/.netlify/functions/admin-concierge-get");
       if (!res.ok) throw new Error("Failed to load concierge messages");
       const json = await res.json();
-      setThreads(json.threads || []);
+      setThreads(json.data || []);
     } catch (err) {
       console.error(err);
       setError(err.message || "Error loading concierge messages");
@@ -27,37 +27,41 @@ export default function useConciergeMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  const sendReply = async (threadId, messageBody) => {
+  const sendReply = async (threadId, messageBody, threadEmail = "", threadName = "Admin") => {
     try {
       setSaving(true);
-      const res = await fetch(`/api/admin/concierge/${threadId}/reply`, {
+      const res = await fetch("/.netlify/functions/admin-concierge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: messageBody }),
+        body: JSON.stringify({
+          parentId: threadId,
+          email: threadEmail || "",
+          name: threadName || "Admin",
+          message: messageBody,
+          source: "Admin Reply",
+        }),
       });
       if (!res.ok) throw new Error("Failed to send reply");
-      const json = await res.json();
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? json.thread : t))
-      );
-      return json.thread;
+      await fetchThreads();
     } finally {
       setSaving(false);
     }
   };
 
-  const markResolved = async (threadId) => {
+  const markResolved = async (threadId, currentStatus = "") => {
     try {
       setSaving(true);
-      const res = await fetch(`/api/admin/concierge/${threadId}/resolve`, {
-        method: "POST",
+      const newStatus = currentStatus === "Resolved" ? "New" : "Resolved";
+      const res = await fetch("/.netlify/functions/admin-concierge", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: threadId, status: newStatus }),
       });
-      if (!res.ok) throw new Error("Failed to mark resolved");
-      const json = await res.json();
+      if (!res.ok) throw new Error("Failed to update status");
       setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? json.thread : t))
+        prev.map((t) => (t.id === threadId ? { ...t, status: newStatus } : t))
       );
-      return json.thread;
+      return newStatus;
     } finally {
       setSaving(false);
     }
@@ -65,6 +69,7 @@ export default function useConciergeMessages() {
 
   return {
     threads,
+    messages: threads, // alias for backwards compatibility
     loading,
     saving,
     error,

@@ -1,72 +1,110 @@
 // ==========================================================
-// 📄 FILE: admin-concierge.js  (BUILD OUT)
-// Full CRUD for concierge messages — used by AdminConcierge.jsx
+// 📄 FILE: admin-concierge.js
+// Full CRUD for concierge messages — Supabase direct edition
 // Location: netlify/functions/admin-concierge.js
 // ==========================================================
 
-const {
-  selectRecords,
-  submitToAirtable,
-  updateAirtableRecord,
-  respond,
-} = require("./utils");
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
+
+const TABLE = "concierge";
 
 exports.handler = withFHJ(async (event) => {
   const method = event.httpMethod;
 
   // 🟢 GET: Fetch all concierge messages
   if (method === "GET") {
-    const records = await selectRecords("Concierge", "", { normalizer: true });
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    const data = records
-      .map((r) => ({
-        id: r.id,
-        message: r.Message || "",
-        email: r.Email || "",
-        name: r.Name || "",
-        status: r.Status || "New",
-        created: r.Created || r.createdTime || "",
-        updated: r.Updated || r.Update || "",
-        source: r.Source || "",
-        context: r.Context || "",
-      }))
-      .sort((a, b) => new Date(b.created) - new Date(a.created));
+    if (error) throw new Error(error.message);
 
-    return respond(200, { success: true, data });
+    const records = (data || []).map((r) => ({
+      id: r.id,
+      message: r.message || "",
+      email: r.email || "",
+      name: r.name || "",
+      phone: r.phone || "",
+      status: r.status || "New",
+      created: r.created_at || "",
+      source: r.source || "",
+      context: r.context || "",
+      reply: r.reply || "",
+    }));
+
+    return respond(200, { success: true, data: records });
   }
 
   const payload = JSON.parse(event.body || "{}");
 
-  // 🟡 POST: Create a reply message
+  // 🟡 POST: Store admin reply on the parent message row
   if (method === "POST") {
-    const { parentId, email, name, message, source } = payload;
+    const { parentId, message } = payload;
 
     if (!message) {
       return respond(400, { error: "Message is required" });
     }
 
-    const record = await submitToAirtable("Concierge", {
-      Email: email || "",
-      Name: name || "Admin",
-      Message: message,
-      Source: source || "Admin Reply",
-      Status: "New",
-      Context: parentId ? `Reply to ${parentId}` : "",
-    });
+    // When replying to an existing message, update its `reply` column
+    if (parentId) {
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ reply: message })
+        .eq("id", parentId);
 
-    return respond(200, { success: true, id: record.id });
+      if (error) throw new Error(error.message);
+
+      return respond(200, { success: true });
+    }
+
+    // Standalone message (no parent) — insert new row
+    const { data, error } = await supabase
+      .from(TABLE)
+      .insert([{
+        email: payload.email || "",
+        name: payload.name || "Admin",
+        message,
+        source: payload.source || "Admin",
+        status: "New",
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return respond(200, { success: true, id: data.id });
   }
 
-  // 🟠 PUT: Update status (resolve/reopen)
+  // 🟠 PUT: Update status (resolve / reopen / archive)
   if (method === "PUT") {
     const { id, status } = payload;
 
     if (!id) return respond(400, { error: "Missing message ID" });
 
-    await updateAirtableRecord("Concierge", id, {
-      Status: status || "Resolved",
-    });
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ status: status || "Resolved" })
+      .eq("id", id);
+
+    if (error) throw new Error(error.message);
+
+    return respond(200, { success: true });
+  }
+
+  // 🔴 DELETE: Remove a message permanently
+  if (method === "DELETE") {
+    const { id } = payload;
+
+    if (!id) return respond(400, { error: "Missing message ID" });
+
+    const { error } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq("id", id);
+
+    if (error) throw new Error(error.message);
 
     return respond(200, { success: true });
   }

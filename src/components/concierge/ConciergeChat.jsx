@@ -1,6 +1,8 @@
 // ==========================================================
-// 📄 FILE: ConciergeChat.jsx  (BUILD OUT)
-// Floating concierge chat with real backend integration
+// 📄 FILE: ConciergeChat.jsx  (DISCOVERY FLOW UPGRADE)
+// Conversational travel-needs discovery: name → email →
+// phone → trip type → destination → timing → travelers →
+// budget → extras → submit. Context-aware, chip-driven.
 // Location: src/components/concierge/ConciergeChat.jsx
 // ==========================================================
 
@@ -9,12 +11,101 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fhjTheme } from "../FHJ/FHJUIKit.jsx";
 import ConciergeToggleButton from "./ConciergeToggleButton.jsx";
 
+const SESSION_KEY = "fhj_chat_state_v2";
+
+const INITIAL_MESSAGES = [
+  {
+    id: "welcome",
+    from: "concierge",
+    text: "Welcome to FHJ Dream Destinations! ✈️ I'm here to help craft your perfect journey. To get started, what's your name?",
+  },
+];
+
 const placeholders = {
   name: "Your name…",
   email: "Your email address…",
   phone: "Your phone number…",
-  message: "Tell us about your dream trip…",
+  tripType: "Type of trip, or pick below…",
+  destination: "Dream destination, or choose below…",
+  timing: "When you'd like to travel…",
+  travelers: "Number of travelers…",
+  budget: "Approximate budget per person…",
+  extras: "Any special needs, occasions, must-sees… (or say 'none')…",
 };
+
+// Chips shown per step — clicking one auto-advances the conversation
+const STEP_CHIPS = {
+  tripType: [
+    "Luxury Getaway ✨",
+    "Honeymoon / Romance 💑",
+    "Family Adventure 👨‍👩‍👧",
+    "Group Travel 👥",
+    "Custom Itinerary 🗺️",
+    "Special Event 🎉",
+  ],
+  destination: [
+    "Open to suggestions 🌍",
+    "Caribbean 🏝️",
+    "Europe 🗺️",
+    "Asia 🌏",
+    "Mexico / Latin America 🌴",
+    "Africa / Safari 🦁",
+    "Cruise 🚢",
+  ],
+  timing: [
+    "Next 30 days 🏃",
+    "1–3 months 📅",
+    "3–6 months 🗓️",
+    "6+ months ahead ⏳",
+    "Just exploring 💭",
+  ],
+  travelers: [
+    "Just me 🧳",
+    "2 travelers 💑",
+    "3–5 travelers 👥",
+    "6–10 travelers 🎊",
+    "10+ (large group) 🎉",
+  ],
+  budget: [
+    "Under $1,500 💰",
+    "$1,500 – $3,000 💳",
+    "$3,000 – $5,000 ✈️",
+    "$5,000+ per person 🌟",
+    "Flexible / Unsure 🤷",
+  ],
+  extras: [
+    "No special requirements 👍",
+  ],
+};
+
+// Returns a contextual opener based on the chosen trip type
+function getTripTypePrefix(type) {
+  const t = (type || "").toLowerCase();
+  if (t.includes("honeymoon") || t.includes("romance")) return "How exciting — a romantic escape! 💑";
+  if (t.includes("family")) return "Family adventures are truly the best! 👨‍👩‍👧";
+  if (t.includes("group")) return "Love that energy — group travel is so much fun! 🎊";
+  if (t.includes("luxury")) return "Excellent taste — luxury travel is our specialty! ✨";
+  if (t.includes("event") || t.includes("special")) return "Special occasions deserve extraordinary trips! 🎉";
+  return "Wonderful choice! 🌟";
+}
+
+// Builds the structured message that gets saved and shown in the admin
+function buildMessage({ tripType, destination, timing, travelers, budget, extras }) {
+  const parts = [
+    `Trip Type: ${tripType}`,
+    `Destination: ${destination}`,
+    `Travel Timing: ${timing}`,
+    `Travelers: ${travelers}`,
+    `Budget (per person): ${budget}`,
+  ];
+  const extrasClean = (extras || "").trim();
+  const skipExtras =
+    !extrasClean ||
+    extrasClean.toLowerCase() === "none" ||
+    extrasClean.toLowerCase().includes("no special");
+  if (!skipExtras) parts.push(`Special Requirements: ${extrasClean}`);
+  return parts.join(" · ");
+}
 
 export default function ConciergeChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,84 +113,177 @@ export default function ConciergeChat() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: "welcome",
-      from: "concierge",
-      text: "Welcome to FHJ Dream Destinations! How can we help make your travel dreams a reality? ✈️ First, what's your name?",
-    },
-  ]);
+  const [tripType, setTripType] = useState("");
+  const [destination, setDestination] = useState("");
+  const [timing, setTiming] = useState("");
+  const [travelers, setTravelers] = useState("");
+  const [budget, setBudget] = useState("");
+  const [extras, setExtras] = useState("");
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const typingTimersRef = useRef([]);
+  const msgCounterRef = useRef(0);
 
-  // Auto-scroll on new message
+  // ── Restore session on mount ──────────────────────────────
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.messages?.length) setMessages(s.messages);
+        if (s.step) setStep(s.step);
+        if (s.userName) setUserName(s.userName);
+        if (s.userEmail) setUserEmail(s.userEmail);
+        if (s.userPhone) setUserPhone(s.userPhone);
+        if (s.tripType) setTripType(s.tripType);
+        if (s.destination) setDestination(s.destination);
+        if (s.timing) setTiming(s.timing);
+        if (s.travelers) setTravelers(s.travelers);
+        if (s.budget) setBudget(s.budget);
+        if (s.extras) setExtras(s.extras);
+      }
+    } catch {
+      // sessionStorage may be unavailable (e.g. private browsing) — safe to ignore
+    }
+  }, []);
+
+  // ── Persist session on state change ──────────────────────
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        messages, step, userName, userEmail, userPhone,
+        tripType, destination, timing, travelers, budget, extras,
+      }));
+    } catch {
+      // sessionStorage may be unavailable — safe to ignore
+    }
+  }, [messages, step, userName, userEmail, userPhone, tripType, destination, timing, travelers, budget, extras]);
+
+  // ── Auto-scroll on new message ────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const handleToggle = () => setIsOpen(!isOpen);
+  // ── Helper: typing indicator → append concierge message ──
+  const conciergeSay = (text, delay = 350) => {
+    const t1 = setTimeout(() => {
+      setIsTyping(true);
+      const t2 = setTimeout(() => {
+        setIsTyping(false);
+        msgCounterRef.current += 1;
+        setMessages((prev) => [
+          ...prev,
+          { id: `c-${msgCounterRef.current}`, from: "concierge", text },
+        ]);
+      }, 900);
+      typingTimersRef.current.push(t2);
+    }, delay);
+    typingTimersRef.current.push(t1);
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const trimmed = input.trim();
-    if (!trimmed || sending) return;
+  // ── Reset conversation ────────────────────────────────────
+  const handleReset = () => {
+    typingTimersRef.current.forEach(clearTimeout);
+    typingTimersRef.current = [];
+    try { sessionStorage.removeItem(SESSION_KEY); } catch {
+      // sessionStorage may be unavailable — safe to ignore
+    }
+    setStep("name");
+    setUserName(""); setUserEmail(""); setUserPhone("");
+    setTripType(""); setDestination(""); setTiming("");
+    setTravelers(""); setBudget(""); setExtras("");
+    setMessages(INITIAL_MESSAGES);
+    setInput("");
+  };
 
-    // Add user message
-    const userMsg = { id: `user-${Date.now()}`, from: "user", text: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
+  // ── Core input processor — called by both form submit and chip click ──
+  const processUserInput = async (trimmed) => {
+    if (!trimmed || sending || isTyping) return;
+
+    msgCounterRef.current += 1;
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${msgCounterRef.current}`, from: "user", text: trimmed },
+    ]);
     setInput("");
 
+    // ── Collect contact info ──────────────────────────────
     if (step === "name") {
       setUserName(trimmed);
       setStep("email");
-      const reply = {
-        id: `concierge-${Date.now()}`,
-        from: "concierge",
-        text: `Nice to meet you, ${trimmed}! What's your email address so we can follow up with you?`,
-      };
-      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      conciergeSay(`Nice to meet you, ${trimmed}! 😊 What's your email address so we can send you trip details?`);
       return;
     }
 
     if (step === "email") {
-      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-      if (!emailValid) {
-        const errReply = {
-          id: `concierge-${Date.now()}`,
-          from: "concierge",
-          text: "That doesn't look like a valid email address. Please try again.",
-        };
-        setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        conciergeSay("That doesn't look like a valid email address. Please try again (e.g., name@example.com).");
         return;
       }
       setUserEmail(trimmed);
       setStep("phone");
-      const reply = {
-        id: `concierge-${Date.now()}`,
-        from: "concierge",
-        text: "Great! What's the best phone number to reach you?",
-      };
-      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      conciergeSay("Got it! And what's the best phone number to reach you?");
       return;
     }
 
     if (step === "phone") {
       setUserPhone(trimmed);
-      setStep("message");
-      const reply = {
-        id: `concierge-${Date.now()}`,
-        from: "concierge",
-        text: "Perfect! What can we help you with today? Tell us about your dream destination or any questions you have.",
-      };
-      setTimeout(() => setMessages((prev) => [...prev, reply]), 400);
+      setStep("tripType");
+      conciergeSay(`Thanks, ${userName}! 🌟 Now let's start planning something incredible. What type of travel experience are you dreaming of?`);
       return;
     }
 
-    // step === "message"
-    setSending(true);
+    // ── Discovery steps ───────────────────────────────────
+    if (step === "tripType") {
+      setTripType(trimmed);
+      setStep("destination");
+      const prefix = getTripTypePrefix(trimmed);
+      conciergeSay(`${prefix} Where are you dreaming of going — or would you like us to suggest some breathtaking destinations? 🌍`);
+      return;
+    }
 
+    if (step === "destination") {
+      setDestination(trimmed);
+      setStep("timing");
+      const isOpen = trimmed.toLowerCase().includes("open") || trimmed.toLowerCase().includes("suggest");
+      const resp = isOpen
+        ? "A sense of adventure — love it! 🌍 We'll come prepared with some incredible options."
+        : `${trimmed} — incredible choice! ✨`;
+      conciergeSay(`${resp} When are you hoping to travel?`);
+      return;
+    }
+
+    if (step === "timing") {
+      setTiming(trimmed);
+      setStep("travelers");
+      conciergeSay(`Perfect — noted! 📅 And how many travelers will be joining you?`);
+      return;
+    }
+
+    if (step === "travelers") {
+      setTravelers(trimmed);
+      setStep("budget");
+      conciergeSay("Wonderful! 🎉 To help us match you with the right options, what's your approximate budget per person?");
+      return;
+    }
+
+    if (step === "budget") {
+      setBudget(trimmed);
+      setStep("extras");
+      conciergeSay("Almost there! 🏖️ Last question — is there anything special we should know? Think dietary needs, accessibility, a must-see experience, or a special occasion to celebrate. (Just say 'none' if not!)");
+      return;
+    }
+
+    // ── Final step: submit everything ────────────────────
+    // step === "extras"
+    setSending(true);
     try {
+      const compiledMsg = buildMessage({
+        tripType, destination, timing, travelers, budget, extras: trimmed,
+      });
       const res = await fetch("/.netlify/functions/concierge-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,9 +291,9 @@ export default function ConciergeChat() {
           name: userName,
           email: userEmail,
           phone: userPhone,
-          message: trimmed,
+          message: compiledMsg,
           source: "Chat Widget",
-          context: "Concierge Chat Widget",
+          context: `Discovery Chat — ${tripType} to ${destination}`,
         }),
       });
 
@@ -117,34 +301,48 @@ export default function ConciergeChat() {
 
       if (data.success) {
         setStep("done");
-        const reply = {
-          id: `concierge-${Date.now()}`,
-          from: "concierge",
-          text: `Thank you, ${userName}! 🌴 Your message has been received and we'll reach out to you at ${userEmail} shortly. We look forward to crafting your perfect journey!`,
-        };
-        setTimeout(() => setMessages((prev) => [...prev, reply]), 600);
+        conciergeSay(
+          `You're all set, ${userName}! 🌟 I've sent your travel request to our team. A travel expert will reach out at ${userEmail} very soon to craft your perfect ${(tripType || "").toLowerCase()} itinerary. We can't wait to make it happen! ✈️`,
+          200
+        );
       } else {
-        const errReply = {
-          id: `err-${Date.now()}`,
-          from: "concierge",
-          text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
-        };
-        setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
+        conciergeSay("I'm sorry, something went wrong. Please try again or contact us directly at info@fhjdreamdestinations.com");
       }
-    } catch (err) {
-      const errReply = {
-        id: `err-${Date.now()}`,
-        from: "concierge",
-        text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
-      };
-      setTimeout(() => setMessages((prev) => [...prev, errReply]), 400);
+    } catch {
+      conciergeSay("I'm sorry, something went wrong. Please try again or contact us directly at info@fhjdreamdestinations.com");
     } finally {
       setSending(false);
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    processUserInput(input.trim());
+  };
+
+  // Chips auto-advance the conversation immediately
+  const handleQuickReply = (text) => {
+    processUserInput(text);
+  };
+
+  const handleToggle = () => setIsOpen((o) => !o);
+
+  const currentChips = STEP_CHIPS[step] || [];
+
   return (
     <>
+      {/* Keyframes */}
+      <style>{`
+        @keyframes fhj-dot-bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+          40% { transform: translateY(-5px); opacity: 1; }
+        }
+        @keyframes fhj-online-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+
       <ConciergeToggleButton isOpen={isOpen} onToggle={handleToggle} />
 
       <AnimatePresence>
@@ -158,11 +356,18 @@ export default function ConciergeChat() {
           >
             {/* Header */}
             <div style={headerStyle}>
-              <div>
-                <h3 style={{ margin: 0, color: "white", fontSize: "1.1rem" }}>FHJ Concierge</h3>
-                <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "0.8rem" }}>
-                  Ask about events, travel, or your itinerary.
-                </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <span style={{
+                  display: "inline-block", width: "8px", height: "8px",
+                  borderRadius: "50%", background: "#00c48c", flexShrink: 0,
+                  animation: "fhj-online-pulse 2s ease-in-out infinite",
+                }} />
+                <div>
+                  <h3 style={{ margin: 0, color: "white", fontSize: "1.1rem" }}>FHJ Concierge</h3>
+                  <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "0.8rem" }}>
+                    Your personal travel expert
+                  </p>
+                </div>
               </div>
               <button onClick={handleToggle} style={closeBtnStyle} aria-label="Close chat">✕</button>
             </div>
@@ -177,20 +382,45 @@ export default function ConciergeChat() {
                     ...(msg.from === "user" ? userBubble : conciergeBubble),
                   }}
                 >
-                  <p style={{ margin: 0 }}>{msg.text}</p>
+                  <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{msg.text}</p>
                 </div>
               ))}
 
-              {sending && (
-                <div style={{ ...messageBubble, ...conciergeBubble, opacity: 0.6 }}>
-                  <p style={{ margin: 0 }}>Sending...</p>
+              {/* Typing indicator */}
+              {isTyping && (
+                <div style={{ ...messageBubble, ...conciergeBubble, padding: "0.65rem 1rem" }}>
+                  <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} style={{
+                        display: "inline-block", width: "7px", height: "7px",
+                        borderRadius: "50%", background: "#94a3b8",
+                        animation: `fhj-dot-bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                      }} />
+                    ))}
+                  </span>
                 </div>
               )}
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
+            {/* Chips (shown when available, input is empty, not typing) */}
+            {currentChips.length > 0 && !input && !isTyping && step !== "done" && (
+              <div style={quickRepliesContainerStyle}>
+                {currentChips.map((qr) => (
+                  <button
+                    key={qr}
+                    onClick={() => handleQuickReply(qr)}
+                    disabled={sending}
+                    style={{ ...quickReplyChipStyle, opacity: sending ? 0.4 : 1 }}
+                  >
+                    {qr}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input row */}
             {step !== "done" && (
               <form onSubmit={handleSubmit} style={inputRowStyle}>
                 <input
@@ -198,20 +428,29 @@ export default function ConciergeChat() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={placeholders[step] || "…"}
-                  disabled={sending}
+                  disabled={sending || isTyping}
                   style={inputFieldStyle}
                 />
                 <button
                   type="submit"
-                  disabled={sending || !input.trim()}
+                  disabled={sending || isTyping || !input.trim()}
                   style={{
                     ...sendBtnStyle,
-                    opacity: sending || !input.trim() ? 0.4 : 1,
+                    opacity: sending || isTyping || !input.trim() ? 0.4 : 1,
                   }}
                 >
-                  Send
+                  {sending ? "…" : "Send"}
                 </button>
               </form>
+            )}
+
+            {/* Done state */}
+            {step === "done" && !isTyping && (
+              <div style={doneFooterStyle}>
+                <button onClick={handleReset} style={resetBtnStyle}>
+                  Start a new conversation
+                </button>
+              </div>
             )}
           </motion.div>
         )}
@@ -228,7 +467,7 @@ const panelStyle = {
   bottom: "90px",
   right: "20px",
   width: "380px",
-  maxHeight: "520px",
+  maxHeight: "580px",
   background: "rgba(10, 10, 20, 0.96)",
   backdropFilter: "blur(20px)",
   borderRadius: "20px",
@@ -264,7 +503,7 @@ const messagesStyle = {
   display: "flex",
   flexDirection: "column",
   gap: "0.75rem",
-  minHeight: "250px",
+  minHeight: "200px",
 };
 
 const messageBubble = {
@@ -287,6 +526,25 @@ const conciergeBubble = {
   background: "rgba(255,255,255,0.08)",
   color: "#e5e7eb",
   borderBottomLeftRadius: "4px",
+};
+
+const quickRepliesContainerStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "0.4rem",
+  padding: "0.5rem 1.25rem 0.6rem",
+};
+
+const quickReplyChipStyle = {
+  padding: "0.35rem 0.75rem",
+  borderRadius: "999px",
+  background: "rgba(0,196,140,0.1)",
+  border: "1px solid rgba(0,196,140,0.3)",
+  color: "#6ee7b7",
+  fontSize: "0.78rem",
+  cursor: "pointer",
+  transition: "background 0.15s ease",
+  whiteSpace: "nowrap",
 };
 
 const inputRowStyle = {
@@ -315,6 +573,24 @@ const sendBtnStyle = {
   color: "#00c48c",
   fontSize: "0.85rem",
   fontWeight: 600,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+};
+
+const doneFooterStyle = {
+  padding: "0.75rem 1.25rem",
+  borderTop: "1px solid rgba(255,255,255,0.08)",
+  display: "flex",
+  justifyContent: "center",
+};
+
+const resetBtnStyle = {
+  background: "none",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: "999px",
+  color: "#94a3b8",
+  fontSize: "0.8rem",
+  padding: "0.4rem 1rem",
   cursor: "pointer",
   transition: "all 0.2s ease",
 };
