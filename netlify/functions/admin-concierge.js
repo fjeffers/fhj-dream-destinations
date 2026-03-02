@@ -1,5 +1,6 @@
 // netlify/functions/admin-concierge.js
 // Admin-facing concierge API: GET (list), PATCH (update status/reply), DELETE (delete)
+// Uses the Supabase service-role client from utils.js (SUPABASE_SERVICE_KEY env var).
 
 const { supabase, respond } = require("./utils");
 const { requireAdminAuth } = require("./middleware");
