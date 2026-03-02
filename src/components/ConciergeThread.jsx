@@ -1,6 +1,7 @@
 // src/components/ConciergeThread.jsx
 import React, { useEffect, useState } from "react";
 import { FHJButton } from "./FHJ/FHJUIKit.jsx"; // adjust path if needed
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function ConciergeThread({ conciergeId, refreshParent }) {
   const [messages, setMessages] = useState([]);
@@ -12,7 +13,7 @@ export default function ConciergeThread({ conciergeId, refreshParent }) {
   const loadMessages = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/.netlify/functions/admin-concierge-messages?concierge_id=${encodeURIComponent(conciergeId)}`);
+      const res = await adminFetch(`/.netlify/functions/admin-concierge-messages?concierge_id=${encodeURIComponent(conciergeId)}`);
       const json = await res.json();
       setMessages(json.messages || []);
     } catch (err) { console.error("load messages", err); }
@@ -24,7 +25,7 @@ export default function ConciergeThread({ conciergeId, refreshParent }) {
   const postMessage = async (sender = "admin", body = composer, metadata = {}) => {
     if (!body || !conciergeId) return;
     try {
-      const res = await fetch(`/.netlify/functions/admin-concierge-messages`, {
+      const res = await adminFetch(`/.netlify/functions/admin-concierge-messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ concierge_id: conciergeId, sender, body, metadata })

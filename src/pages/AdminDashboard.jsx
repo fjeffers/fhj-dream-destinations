@@ -16,6 +16,7 @@ import ClientGrowthChart from "../components/admin/charts/ClientGrowthChart.jsx"
 import TripsPerMonthChart from "../components/admin/charts/TripsPerMonthChart.jsx";
 import ConciergeActivityChart from "../components/admin/charts/ConciergeActivityChart.jsx";
 import EventAttendanceChart from "../components/admin/charts/EventAttendanceChart.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminDashboard({ admin }) {
   const navigate = useNavigate();
@@ -27,8 +28,8 @@ export default function AdminDashboard({ admin }) {
     const load = async () => {
       try {
         const [statsRes, insightsRes] = await Promise.allSettled([
-          fetch("/.netlify/functions/admin-dashboard-stats"),
-          fetch("/.netlify/functions/admin-dashboard-insights"),
+          adminFetch("/.netlify/functions/admin-dashboard-stats"),
+          adminFetch("/.netlify/functions/admin-dashboard-insights"),
         ]);
 
         if (statsRes.status === "fulfilled" && statsRes.value.ok) {

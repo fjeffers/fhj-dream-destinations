@@ -1,8 +1,8 @@
 // netlify/functions/admin-dashboard-trips-monthly.js
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   try {
     const trips = await selectRecords("Trips");
 

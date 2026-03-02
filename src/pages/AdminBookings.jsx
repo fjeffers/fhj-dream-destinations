@@ -10,6 +10,7 @@ import FHJDataTable from "../components/FHJ/FHJDataTable.jsx";
 import FHJFormModal, { BOOKING_FIELDS } from "../components/FHJ/FHJFormModal.jsx";
 import FHJSkeleton from "../components/FHJ/FHJSkeleton.jsx";
 import { useToast } from "../components/FHJ/FHJToast.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminBookings({ admin }) {
   const toast = useToast();
@@ -24,7 +25,7 @@ export default function AdminBookings({ admin }) {
   const loadBookings = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/.netlify/functions/admin-bookings");
+      const res = await adminFetch("/.netlify/functions/admin-bookings");
       const data = await res.json();
       setBookings(data.bookings || []);
     } catch (err) {
@@ -40,7 +41,7 @@ export default function AdminBookings({ admin }) {
     setSaving(true);
     try {
       const method = editingBooking ? "PUT" : "POST";
-      await fetch("/.netlify/functions/admin-bookings", {
+      await adminFetch("/.netlify/functions/admin-bookings", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +69,7 @@ export default function AdminBookings({ admin }) {
     if (!window.confirm(`Delete booking for ${booking.clientName}?`)) return;
     setSaving(true);
     try {
-      await fetch("/.netlify/functions/admin-bookings", {
+      await adminFetch("/.netlify/functions/admin-bookings", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: booking.id }),

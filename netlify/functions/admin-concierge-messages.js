@@ -1,15 +1,22 @@
 // netlify/functions/admin-concierge-messages.js
 // Threaded conversation endpoints for concierge messages
-import supabase from "../../utils/supabaseServer.js";
 
-export const handler = async (event) => {
+const { supabase, respond } = require("./utils");
+const { requireAdminAuth } = require("./middleware");
+
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return respond(200, {});
+
+  const authError = await requireAdminAuth(event);
+  if (authError) return authError;
+
   try {
     const method = event.httpMethod;
     const qs = event.queryStringParameters || {};
 
     if (method === "GET") {
       const concierge_id = qs.concierge_id;
-      if (!concierge_id) return { statusCode: 400, body: JSON.stringify({ error: "concierge_id required" }) };
+      if (!concierge_id) return respond(400, { error: "concierge_id required" });
 
       const { data: messages, error: mErr } = await supabase
         .from("concierge_messages")
@@ -18,25 +25,25 @@ export const handler = async (event) => {
         .order("created_at", { ascending: true });
 
       if (mErr) throw mErr;
-      return { statusCode: 200, body: JSON.stringify({ messages: messages || [] }) };
+      return respond(200, { messages: messages || [] });
     }
 
     if (method === "POST") {
       const payload = JSON.parse(event.body || "{}");
       const { concierge_id, sender, body, metadata = {} } = payload;
-      if (!concierge_id || !sender || !body) return { statusCode: 400, body: JSON.stringify({ error: "concierge_id, sender, body required" }) };
+      if (!concierge_id || !sender || !body) return respond(400, { error: "concierge_id, sender, body required" });
 
       const insert = { concierge_id, sender, body, metadata, created_at: new Date().toISOString() };
       const { data: created, error: iErr } = await supabase.from("concierge_messages").insert([insert]).select().single();
       if (iErr) throw iErr;
 
       await supabase.from("concierge").update({ last_activity: new Date().toISOString(), conversation_open: true }).eq("id", concierge_id);
-      return { statusCode: 201, body: JSON.stringify({ message: created }) };
+      return respond(201, { message: created });
     }
 
-    return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
+    return respond(405, { error: "Method not allowed" });
   } catch (err) {
     console.error("admin-concierge-messages error:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
+    return respond(500, { error: err.message || String(err) });
   }
 };

@@ -55,11 +55,15 @@ export default function App() {
   const handleLogin = (data) => {
     setAdmin(data);
     localStorage.setItem("fhj_admin", JSON.stringify(data));
+    if (data && data.token) {
+      localStorage.setItem("fhj_admin_token", data.token);
+    }
   };
 
   const handleLogout = () => {
     setAdmin(null);
     localStorage.removeItem("fhj_admin");
+    localStorage.removeItem("fhj_admin_token");
   };
 
   return (

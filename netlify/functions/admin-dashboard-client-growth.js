@@ -1,8 +1,8 @@
 // netlify/functions/admin-dashboard-client-growth.js
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const TABLE_CLIENTS = "Client Name";
 
   const clients = await selectRecords(TABLE_CLIENTS);

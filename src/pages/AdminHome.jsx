@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import Navigation
 import { FHJCard, FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 export default function AdminHome({ admin }) {
   const navigate = useNavigate(); // Initialize hook
   const [stats, setStats] = useState(null);
@@ -8,7 +9,7 @@ export default function AdminHome({ admin }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-stats");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-stats");
         if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
         setStats(data);

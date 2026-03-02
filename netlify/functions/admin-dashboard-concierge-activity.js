@@ -1,8 +1,8 @@
 // netlify/functions/admin-dashboard-concierge-activity.js
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const TABLE_CONCIERGE = "Concierge";
 
   const records = await selectRecords(TABLE_CONCIERGE);

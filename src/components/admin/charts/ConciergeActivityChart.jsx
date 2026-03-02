@@ -9,6 +9,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
+import { adminFetch } from "../../../utils/adminFetch.js";
 
 export default function ConciergeActivityChart() {
   const [data, setData] = useState([]);
@@ -17,7 +18,7 @@ export default function ConciergeActivityChart() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-concierge-activity");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-concierge-activity");
         const json = await res.json();
         setData(json.data || json || []);
       } catch (err) {

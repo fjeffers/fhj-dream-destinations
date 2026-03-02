@@ -1,6 +1,6 @@
 // netlify/functions/admin-stream.js
 const Airtable = require("airtable");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
 const handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
@@ -79,4 +79,4 @@ const handler = async (event, context) => {
   }
 };
 
-exports.handler = withFHJ(handler);
+exports.handler = withFHJAdmin(handler);

@@ -1,5 +1,6 @@
 // src/hooks/useTripsMonthly.js
 import { useEffect, useState } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function useTripsMonthly() {
   const [data, setData] = useState([]);
@@ -8,7 +9,7 @@ export default function useTripsMonthly() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-trips-monthly");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-trips-monthly");
         const json = await res.json();
         setData(json.data || []);
       } catch (err) {

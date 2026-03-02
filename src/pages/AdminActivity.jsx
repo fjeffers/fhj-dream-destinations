@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { FHJCard, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 export default function AdminActivity() {
   const [feed, setFeed] = useState([]);
   const [error, setError] = useState(false);
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-activity");
+        const res = await adminFetch("/.netlify/functions/admin-activity");
         if (!res.ok) throw new Error("Failed to fetch activity");
         const data = await res.json();
         // Ensure we always have an array

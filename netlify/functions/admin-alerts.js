@@ -1,9 +1,9 @@
 // netlify/functions/admin-alerts.js
 const { respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 const Airtable = require("airtable");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
     process.env.AIRTABLE_BASE_ID
   );

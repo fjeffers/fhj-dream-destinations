@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import FHJSkeleton from "../components/FHJ/FHJSkeleton.jsx";
 import { useToast } from "../components/FHJ/FHJToast.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminConcierge({ admin }) {
   const toast = useToast();
@@ -23,7 +24,7 @@ export default function AdminConcierge({ admin }) {
   const loadMessages = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/.netlify/functions/admin-concierge-get");
+      const res = await adminFetch("/.netlify/functions/admin-concierge-get");
       const data = await res.json();
       setMessages(data.data || []);
     } catch (err) {
@@ -48,7 +49,7 @@ export default function AdminConcierge({ admin }) {
   const toggleResolve = async (msg) => {
     try {
       const newStatus = msg.status === "Resolved" ? "New" : "Resolved";
-      await fetch("/.netlify/functions/admin-concierge", {
+      await adminFetch("/.netlify/functions/admin-concierge", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, status: newStatus }),
@@ -68,7 +69,7 @@ export default function AdminConcierge({ admin }) {
     if (!replyText.trim() || !selected) return;
     setSending(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
+      await adminFetch("/.netlify/functions/admin-concierge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

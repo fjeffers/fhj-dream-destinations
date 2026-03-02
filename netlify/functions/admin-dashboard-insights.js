@@ -4,9 +4,9 @@
 // ==========================================================
 
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const TABLE_TRIPS = "Trips";
   const TABLE_EVENTS = "Events";
   const TABLE_RSVPS = "RSVPs";

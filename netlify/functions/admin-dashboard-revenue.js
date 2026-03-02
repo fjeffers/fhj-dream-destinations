@@ -5,9 +5,9 @@
 // ==========================================================
 
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   try {
     const bookings = await selectRecords("Client_Bookings");
 

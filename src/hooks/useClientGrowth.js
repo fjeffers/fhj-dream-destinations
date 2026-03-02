@@ -1,5 +1,6 @@
 // src/hooks/useClientGrowth.js
 import { useEffect, useState } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function useClientGrowth() {
   const [data, setData] = useState([]);
