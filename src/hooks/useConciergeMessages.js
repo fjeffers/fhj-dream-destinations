@@ -27,19 +27,13 @@ export default function useConciergeMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  const sendReply = async (threadId, messageBody, threadEmail = "", threadName = "Admin") => {
+  const sendReply = async (threadId, messageBody) => {
     try {
       setSaving(true);
       const res = await fetch("/.netlify/functions/admin-concierge", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          parentId: threadId,
-          email: threadEmail || "",
-          name: threadName || "Admin",
-          message: messageBody,
-          source: "Admin Reply",
-        }),
+        body: JSON.stringify({ id: threadId, reply: messageBody }),
       });
       if (!res.ok) throw new Error("Failed to send reply");
       await fetchThreads();
@@ -53,7 +47,7 @@ export default function useConciergeMessages() {
       setSaving(true);
       const newStatus = currentStatus === "Resolved" ? "New" : "Resolved";
       const res = await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: threadId, status: newStatus }),
       });

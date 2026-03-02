@@ -3,7 +3,7 @@ import React from "react";
 import useConciergeMessages from "../hooks/useConciergeMessages.js";
 import { FHJCard } from "../components/FHJ/FHJUIKit.jsx";
 export default function ConciergeInboxPage() {
-  const { threads, loading } = useConciergeMessages();
+  const { messages, loading } = useConciergeMessages();
   return (
     <div style={{ padding: "2rem" }}>
       <h1 style={{ color: "#D4AF37", marginBottom: "1rem" }}>
@@ -12,11 +12,11 @@ export default function ConciergeInboxPage() {
       <FHJCard style={{ padding: "1.5rem" }}>
         {loading ? (
           <p>Loading messages…</p>
-        ) : threads.length === 0 ? (
+        ) : messages.length === 0 ? (
           <p>No messages found.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {threads.map((m) => (
+            {messages.map((m) => (
               <div
                 key={m.id}
                 style={{
