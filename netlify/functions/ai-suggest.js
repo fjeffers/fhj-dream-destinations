@@ -1,58 +1,117 @@
 // netlify/functions/ai-suggest.js
-// Uses OPENAI_API_KEY or FHJAI environment variable (fallback).
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+// Generate 1-3 clarifying follow-up questions using OpenAI (server-side).
+// If called with { persist: true, concierge_id } will insert assistant messages into concierge_messages
+// and update parent concierge.last_activity via Supabase service client.
+//
+// POST JSON:
+// { message: string, context?: string, persist?: boolean, concierge_id?: uuid }
+//
+// Response: { suggestions: [..], persisted?: { messages: [...] } }
 
-export const handler = async (event) => {
+const fetch = require('node-fetch');
+const supabase = require('./utils/supabaseServer');
+const { respond } = require('./utils/respond');
+
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+
+async function callOpenAI(message, context = '') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+
+  const system = 'You are a friendly travel concierge assistant. Produce 1-3 short clarifying questions that help fulfill a travel booking request. Keep them concise and natural.';
+  const user = `Client message: ${message}\nContext: ${context}\n\nReturn exactly an array of 1-3 short clarifying questions.`;
+
+  const body = {
+    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user }
+    ],
+    temperature: 0.6,
+    max_tokens: 200
+  };
+
+  const res = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`OpenAI error: ${res.status} ${txt}`);
+  }
+
+  const data = await res.json();
+  const assistant = data?.choices?.[0]?.message?.content ?? '';
+
+  // Try parse JSON array first
   try {
-    if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
-    const payload = JSON.parse(event.body || "{}");
-    const { message, context = "" } = payload;
-    if (!message) return { statusCode: 400, body: JSON.stringify({ error: "message required" }) };
+    const parsed = JSON.parse(assistant);
+    if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
+  } catch (e) {
+    // fallback: split lines
+    const lines = assistant.split(/\r?\n/).map(l => l.replace(/^[\d\.\-\)\s]+/, '').trim()).filter(Boolean);
+    if (lines.length) return lines.slice(0, 3);
+  }
 
-    const apiKey = process.env.OPENAI_API_KEY || process.env.FHJAI || process.env.FHJ_AI || "";
-    if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: "OpenAI API key not configured (OPENAI_API_KEY or FHJAI)" }) };
+  // Last resort: return whole assistant as single suggestion
+  return [assistant.trim()].filter(Boolean).slice(0, 3);
+}
 
-    const prompt = `You are an assistant that suggests short clarifying follow-up questions a travel agent might ask a client.
-Client message: ${message}
-Context: ${context}
+module.exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return respond(204, {});
+  if (event.httpMethod !== 'POST') return respond(405, { error: 'Method Not Allowed' });
 
-Return 3 concise follow-up questions as a JSON array (e.g. ["Question 1","Question 2","Question 3"]).`;
+  let body = {};
+  try { body = event.body ? JSON.parse(event.body) : {}; } catch (e) { return respond(400, { error: 'Invalid JSON' }); }
 
-    const body = {
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You suggest concise clarifying questions for a travel booking request." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 300
-    };
+  const message = (body.message || '').toString().trim();
+  const context = (body.context || '').toString().trim();
+  const persist = !!body.persist;
+  const concierge_id = body.concierge_id || null;
 
-    const res = await fetch(OPENAI_API_URL, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
+  if (!message) return respond(400, { error: 'message required' });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("OpenAI error:", res.status, txt);
-      return { statusCode: 500, body: JSON.stringify({ error: "OpenAI error", details: txt }) };
-    }
-
-    const data = await res.json();
-    const assistant = data.choices?.[0]?.message?.content || "";
+  try {
     let suggestions = [];
     try {
-      suggestions = JSON.parse(assistant);
-      if (!Array.isArray(suggestions)) suggestions = [];
+      suggestions = await callOpenAI(message, context);
     } catch (e) {
-      suggestions = assistant.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 3);
+      console.error('OpenAI call failed, falling back to rule-based', e);
+      suggestions = [
+        'Can you share your travel dates (or a date range)?',
+        'How many people will be traveling?',
+        'Do you have a preferred budget or class of service?'
+      ];
     }
 
-    return { statusCode: 200, body: JSON.stringify({ suggestions }) };
+    const result = { suggestions };
+
+    if (persist && concierge_id && supabase) {
+      // Insert assistant messages (one per suggestion)
+      const now = new Date().toISOString();
+      const inserts = suggestions.map((s) => ({
+        concierge_id,
+        sender: 'assistant',
+        body: s,
+        metadata: { generated_by: process.env.OPENAI_API_KEY ? 'openai' : 'rule-based', suggestion: true },
+        created_at: now
+      }));
+      const { data: created, error } = await supabase.from('concierge_messages').insert(inserts).select();
+      if (error) {
+        console.error('Error persisting suggestions:', error);
+        result.persist_error = error.message || String(error);
+      } else {
+        result.persisted = { messages: created };
+        // update parent last_activity
+        await supabase.from('concierge').update({ last_activity: now }).eq('id', concierge_id);
+      }
+    }
+
+    return respond(200, result);
   } catch (err) {
-    console.error("ai-suggest handler error:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
+    console.error('ai-suggest error', err);
+    return respond(500, { error: err.message || String(err) });
   }
 };
