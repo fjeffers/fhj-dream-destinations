@@ -48,6 +48,14 @@ export default function ConciergeChat() {
   // ── Restore session on mount ──────────────────────────────
   useEffect(() => {
     try {
+      // Hard page reload → give the user a fresh chat every time
+      const nav = (typeof performance !== "undefined")
+        ? performance.getEntriesByType?.("navigation")?.[0]
+        : null;
+      if (nav?.type === "reload") {
+        sessionStorage.removeItem(SESSION_KEY);
+        return;
+      }
       const saved = sessionStorage.getItem(SESSION_KEY);
       if (saved) {
         const s = JSON.parse(saved);
@@ -273,7 +281,20 @@ export default function ConciergeChat() {
                   </p>
                 </div>
               </div>
-              <button onClick={handleToggle} style={closeBtnStyle} aria-label="Close chat">✕</button>
+              <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                {/* New conversation button — available at any point during the chat */}
+                {step !== "name" && (
+                  <button
+                    onClick={handleReset}
+                    style={newChatBtnStyle}
+                    aria-label="Start a new conversation"
+                    title="Start a new conversation"
+                  >
+                    ↺
+                  </button>
+                )}
+                <button onClick={handleToggle} style={closeBtnStyle} aria-label="Close chat">✕</button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -398,6 +419,18 @@ const closeBtnStyle = {
   fontSize: "1rem",
   cursor: "pointer",
   padding: "4px",
+};
+
+const newChatBtnStyle = {
+  background: "none",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: "6px",
+  color: "rgba(255,255,255,0.45)",
+  fontSize: "1rem",
+  cursor: "pointer",
+  padding: "2px 6px",
+  lineHeight: 1,
+  transition: "all 0.2s ease",
 };
 
 const messagesStyle = {

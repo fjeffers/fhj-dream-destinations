@@ -21,6 +21,7 @@ export default function AdminConcierge({ admin }) {
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [rowDeleteId, setRowDeleteId] = useState(null); // inline delete confirm on list rows
 
   const loadMessages = async () => {
     try {
@@ -113,6 +114,7 @@ export default function AdminConcierge({ admin }) {
       if (!res.ok) throw new Error("Archive request failed");
       toast.success("Conversation archived.");
       setSelected(null);
+      setRowDeleteId(null);
       loadMessages();
     } catch (err) {
       toast.error("Failed to archive conversation.");
@@ -131,6 +133,7 @@ export default function AdminConcierge({ admin }) {
       toast.success("Conversation deleted.");
       setSelected(null);
       setShowDeleteConfirm(false);
+      setRowDeleteId(null);
       loadMessages();
     } catch (err) {
       toast.error("Failed to delete conversation.");
@@ -244,7 +247,7 @@ export default function AdminConcierge({ admin }) {
               <motion.div
                 key={msg.id}
                 whileHover={{ scale: 1.01 }}
-                onClick={() => setSelected(msg)}
+                onClick={() => { setSelected(msg); setRowDeleteId(null); }}
                 style={{
                   ...messageItemStyle,
                   borderColor: selected?.id === msg.id ? fhjTheme.primary : "rgba(255,255,255,0.06)",
@@ -281,6 +284,46 @@ export default function AdminConcierge({ admin }) {
                       📞 {msg.phone}
                     </p>
                   )}
+
+                  {/* Inline Archive + Delete buttons */}
+                  <div
+                    style={{ display: "flex", gap: "0.35rem", marginTop: "0.5rem" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {msg.status !== "Archived" && (
+                      <button
+                        onClick={() => handleArchive(msg)}
+                        style={rowArchiveBtnStyle}
+                        title="Archive"
+                      >
+                        📦 Archive
+                      </button>
+                    )}
+                    {rowDeleteId === msg.id ? (
+                      <>
+                        <button
+                          onClick={() => handleDelete(msg)}
+                          style={rowConfirmDeleteBtnStyle}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setRowDeleteId(null)}
+                          style={rowCancelBtnStyle}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setRowDeleteId(msg.id)}
+                        style={rowDeleteBtnStyle}
+                        title="Delete"
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ))
@@ -628,4 +671,53 @@ const replyTextareaStyle = {
   minHeight: "60px",
   boxSizing: "border-box",
   colorScheme: "dark",
+};
+
+// Inline row buttons (list panel)
+const rowArchiveBtnStyle = {
+  padding: "0.2rem 0.55rem",
+  borderRadius: "6px",
+  background: "rgba(148,163,184,0.08)",
+  border: "1px solid rgba(148,163,184,0.2)",
+  color: "#94a3b8",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const rowDeleteBtnStyle = {
+  padding: "0.2rem 0.55rem",
+  borderRadius: "6px",
+  background: "rgba(248,113,113,0.06)",
+  border: "1px solid rgba(248,113,113,0.25)",
+  color: "#f87171",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const rowConfirmDeleteBtnStyle = {
+  padding: "0.2rem 0.55rem",
+  borderRadius: "6px",
+  background: "rgba(248,113,113,0.18)",
+  border: "1px solid rgba(248,113,113,0.5)",
+  color: "#f87171",
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const rowCancelBtnStyle = {
+  padding: "0.2rem 0.55rem",
+  borderRadius: "6px",
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "#94a3b8",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 };
