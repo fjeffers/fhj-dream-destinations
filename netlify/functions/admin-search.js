@@ -1,7 +1,7 @@
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async (event) => {
+exports.handler = withFHJAdmin(async (event) => {
   const query = (event.queryStringParameters?.q || "").toLowerCase();
 
   if (!query) return respond(200, { results: [] });

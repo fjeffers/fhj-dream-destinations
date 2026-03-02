@@ -1,6 +1,6 @@
 // netlify/functions/admin-activity.js
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
 // Normalize timestamps safely
 function safeTime(value) {
@@ -9,7 +9,7 @@ function safeTime(value) {
   return isNaN(d) ? new Date(0).toISOString() : d.toISOString();
 }
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const [
     messages,
     bookings,

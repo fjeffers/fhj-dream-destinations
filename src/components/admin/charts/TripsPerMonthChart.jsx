@@ -8,6 +8,7 @@ import React, { useState, useEffect } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { adminFetch } from "../../../utils/adminFetch.js";
 
 export default function TripsPerMonthChart() {
   const [data, setData] = useState([]);
@@ -16,7 +17,7 @@ export default function TripsPerMonthChart() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-trips-monthly");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-trips-monthly");
         const json = await res.json();
         setData(json.data || json || []);
       } catch (err) {

@@ -14,6 +14,7 @@ import React, { useState, useEffect } from "react";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { useToast } from "../components/FHJ/FHJToast.jsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { adminFetch } from "../utils/adminFetch.js";
 
 const ROLES = ["Owner", "Manager", "Agent", "Assistant"];
 
@@ -42,7 +43,7 @@ export default function AdminSettings({ admin }) {
   const loadAdmins = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/.netlify/functions/admin-users");
+      const res = await adminFetch("/.netlify/functions/admin-users");
       const data = await res.json();
       setAdmins(data.admins || []);
     } catch (err) {
@@ -97,7 +98,7 @@ export default function AdminSettings({ admin }) {
         delete body.password;
       }
 
-      const res = await fetch("/.netlify/functions/admin-users", {
+      const res = await adminFetch("/.netlify/functions/admin-users", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -120,7 +121,7 @@ export default function AdminSettings({ admin }) {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`/.netlify/functions/admin-users?id=${id}`, {
+      const res = await adminFetch(`/.netlify/functions/admin-users?id=${id}`, {
         method: "DELETE",
       });
       const data = await res.json();

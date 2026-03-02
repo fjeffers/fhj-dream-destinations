@@ -1,3 +1,4 @@
+import { adminFetch } from "./adminFetch.js";
 // src/utils/LiveUpdates.js
 const subscribers = new Set();
 
@@ -54,7 +55,7 @@ const startPolling = () => {
   if (pollInterval) return;
   const poll = async () => {
     try {
-      const res = await fetch("/.netlify/functions/admin-alerts");
+      const res = await adminFetch("/.netlify/functions/admin-alerts");
       const alertsData = await res.json();
       notify({
         source: "poll",

@@ -9,6 +9,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis,
 } from "recharts";
+import { adminFetch } from "../../../utils/adminFetch.js";
 
 const COLORS = {
   yes: "#D4AF37",
@@ -23,7 +24,7 @@ export default function EventAttendanceChart() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-event-attendance");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-event-attendance");
         const json = await res.json();
         setData(json.data || json || []);
       } catch (err) {

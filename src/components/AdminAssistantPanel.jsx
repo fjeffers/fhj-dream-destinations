@@ -6,6 +6,7 @@ import {
   FHJInput,
   fhjTheme,
 } from "./FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminAssistantPanel({ admin }) {
   const [query, setQuery] = useState("");
@@ -17,7 +18,7 @@ export default function AdminAssistantPanel({ admin }) {
 
     setLoading(true);
 
-    const res = await fetch("/.netlify/functions/admin-nlp", {
+    const res = await adminFetch("/.netlify/functions/admin-nlp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),

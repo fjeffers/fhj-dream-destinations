@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { FHJCard, fhjTheme } from "./FHJ/FHJUIKit.jsx";
 import { LiveUpdates } from "../utils/LiveUpdates.js";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminInsightsPanel({ admin }) {
   const [insights, setInsights] = useState(null);
@@ -9,7 +10,7 @@ export default function AdminInsightsPanel({ admin }) {
 
   const loadInsights = async () => {
     setLoading(true);
-    const res = await fetch("/.netlify/functions/admin-insights");
+    const res = await adminFetch("/.netlify/functions/admin-insights");
     const data = await res.json();
     setInsights(data);
     setLoading(false);

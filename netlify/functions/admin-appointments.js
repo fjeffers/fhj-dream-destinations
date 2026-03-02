@@ -4,9 +4,13 @@
 // ==========================================================
 
 const { supabase, respond } = require("./utils");
+const { requireAdminAuth } = require("./middleware");
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
+
+  const authError = await requireAdminAuth(event);
+  if (authError) return authError;
 
   const method = event.httpMethod;
   const params = event.queryStringParameters || {};

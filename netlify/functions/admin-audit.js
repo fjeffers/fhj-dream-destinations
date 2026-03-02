@@ -17,9 +17,9 @@ const {
   submitToAirtable,
   respond,
 } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async (event) => {
+exports.handler = withFHJAdmin(async (event) => {
   const method = event.httpMethod;
 
   // ============================

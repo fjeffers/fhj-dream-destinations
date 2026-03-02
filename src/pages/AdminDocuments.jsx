@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 import {
   FHJCard,
   FHJButton,
@@ -12,7 +13,7 @@ export default function AdminDocuments({ admin }) {
   const isAssistant = admin.Role === "Assistant";
   const loadDocuments = async () => {
     setLoading(true);
-    const res = await fetch("/.netlify/functions/admin-documents");
+    const res = await adminFetch("/.netlify/functions/admin-documents");
     const data = await res.json();
     setDocuments(data.documents || []);
     setLoading(false);
@@ -21,7 +22,7 @@ export default function AdminDocuments({ admin }) {
     if (isAssistant || !file) return;
     const formData = new FormData();
     formData.append("file", file);
-    await fetch("/.netlify/functions/admin-documents", {
+    await adminFetch("/.netlify/functions/admin-documents", {
       method: "POST",
       body: formData,
     });
@@ -30,7 +31,7 @@ export default function AdminDocuments({ admin }) {
   };
   const handleDelete = async (id) => {
     if (isAssistant) return;
-    await fetch("/.netlify/functions/admin-documents", {
+    await adminFetch("/.netlify/functions/admin-documents", {
       method: "DELETE",
       body: JSON.stringify({ id }),
     });

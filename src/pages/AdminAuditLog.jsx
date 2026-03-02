@@ -1,5 +1,6 @@
 // src/hooks/useAuditLog.js
 import { useState, useEffect, useCallback } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function useAuditLog() {
   const [logs, setLogs] = useState([]);
@@ -24,7 +25,7 @@ export default function useAuditLog() {
         if (value) queryParams.append(key, value);
       });
 
-      const res = await fetch(`/.netlify/functions/admin-audit?${queryParams.toString()}`);
+      const res = await adminFetch(`/.netlify/functions/admin-audit?${queryParams.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch logs");
       
       const data = await res.json();

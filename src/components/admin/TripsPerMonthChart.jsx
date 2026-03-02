@@ -9,13 +9,14 @@ import {
   CartesianGrid,
 } from "recharts";
 import { FHJCard, fhjTheme } from "../FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../../utils/adminFetch.js";
 
 export default function TripsPerMonthChart() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch("/.netlify/functions/admin-dashboard-trips-monthly");
+      const res = await adminFetch("/.netlify/functions/admin-dashboard-trips-monthly");
       const json = await res.json();
       setData(json.data || []);
     };

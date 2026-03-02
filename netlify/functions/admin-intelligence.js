@@ -14,7 +14,7 @@
 // ==========================================================
 
 const { respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 const Airtable = require("airtable");
 
 // -------------------------------------------------------
@@ -78,7 +78,7 @@ function parseIntent(input) {
 // -------------------------------------------------------
 // Handler
 // -------------------------------------------------------
-exports.handler = withFHJ(async (event) => {
+exports.handler = withFHJAdmin(async (event) => {
   const body = JSON.parse(event.body || "{}");
   const query = body.query || body.command || "";
 

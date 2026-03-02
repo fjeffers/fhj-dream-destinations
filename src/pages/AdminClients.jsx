@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminClients({ admin }) {
   const [clients, setClients] = useState([]);
@@ -31,7 +32,7 @@ export default function AdminClients({ admin }) {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/.netlify/functions/admin-clients");
+      const res = await adminFetch("/.netlify/functions/admin-clients");
       const data = await res.json();
       setClients(data.clients || []);
     } catch (err) {
@@ -75,7 +76,7 @@ export default function AdminClients({ admin }) {
 
     try {
       const method = editing ? "PUT" : "POST";
-      const res = await fetch("/.netlify/functions/admin-clients", {
+      const res = await adminFetch("/.netlify/functions/admin-clients", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -110,7 +111,7 @@ export default function AdminClients({ admin }) {
     if (!window.confirm(`Delete "${name}"?`)) return;
 
     try {
-      await fetch("/.netlify/functions/admin-clients", {
+      await adminFetch("/.netlify/functions/admin-clients", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: client.id }),

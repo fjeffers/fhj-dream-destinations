@@ -1,8 +1,8 @@
 // netlify/functions/admin-log.js
 const { submitToAirtable, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async (event) => {
+exports.handler = withFHJAdmin(async (event) => {
   const payload = JSON.parse(event.body || "{}");
 
   await submitToAirtable("AuditLog", {

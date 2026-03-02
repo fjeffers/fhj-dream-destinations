@@ -6,6 +6,7 @@ import {
   fhjTheme,
 } from "./fhj/FHJUIKit.jsx";
 import { LiveUpdates } from "../utils/LiveUpdates.js";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function NotificationsSidebar() {
   const [alerts, setAlerts] = useState([]);
@@ -15,7 +16,7 @@ export default function NotificationsSidebar() {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/.netlify/functions/admin-alerts");
+      const res = await adminFetch("/.netlify/functions/admin-alerts");
       const data = await res.json();
       setAlerts(data.alerts || []);
       setLastUpdated(new Date());

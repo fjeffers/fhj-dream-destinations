@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { adminFetch } from "../utils/adminFetch.js";
 
 const THEME = { primary: "#00c48c", bg: "#0b1120" };
 
@@ -165,7 +166,7 @@ export default function AdminEvents({ admin }) {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/.netlify/functions/admin-events");
+      const res = await adminFetch("/.netlify/functions/admin-events");
       const data = await res.json();
       setEvents(data.events || []);
     } catch (err) {
@@ -256,7 +257,7 @@ export default function AdminEvents({ admin }) {
         EventPic: form.eventPic, Background: form.background, ClientPic: form.clientPic,
         "Share Link": form.shareLink, Active: form.active,
       };
-      const res = await fetch("/.netlify/functions/admin-events", {
+      const res = await adminFetch("/.netlify/functions/admin-events", {
         method, headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -280,7 +281,7 @@ export default function AdminEvents({ admin }) {
     const name = evt.title || "this event";
     if (!window.confirm(`Delete "${name}"?`)) return;
     try {
-      await fetch("/.netlify/functions/admin-events", {
+      await adminFetch("/.netlify/functions/admin-events", {
         method: "DELETE", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: evt.id }),
       });

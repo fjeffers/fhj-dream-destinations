@@ -5,9 +5,9 @@
 // ==========================================================
 
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);

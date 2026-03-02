@@ -4,6 +4,7 @@ import {
   FHJButton,
   fhjTheme,
 } from "../components/FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminAuditVisualizer({ admin }) {
   const [logs, setLogs] = useState([]);
@@ -15,7 +16,7 @@ export default function AdminAuditVisualizer({ admin }) {
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/.netlify/functions/admin-audit");
+      const res = await adminFetch("/.netlify/functions/admin-audit");
       const data = await res.json();
       setLogs(data.logs || []);
     } catch (err) {

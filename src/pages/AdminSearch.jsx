@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FHJCard, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 export default function AdminSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);

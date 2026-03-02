@@ -5,7 +5,7 @@
 // Location: netlify/functions/admin-auth.js
 // ==========================================================
 
-const { selectRecords, respond } = require("./utils");
+const { selectRecords, respond, supabase } = require("./utils");
 
 // In-memory lockout tracker (resets on redeploy)
 const failedAttempts = {};
@@ -152,9 +152,24 @@ exports.handler = async (event) => {
 
     console.log("Login success for:", adminData.Name);
 
+    // Sign in via Supabase Auth to obtain a JWT for subsequent admin API calls
+    let token = null;
+    try {
+      const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: storedCode,
+      });
+      if (!signInError && sessionData && sessionData.session) {
+        token = sessionData.session.access_token;
+      }
+    } catch (signInErr) {
+      // Non-fatal: admin still authenticated via PIN; JWT will be unavailable
+      console.warn("Supabase signIn failed (admin may not have a Supabase Auth account):", signInErr.message);
+    }
+
     return {
       statusCode: 200, headers,
-      body: JSON.stringify({ success: true, admin: adminData }),
+      body: JSON.stringify({ success: true, admin: { ...adminData, token } }),
     };
 
   } catch (err) {

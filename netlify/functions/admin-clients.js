@@ -4,13 +4,17 @@
 // Location: netlify/functions/admin-clients.js
 // ==========================================================
 const { supabase, respond } = require("./utils");
+const { requireAdminAuth } = require("./middleware");
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
 
+  const authError = await requireAdminAuth(event);
+  if (authError) return authError;
+
   const method = event.httpMethod;
   let payload = {};
-  
+
   if (method !== "GET") {
     try {
       payload = JSON.parse(event.body || "{}");

@@ -6,9 +6,13 @@
 //   place_image_url, notes, active, created_at
 // ==========================================================
 const { supabase, respond } = require("./utils");
+const { requireAdminAuth } = require("./middleware");
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
+
+  const authError = await requireAdminAuth(event);
+  if (authError) return authError;
 
   // GET — list all deals
   if (event.httpMethod === "GET") {

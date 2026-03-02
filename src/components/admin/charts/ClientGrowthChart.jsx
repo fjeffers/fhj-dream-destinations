@@ -8,6 +8,7 @@ import React, { useState, useEffect } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { adminFetch } from "../../../utils/adminFetch.js";
 
 export default function ClientGrowthChart() {
   const [data, setData] = useState([]);
@@ -16,7 +17,7 @@ export default function ClientGrowthChart() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-client-growth");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-client-growth");
         const json = await res.json();
         setData(json.data || json || []);
       } catch (err) {

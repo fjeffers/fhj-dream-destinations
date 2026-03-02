@@ -11,6 +11,7 @@ import FHJDataTable from "../components/FHJ/FHJDataTable.jsx";
 import FHJFormModal, { TRIP_FIELDS } from "../components/FHJ/FHJFormModal.jsx";
 import FHJSkeleton from "../components/FHJ/FHJSkeleton.jsx";
 import { useToast } from "../components/FHJ/FHJToast.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function AdminTrips({ admin }) {
   const toast = useToast();
@@ -28,7 +29,7 @@ export default function AdminTrips({ admin }) {
   const loadTrips = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/.netlify/functions/admin-trips");
+      const res = await adminFetch("/.netlify/functions/admin-trips");
       const data = await res.json();
       setTrips(data.trips || []);
     } catch (err) {
@@ -47,7 +48,7 @@ export default function AdminTrips({ admin }) {
     setSaving(true);
     try {
       const method = editingTrip ? "PUT" : "POST";
-      await fetch("/.netlify/functions/admin-trips", {
+      await adminFetch("/.netlify/functions/admin-trips", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, id: editingTrip?.id }),
@@ -72,7 +73,7 @@ export default function AdminTrips({ admin }) {
 
     setSaving(true);
     try {
-      await fetch("/.netlify/functions/admin-trips", {
+      await adminFetch("/.netlify/functions/admin-trips", {
         method: "DELETE",
         body: JSON.stringify({ id: trip.id }),
       });

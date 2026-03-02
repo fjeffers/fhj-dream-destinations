@@ -1,5 +1,6 @@
 // src/hooks/useDashboardStats.js
 import { useEffect, useState } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function useDashboardStats() {
   const [stats, setStats] = useState(null);
@@ -8,7 +9,7 @@ export default function useDashboardStats() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-stats");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-stats");
         const data = await res.json();
         setStats(data.stats);
       } catch (err) {

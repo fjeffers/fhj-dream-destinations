@@ -1,6 +1,6 @@
 // netlify/functions/middleware.js
 
-const { respond } = require('./utils');
+const { respond, supabase } = require('./utils');
 
 // 1. CORS Wrapper: Handles Pre-flight & Adds Headers
 const withCors = (handler) => async (event, context) => {
@@ -69,9 +69,43 @@ const withErrorHandling = (handler) => async (event, context) => {
 const withFHJ = (handler) =>
   withCors(withLogging(withErrorHandling(handler)));
 
+// 5. Admin Auth: Verify Supabase JWT from Authorization: Bearer header
+async function requireAdminAuth(event) {
+  const authHeader =
+    (event.headers && (event.headers['authorization'] || event.headers['Authorization'])) || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+
+  if (!token) {
+    return respond(401, { error: 'Authentication required' });
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data || !data.user) {
+    return respond(401, { error: 'Invalid or expired token' });
+  }
+
+  return null; // Auth passed
+}
+
+const withAdminAuth = (handler) => async (event, context) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return handler(event, context);
+  }
+  const authError = await requireAdminAuth(event);
+  if (authError) return authError;
+  return handler(event, context);
+};
+
+// 6. Admin Master Wrapper: CORS + Logging + Error Handling + Auth
+const withFHJAdmin = (handler) =>
+  withCors(withLogging(withErrorHandling(withAdminAuth(handler))));
+
 module.exports = {
   withCors,
   withLogging,
   withErrorHandling,
   withFHJ,
+  withAdminAuth,
+  withFHJAdmin,
+  requireAdminAuth,
 };

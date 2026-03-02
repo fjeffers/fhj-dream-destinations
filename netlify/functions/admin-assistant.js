@@ -1,5 +1,5 @@
 const { respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
 // This is a placeholder — you can connect any LLM API here.
 async function generateReply(messages) {
@@ -21,7 +21,7 @@ async function generateReply(messages) {
   return "I'm here to help with FHJ operations — bookings, trips, clients, concierge, analytics, and more.";
 }
 
-exports.handler = withFHJ(async (event) => {
+exports.handler = withFHJAdmin(async (event) => {
   const body = JSON.parse(event.body || "{}");
   const messages = body.messages || [];
 

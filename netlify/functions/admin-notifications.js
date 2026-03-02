@@ -1,12 +1,12 @@
 const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+const { withFHJAdmin } = require("./middleware");
 
 function safeTime(v) {
   const d = new Date(v);
   return isNaN(d) ? new Date(0).toISOString() : d.toISOString();
 }
 
-exports.handler = withFHJ(async () => {
+exports.handler = withFHJAdmin(async () => {
   const [messages, bookings, events] = await Promise.all([
     selectRecords("ConciergeMessages", "", { normalizer: true }),
     selectRecords("Bookings", "", { normalizer: true }),

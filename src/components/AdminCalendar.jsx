@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment-timezone";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { adminFetch } from "../utils/adminFetch.js";
 
 // Admins will see times in America/New_York (EST / EDT).
 const localizer = momentLocalizer(moment);
@@ -21,7 +22,7 @@ export default function AdminCalendar() {
 
   const loadEvents = async (start, end) => {
     try {
-      const res = await fetch(`/.netlify/functions/admin-appointments?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+      const res = await adminFetch(`/.netlify/functions/admin-appointments?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
       const json = await res.json();
       const items = [
         ...(json.bookings || []).map((b) => ({

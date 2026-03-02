@@ -1,5 +1,6 @@
 // src/hooks/useInsights.js
 import { useEffect, useState } from "react";
+import { adminFetch } from "../utils/adminFetch.js";
 
 export default function useInsights() {
   const [insights, setInsights] = useState(null);
@@ -8,7 +9,7 @@ export default function useInsights() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-dashboard-insights");
+        const res = await adminFetch("/.netlify/functions/admin-dashboard-insights");
         const json = await res.json();
         setInsights(json.insights || null);
       } catch (err) {

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { FHJCard, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import { adminFetch } from "../utils/adminFetch.js";
 export default function AdminAnalytics({ admin }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/.netlify/functions/admin-analytics");
+        const res = await adminFetch("/.netlify/functions/admin-analytics");
         if (!res.ok) throw new Error("Failed to load analytics");
         const json = await res.json();
         setData(json);
