@@ -205,6 +205,10 @@ export default function ConciergeChat() {
               context: `AI Discovery Chat:\n${transcript}`,
             }),
           });
+          conciergeSay(
+            `📧 I've sent a copy of our conversation to ${userEmail} — check your inbox! Our team will be in touch within 1–2 business days. ✨`,
+            800
+          );
         }
       } catch {
         conciergeSay("I'm sorry, something went wrong. Please try again or contact us directly at info@fhjdreamdestinations.com");
