@@ -17,8 +17,7 @@ export default function AdminConcierge({ admin }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unresolved | resolved
   const [selected, setSelected] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [sendingSummary, setSendingSummary] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -49,7 +48,7 @@ export default function AdminConcierge({ admin }) {
     try {
       const newStatus = msg.status === "Resolved" ? "New" : "Resolved";
       await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, status: newStatus }),
       });
@@ -63,29 +62,25 @@ export default function AdminConcierge({ admin }) {
     }
   };
 
-  // Send reply
-  const handleReply = async () => {
-    if (!replyText.trim() || !selected) return;
-    setSending(true);
+  // Send email summary to owner
+  const sendSummary = async (msg) => {
+    setSendingSummary(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
+      const res = await fetch("/.netlify/functions/email-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          parentId: selected.id,
-          email: selected.email,
-          name: admin?.Name || admin?.Email || "Admin",
-          message: replyText,
-          source: "Admin Reply",
-        }),
+        body: JSON.stringify({ concierge_id: msg.id }),
       });
-      toast.success("Reply sent!");
-      setReplyText("");
-      loadMessages();
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Summary email sent!");
+      } else {
+        toast.error(data.error || "Failed to send summary.");
+      }
     } catch (err) {
-      toast.error("Failed to send reply.");
+      toast.error("Failed to send summary email.");
     } finally {
-      setSending(false);
+      setSendingSummary(false);
     }
   };
 
@@ -202,13 +197,23 @@ export default function AdminConcierge({ admin }) {
                   </p>
                 </div>
 
-                <FHJButton
-                  variant={selected.status === "Resolved" ? "ghost" : "success"}
-                  size="sm"
-                  onClick={() => toggleResolve(selected)}
-                >
-                  {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
-                </FHJButton>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <FHJButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => sendSummary(selected)}
+                    disabled={sendingSummary}
+                  >
+                    {sendingSummary ? "Sending…" : "📧 Send Summary"}
+                  </FHJButton>
+                  <FHJButton
+                    variant={selected.status === "Resolved" ? "ghost" : "success"}
+                    size="sm"
+                    onClick={() => toggleResolve(selected)}
+                  >
+                    {selected.status === "Resolved" ? "Reopen" : "Mark Resolved"}
+                  </FHJButton>
+                </div>
               </div>
 
               {/* Status Badge */}
@@ -229,43 +234,8 @@ export default function AdminConcierge({ admin }) {
                 </span>
               </div>
 
-              {/* Message Content */}
-              <div style={messageContentStyle}>
-                <p style={{ color: "#e5e7eb", lineHeight: 1.7, margin: 0 }}>
-                  {selected.message}
-                </p>
-                {selected.context && (
-                  <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "1rem" }}>
-                    Context: {selected.context}
-                  </p>
-                )}
-              </div>
-
-              {/* Reply Section */}
-              <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Reply to {selected.name}</p>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type your reply..."
-                    style={replyTextareaStyle}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleReply();
-                      }
-                    }}
-                  />
-                  <FHJButton
-                    onClick={handleReply}
-                    disabled={sending || !replyText.trim()}
-                    style={{ alignSelf: "flex-end" }}
-                  >
-                    {sending ? "Sending..." : "Reply"}
-                  </FHJButton>
-                </div>
-              </div>
+              {/* Threaded Conversation */}
+              <ConciergeThread conciergeId={selected.id} refreshParent={loadMessages} />
             </motion.div>
           )}
         </AnimatePresence>
