@@ -1,6 +1,6 @@
 // ==========================================================
 // 📄 FILE: admin-concierge.js
-// Full CRUD for concierge messages — Supabase direct edition
+// Admin-facing concierge API: GET (list+search), PATCH (status/reply), DELETE
 // Location: netlify/functions/admin-concierge.js
 // ==========================================================
 
@@ -12,101 +12,78 @@ const TABLE = "concierge";
 exports.handler = withFHJ(async (event) => {
   const method = event.httpMethod;
 
-  // 🟢 GET: Fetch all concierge messages
+  // ── GET: list with optional search / status filter / pagination ──
   if (method === "GET") {
-    const { data, error } = await supabase
+    const { status = "All", limit = 100, offset = 0, q = "" } =
+      event.queryStringParameters || {};
+
+    let query = supabase
       .from(TABLE)
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
 
+    if (q && q.trim()) {
+      query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,message.ilike.%${q}%`);
+    }
+
+    if (status && status !== "All") {
+      if (status === "Unresolved") {
+        query = query
+          .not("status", "eq", "Resolved")
+          .not("status", "eq", "Archived");
+      } else {
+        query = query.eq("status", status);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    const records = (data || []).map((r) => ({
-      id: r.id,
-      message: r.message || "",
-      email: r.email || "",
-      name: r.name || "",
-      phone: r.phone || "",
-      status: r.status || "New",
-      created: r.created_at || "",
-      source: r.source || "",
-      context: r.context || "",
-      reply: r.reply || "",
-    }));
-
-    return respond(200, { success: true, data: records });
+    return respond(200, { items: data || [] });
   }
 
-  const payload = JSON.parse(event.body || "{}");
+  // ── PATCH: update status and/or reply ────────────────────────────
+  if (method === "PATCH") {
+    const { id, status, reply } = JSON.parse(event.body || "{}");
 
-  // 🟡 POST: Store admin reply on the parent message row
-  if (method === "POST") {
-    const { parentId, message } = payload;
+    if (!id) return respond(400, { error: "id required" });
 
-    if (!message) {
-      return respond(400, { error: "Message is required" });
-    }
+    const updates = { updated_at: new Date().toISOString() };
+    if (typeof status !== "undefined") updates.status = status;
+    if (typeof reply  !== "undefined") updates.reply  = reply;
 
-    // When replying to an existing message, update its `reply` column
-    if (parentId) {
-      const { error } = await supabase
-        .from(TABLE)
-        .update({ reply: message })
-        .eq("id", parentId);
-
-      if (error) throw new Error(error.message);
-
-      return respond(200, { success: true });
-    }
-
-    // Standalone message (no parent) — insert new row
     const { data, error } = await supabase
       .from(TABLE)
-      .insert([{
-        email: payload.email || "",
-        name: payload.name || "Admin",
-        message,
-        source: payload.source || "Admin",
-        status: "New",
-      }])
+      .update(updates)
+      .eq("id", id)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
 
-    return respond(200, { success: true, id: data.id });
+    return respond(200, { item: data });
   }
 
-  // 🟠 PUT: Update status (resolve / reopen / archive)
-  if (method === "PUT") {
-    const { id, status } = payload;
-
-    if (!id) return respond(400, { error: "Missing message ID" });
-
-    const { error } = await supabase
-      .from(TABLE)
-      .update({ status: status || "Resolved" })
-      .eq("id", id);
-
-    if (error) throw new Error(error.message);
-
-    return respond(200, { success: true });
-  }
-
-  // 🔴 DELETE: Remove a message permanently
+  // ── DELETE: remove a message permanently ─────────────────────────
   if (method === "DELETE") {
-    const { id } = payload;
+    const qs = event.queryStringParameters || {};
+    const id =
+      qs.id ||
+      (event.body && JSON.parse(event.body).id);
 
-    if (!id) return respond(400, { error: "Missing message ID" });
+    if (!id) return respond(400, { error: "id required" });
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(TABLE)
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) throw new Error(error.message);
 
-    return respond(200, { success: true });
+    return respond(200, { deleted: data });
   }
 
   return respond(405, { error: "Method not allowed" });

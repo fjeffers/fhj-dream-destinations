@@ -70,7 +70,7 @@ export default function AdminConcierge({ admin }) {
   const updateStatus = async (id, status) => {
     try {
       await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
       });
@@ -87,7 +87,7 @@ export default function AdminConcierge({ admin }) {
   const handleArchive = async (msg) => {
     try {
       const res = await fetch("/.netlify/functions/admin-concierge", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: msg.id, status: "Archived" }),
       });
@@ -123,9 +123,9 @@ export default function AdminConcierge({ admin }) {
     setSending(true);
     try {
       const res = await fetch("/.netlify/functions/admin-concierge", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentId: selected.id, message: replyText }),
+        body: JSON.stringify({ id: selected.id, reply: replyText }),
       });
       if (!res.ok) throw new Error();
       toast.success("Reply sent!");
