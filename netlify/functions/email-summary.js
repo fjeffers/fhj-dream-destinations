@@ -3,8 +3,7 @@
 // POST JSON: { concierge_id: uuid, send_to?: email }  (if send_to not provided, uses OWNER_NOTIFY_EMAIL env var)
 
 const fetch = require('node-fetch');
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require('./utils');
 
 const RESEND_URL = 'https://api.resend.com/emails';
 

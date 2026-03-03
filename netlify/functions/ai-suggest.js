@@ -9,8 +9,7 @@
 // Response: { suggestions: [..], persisted?: { messages: [...] } }
 
 const fetch = require('node-fetch');
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require('./utils');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 

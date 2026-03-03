@@ -3,8 +3,7 @@
 // On POST: creates parent concierge row, persists initial client message,
 // generates AI clarifying questions (persisted), emails owner via Resend, and archives the conversation.
 
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require('./utils');
 const fetch = require('node-fetch');
 
 const AI_SUGGEST_PATH = '/.netlify/functions/ai-suggest';
