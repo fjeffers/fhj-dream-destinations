@@ -1,36 +1,32 @@
 // netlify/functions/admin-alerts.js
-const { respond } = require("./utils");
+
+const { selectRecords, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 exports.handler = withFHJ(async () => {
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
-
   const now = new Date();
   const nowISO = now.toISOString();
   const oneHourAgoISO = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const [bookings, trips, concierge, logs] = await Promise.all([
-    base("Bookings").select().all(),
-    base("Trips").select().all(),
-    base("Concierge").select().all(),
-    base("AuditLog").select().all(),
+    selectRecords("Bookings", ""),
+    selectRecords("Trips", ""),
+    selectRecords("Concierge", ""),
+    selectRecords("AuditLog", ""),
   ]);
 
   const alerts = [];
 
   // 1. Unpaid balances
   bookings.forEach((b) => {
-    const balance = b.get("BalanceDue") || 0;
+    const balance = b.BalanceDue || b.balance_due || 0;
     if (balance > 0) {
       alerts.push({
         id: `unpaid-${b.id}`,
         type: "payment",
         severity: "warning",
-        message: `${b.get("ClientName")} has an outstanding balance of $${balance}.`,
+        message: `${b.ClientName || b.client_name || b["Client Name"]} has an outstanding balance of $${balance}.`,
         createdAt: nowISO,
       });
     }
@@ -38,7 +34,7 @@ exports.handler = withFHJ(async () => {
 
   // 2. Trips starting in next 7 days
   trips.forEach((t) => {
-    const startRaw = t.get("StartDate");
+    const startRaw = t["Start Date"] || t.start_date;
     if (!startRaw) return;
     const start = new Date(startRaw);
     if (start >= now && start <= sevenDaysFromNow) {
@@ -46,9 +42,7 @@ exports.handler = withFHJ(async () => {
         id: `trip-${t.id}`,
         type: "trip",
         severity: "info",
-        message: `${t.get("ClientName")} is departing for ${t.get(
-          "Destination"
-        )} on ${t.get("StartDate")}.`,
+        message: `${t.ClientName || t.client_name || t["Client Name"]} is departing for ${t.Destination || t.destination} on ${startRaw}.`,
         createdAt: nowISO,
       });
     }
@@ -56,14 +50,12 @@ exports.handler = withFHJ(async () => {
 
   // 3. Unresolved concierge messages
   concierge.forEach((c) => {
-    if (!c.get("Resolved")) {
+    if (!(c.Resolved || c.resolved)) {
       alerts.push({
         id: `concierge-${c.id}`,
         type: "concierge",
         severity: "urgent",
-        message: `New concierge message from ${c.get("Name")}: "${c.get(
-          "Message"
-        )}"`,
+        message: `New concierge message from ${c.Name || c.name}: "${c.Message || c.message}"`,
         createdAt: nowISO,
       });
     }
@@ -71,16 +63,14 @@ exports.handler = withFHJ(async () => {
 
   // 4. Recent admin activity (last hour)
   logs.forEach((l) => {
-    const ts = l.get("Timestamp");
+    const ts = l.Timestamp || l.timestamp || l.created_at;
     if (!ts) return;
     if (ts >= oneHourAgoISO) {
       alerts.push({
         id: `activity-${l.id}`,
         type: "activity",
         severity: "info",
-        message: `${l.get("Admin")} performed "${l.get(
-          "Action"
-        )}" in ${l.get("Module")}.`,
+        message: `${l.Admin || l.admin} performed "${l.Action || l.action}" in ${l.Module || l.module}.`,
         createdAt: ts,
       });
     }

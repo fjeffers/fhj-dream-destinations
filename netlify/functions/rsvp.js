@@ -1,9 +1,9 @@
 // ==========================================================
-// 📄 FILE: rsvp.js (FIXED - matches Airtable RSVPs schema)
+// 📄 FILE: rsvp.js (FIXED - matches Supabase RSVPs schema)
 // Full CRUD for RSVPs
 // Location: netlify/functions/rsvp.js
 //
-// Airtable RSVPs columns:
+// Supabase RSVPs columns:
 //   Name, Phone, Event Title, Attending, Guest Count,
 //   Guests, Attachments, Dietary Restrictions, Notes,
 //   Status, QR Payload

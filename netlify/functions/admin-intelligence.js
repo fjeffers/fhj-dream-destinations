@@ -13,9 +13,8 @@
 // Frontend: Update AdminCommandPanel.jsx to call this endpoint.
 // ==========================================================
 
-const { respond } = require("./utils");
+const { selectRecords, supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 // -------------------------------------------------------
 // Intent Parser — handles both /commands and natural language
@@ -82,10 +81,6 @@ exports.handler = withFHJ(async (event) => {
   const body = JSON.parse(event.body || "{}");
   const query = body.query || body.command || "";
 
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
-
   const parsed = parseIntent(query);
 
   // ----- Help -----
@@ -114,17 +109,16 @@ You can also type naturally:
 
   // ----- Unpaid Clients -----
   if (parsed.intent === "unpaid_clients") {
-    const bookings = await base("Bookings")
-      .select({ filterByFormula: `{BalanceDue} > 0` })
-      .all();
+    const bookings = await selectRecords("Bookings", "");
+    const unpaid = bookings.filter((b) => (b.BalanceDue || b.balance_due || 0) > 0);
 
     return respond(200, {
       label: "Clients With Outstanding Balances",
       type: "list",
-      result: bookings.map((b) => ({
-        Client: b.get("ClientName"),
-        Email: b.get("Email"),
-        Balance: `$${b.get("BalanceDue")}`,
+      result: unpaid.map((b) => ({
+        Client: b.ClientName || b.client_name || b["Client Name"],
+        Email: b.Email || b.email,
+        Balance: `$${b.BalanceDue || b.balance_due}`,
       })),
     });
   }
@@ -132,37 +126,36 @@ You can also type naturally:
   // ----- Trips by Month -----
   if (parsed.intent === "trips_by_month") {
     const month = parsed.month || "";
-    const trips = await base("Trips").select().all();
+    const trips = await selectRecords("Trips", "");
 
     const filtered = trips.filter((t) =>
-      (t.get("StartDate") || "").toLowerCase().includes(month)
+      ((t["Start Date"] || t.start_date) || "").toLowerCase().includes(month)
     );
 
     return respond(200, {
       label: month ? `Trips in ${month.charAt(0).toUpperCase() + month.slice(1)}` : "All Trips",
       type: "list",
       result: filtered.map((t) => ({
-        Client: t.get("ClientName"),
-        Destination: t.get("Destination"),
-        Start: t.get("StartDate"),
-        End: t.get("EndDate"),
+        Client: t.ClientName || t.client_name || t["Client Name"],
+        Destination: t.Destination || t.destination,
+        Start: t["Start Date"] || t.start_date,
+        End: t["End Date"] || t.end_date,
       })),
     });
   }
 
   // ----- Unresolved Concierge -----
   if (parsed.intent === "unresolved_concierge") {
-    const records = await base("Concierge")
-      .select({ filterByFormula: `{Resolved} = FALSE()` })
-      .all();
+    const records = await selectRecords("Concierge", "");
+    const unresolved = records.filter((r) => !(r.Resolved || r.resolved));
 
     return respond(200, {
       label: "Unresolved Concierge Messages",
       type: "list",
-      result: records.map((r) => ({
-        Name: r.get("Name"),
-        Email: r.get("Email"),
-        Message: r.get("Message"),
+      result: unresolved.map((r) => ({
+        Name: r.Name || r.name,
+        Email: r.Email || r.email,
+        Message: r.Message || r.message,
       })),
     });
   }
@@ -179,11 +172,13 @@ You can also type naturally:
     }
 
     try {
-      const record = await base("Bookings").find(id);
-      const summary = `${record.get("ClientName")} is booked for a trip to ${
-        record.get("Destination") || "their destination"
-      } from ${record.get("StartDate")} to ${record.get("EndDate")}.
-Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balance: $${record.get("BalanceDue")}`;
+      const { data: record, error } = await supabase.from("bookings").select("*").eq("id", id).single();
+      if (error || !record) throw new Error("Not found");
+
+      const summary = `${record.ClientName || record.client_name || record["Client Name"]} is booked for a trip to ${
+        record.Destination || record.destination || "their destination"
+      } from ${record["Start Date"] || record.start_date} to ${record["End Date"] || record.end_date}.
+Total: $${record.TotalPrice || record.total_price} | Paid: $${record.AmountPaid || record.amount_paid} | Balance: $${record.BalanceDue || record.balance_due}`;
 
       return respond(200, {
         label: "Booking Summary",
@@ -202,19 +197,20 @@ Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balan
   // ----- Recent Activity -----
   if (parsed.intent === "recent_activity") {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    const logs = await base("AuditLog")
-      .select({ filterByFormula: `{Timestamp} >= '${since}'` })
-      .all();
+    const logs = await selectRecords("AuditLog", "");
+    const recent = logs.filter((l) => {
+      const ts = l.Timestamp || l.timestamp || l.created_at;
+      return ts && ts >= since;
+    });
 
     return respond(200, {
       label: "Activity in the Last 24 Hours",
       type: "timeline",
-      result: logs.map((l) => ({
-        Admin: l.get("Admin"),
-        Action: l.get("Action"),
-        Module: l.get("Module"),
-        Timestamp: l.get("Timestamp"),
+      result: recent.map((l) => ({
+        Admin: l.Admin || l.admin,
+        Action: l.Action || l.action,
+        Module: l.Module || l.module,
+        Timestamp: l.Timestamp || l.timestamp || l.created_at,
       })),
     });
   }
@@ -230,18 +226,18 @@ Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balan
       });
     }
 
-    const clients = await base("Clients").select().all();
+    const clients = await selectRecords("Client Name", "");
     const matches = clients.filter((c) =>
-      (c.get("Name") || c.get("Full Name") || "").toLowerCase().includes(name)
+      (c["Full Name"] || c.full_name || c.Name || c.name || "").toLowerCase().includes(name)
     );
 
     return respond(200, {
       label: `Search Results for "${parsed.name}"`,
       type: "list",
       result: matches.map((c) => ({
-        Name: c.get("Name") || c.get("Full Name"),
-        Email: c.get("Email"),
-        Phone: c.get("Phone"),
+        Name: c["Full Name"] || c.full_name || c.Name || c.name,
+        Email: c.Email || c.email,
+        Phone: c.Phone || c.phone,
       })),
     });
   }
