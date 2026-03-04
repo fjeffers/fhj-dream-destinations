@@ -10,7 +10,7 @@
 // ==========================================================
 
 const {
-  selectRecords,
+  supabase,
   submitToAirtable,
   updateAirtableRecord,
   deleteAirtableRecord,
@@ -24,20 +24,21 @@ exports.handler = async (event) => {
 
   // 🟢 GET: Fetch RSVPs (optionally filtered by event)
   if (method === "GET") {
-    let filterFormula = "";
+    let query = supabase.from("rsvps").select("*");
 
     if (params.eventId) {
-      // Filter by linked Event record ID
-      filterFormula = `FIND("${params.eventId}", ARRAYJOIN({Event})) > 0`;
+      // Validate eventId is a non-empty string before querying
+      const eventId = String(params.eventId).trim();
+      if (eventId) query = query.eq("event_id", eventId);
+    } else if (params.eventTitle) {
+      // Validate eventTitle is a non-empty string before querying
+      const eventTitle = String(params.eventTitle).trim();
+      if (eventTitle) query = query.eq("event_title", eventTitle);
     }
 
-    if (params.eventTitle) {
-      // Alternative: filter by Event Title text field
-      filterFormula = `{Event Title} = "${params.eventTitle}"`;
-    }
-
-    const rsvps = await selectRecords("RSVPs", filterFormula, { normalizer: true });
-    return respond(200, { rsvps });
+    const { data: rsvpData, error } = await query;
+    if (error) throw new Error(error.message);
+    return respond(200, { rsvps: rsvpData || [] });
   }
 
   // 🟡 POST: Create new RSVP
