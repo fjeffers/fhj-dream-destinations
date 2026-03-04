@@ -1,35 +1,26 @@
 // netlify/functions/client-timeline.js
-const { respond } = require("./utils");
+
+const { selectRecords, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 exports.handler = withFHJ(async (event) => {
   const { clientId } = JSON.parse(event.body || "{}");
 
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
+  // Fetch all related records and filter by clientId in JavaScript
+  // (complex Airtable formulas like FIND are handled client-side)
+  const [allTrips, allBookings, allPayments, allDocuments, allConcierge] = await Promise.all([
+    selectRecords("Trips", ""),
+    selectRecords("Bookings", ""),
+    selectRecords("Payments", ""),
+    selectRecords("Documents", ""),
+    selectRecords("Concierge", ""),
+  ]);
 
-  // Fetch all related records
-  const trips = await base("Trips")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const bookings = await base("Bookings")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const payments = await base("Payments")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const documents = await base("Documents")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const concierge = await base("Concierge")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+  const trips = allTrips.filter((t) => (t.ClientID || t.client_id) === clientId);
+  const bookings = allBookings.filter((b) => (b.ClientID || b.client_id) === clientId);
+  const payments = allPayments.filter((p) => (p.ClientID || p.client_id) === clientId);
+  const documents = allDocuments.filter((d) => (d.ClientID || d.client_id) === clientId);
+  const concierge = allConcierge.filter((c) => (c.ClientID || c.client_id) === clientId);
 
   // Normalize into timeline events
   const events = [];
@@ -37,45 +28,45 @@ exports.handler = withFHJ(async (event) => {
   trips.forEach((t) =>
     events.push({
       type: "Trip",
-      date: t.get("StartDate"),
-      title: `Trip to ${t.get("Destination")}`,
-      details: `${t.get("StartDate")} → ${t.get("EndDate")}`,
+      date: t["Start Date"] || t.start_date,
+      title: `Trip to ${t.Destination || t.destination}`,
+      details: `${t["Start Date"] || t.start_date} → ${t["End Date"] || t.end_date}`,
     })
   );
 
   bookings.forEach((b) =>
     events.push({
       type: "Booking",
-      date: b.get("CreatedAt"),
+      date: b.CreatedAt || b.created_at,
       title: `Booking created`,
-      details: `Total: $${b.get("TotalPrice")}`,
+      details: `Total: $${b.TotalPrice || b.total_price}`,
     })
   );
 
   payments.forEach((p) =>
     events.push({
       type: "Payment",
-      date: p.get("Date"),
+      date: p.Date || p.date,
       title: `Payment received`,
-      details: `$${p.get("Amount")}`,
+      details: `$${p.Amount || p.amount}`,
     })
   );
 
   documents.forEach((d) =>
     events.push({
       type: "Document",
-      date: d.get("UploadedAt"),
+      date: d.UploadedAt || d.uploaded_at || d.created_at,
       title: `Document uploaded`,
-      details: d.get("Name"),
+      details: d.Name || d.name,
     })
   );
 
   concierge.forEach((c) =>
     events.push({
       type: "Concierge",
-      date: c.get("CreatedAt"),
+      date: c.CreatedAt || c.created_at,
       title: `Concierge message`,
-      details: c.get("Message"),
+      details: c.Message || c.message,
     })
   );
 

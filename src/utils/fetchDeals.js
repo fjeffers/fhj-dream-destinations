@@ -14,7 +14,7 @@ const CATEGORY_FALLBACKS = {
 const DEFAULT_FALLBACK = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&q=80";
 
 function extractImage(deal) {
-  // Check all possible field names (Supabase snake_case + legacy Airtable names)
+  // Check all possible field names (Supabase snake_case + field name variants)
   const urlFields = [
     "Place Image URL", "place_image_url",
     "Image URL", "image_url",
