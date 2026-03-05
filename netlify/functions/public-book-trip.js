@@ -21,7 +21,7 @@ exports.handler = withFHJ(async (event) => {
     // STEP 1: Find or Create Client
     let clientId;
     
-    // ⭐ Fix 1 & 2: Use EXACT table name "Client Name" and safer formula
+    // Use EXACT table name "Client Name" and safer formula
     const formula = `LOWER({Email})='${email.toLowerCase()}'`;
     const existingClients = await selectRecords("Client Name", formula);
 
@@ -51,7 +51,7 @@ Dates Flexible: ${flexible ? "Yes" : "No"}
     `.trim();
 
     // STEP 3: Create the Trip Record
-    // ⭐ Fix 3 & 4: Match column names exactly to your Airtable video
+    // Match column names to Supabase schema
     const tripData = {
       "Destination": destination || "Undecided",
       "Client Name": [clientId], // Changed from "Client" to "Client Name"

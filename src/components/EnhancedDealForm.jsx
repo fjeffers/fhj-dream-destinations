@@ -220,6 +220,7 @@ export default function EnhancedDealForm({ deal = null, onSave, onCancel }) {
               <option value="Hotels">Hotels</option>
               <option value="Last-Minute">Last-Minute</option>
               <option value="Adventure">Adventure</option>
+              <option value="Spa">Spa</option>
             </select>
           </div>
 

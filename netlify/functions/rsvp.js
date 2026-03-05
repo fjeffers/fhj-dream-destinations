@@ -1,12 +1,11 @@
 // ==========================================================
-// 📄 FILE: rsvp.js (FIXED - matches Airtable RSVPs schema)
-// Full CRUD for RSVPs
+// 📄 FILE: rsvp.js — Full CRUD for RSVPs
 // Location: netlify/functions/rsvp.js
 //
-// Airtable RSVPs columns:
-//   Name, Phone, Event Title, Attending, Guest Count,
-//   Guests, Attachments, Dietary Restrictions, Notes,
-//   Status, QR Payload
+// Supabase RSVPs columns:
+//   name, phone, event_title, attending, guest_count,
+//   guests, attachments, dietary_restrictions, notes,
+//   status, qr_payload
 // ==========================================================
 
 const {
@@ -60,7 +59,7 @@ exports.handler = async (event) => {
         "QR Payload": payload.qrPayload || "",
       };
 
-      // If there's an email field in your table (check Airtable — not visible in screenshot)
+      // If there's an email field in your table, include it
       if (payload.email) fields.Email = payload.email.trim();
 
       // If Event is a linked record field

@@ -13,9 +13,8 @@
 // Frontend: Update AdminCommandPanel.jsx to call this endpoint.
 // ==========================================================
 
-const { respond } = require("./utils");
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 // -------------------------------------------------------
 // Intent Parser — handles both /commands and natural language
@@ -75,16 +74,9 @@ function parseIntent(input) {
   return { intent: "unknown" };
 }
 
-// -------------------------------------------------------
-// Handler
-// -------------------------------------------------------
 exports.handler = withFHJ(async (event) => {
   const body = JSON.parse(event.body || "{}");
   const query = body.query || body.command || "";
-
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
 
   const parsed = parseIntent(query);
 
@@ -114,17 +106,18 @@ You can also type naturally:
 
   // ----- Unpaid Clients -----
   if (parsed.intent === "unpaid_clients") {
-    const bookings = await base("Bookings")
-      .select({ filterByFormula: `{BalanceDue} > 0` })
-      .all();
+    const { data: bookings = [] } = await supabase
+      .from("bookings")
+      .select("*")
+      .gt("balance_due", 0);
 
     return respond(200, {
       label: "Clients With Outstanding Balances",
       type: "list",
       result: bookings.map((b) => ({
-        Client: b.get("ClientName"),
-        Email: b.get("Email"),
-        Balance: `$${b.get("BalanceDue")}`,
+        Client: b.client_name,
+        Email: b.client_email,
+        Balance: `$${b.balance_due}`,
       })),
     });
   }
@@ -132,37 +125,39 @@ You can also type naturally:
   // ----- Trips by Month -----
   if (parsed.intent === "trips_by_month") {
     const month = parsed.month || "";
-    const trips = await base("Trips").select().all();
+    const { data: trips = [] } = await supabase.from("trips").select("*");
 
     const filtered = trips.filter((t) =>
-      (t.get("StartDate") || "").toLowerCase().includes(month)
+      (t.start_date || "").toLowerCase().includes(month)
     );
 
     return respond(200, {
       label: month ? `Trips in ${month.charAt(0).toUpperCase() + month.slice(1)}` : "All Trips",
       type: "list",
       result: filtered.map((t) => ({
-        Client: t.get("ClientName"),
-        Destination: t.get("Destination"),
-        Start: t.get("StartDate"),
-        End: t.get("EndDate"),
+        Client: t.client,
+        Destination: t.destination,
+        Start: t.start_date,
+        End: t.end_date,
       })),
     });
   }
 
   // ----- Unresolved Concierge -----
   if (parsed.intent === "unresolved_concierge") {
-    const records = await base("Concierge")
-      .select({ filterByFormula: `{Resolved} = FALSE()` })
-      .all();
+    const { data: records = [] } = await supabase
+      .from("concierge")
+      .select("*")
+      .neq("status", "Resolved")
+      .neq("status", "Archived");
 
     return respond(200, {
       label: "Unresolved Concierge Messages",
       type: "list",
       result: records.map((r) => ({
-        Name: r.get("Name"),
-        Email: r.get("Email"),
-        Message: r.get("Message"),
+        Name: r.name,
+        Email: r.email,
+        Message: r.message,
       })),
     });
   }
@@ -179,11 +174,18 @@ You can also type naturally:
     }
 
     try {
-      const record = await base("Bookings").find(id);
-      const summary = `${record.get("ClientName")} is booked for a trip to ${
-        record.get("Destination") || "their destination"
-      } from ${record.get("StartDate")} to ${record.get("EndDate")}.
-Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balance: $${record.get("BalanceDue")}`;
+      const { data: record, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      const summary = `${record.client_name} is booked for a trip to ${
+        record.destination || "their destination"
+      } from ${record.start_date} to ${record.end_date}.
+Total: $${record.total_price} | Paid: $${record.amount_paid} | Balance: $${record.balance_due}`;
 
       return respond(200, {
         label: "Booking Summary",
@@ -203,18 +205,19 @@ Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balan
   if (parsed.intent === "recent_activity") {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const logs = await base("AuditLog")
-      .select({ filterByFormula: `{Timestamp} >= '${since}'` })
-      .all();
+    const { data: logs = [] } = await supabase
+      .from("audit_log")
+      .select("*")
+      .gte("created_at", since);
 
     return respond(200, {
       label: "Activity in the Last 24 Hours",
       type: "timeline",
       result: logs.map((l) => ({
-        Admin: l.get("Admin"),
-        Action: l.get("Action"),
-        Module: l.get("Module"),
-        Timestamp: l.get("Timestamp"),
+        Admin: l.admin || l.admin_email,
+        Action: l.action,
+        Module: l.module,
+        Timestamp: l.timestamp || l.created_at,
       })),
     });
   }
@@ -230,18 +233,18 @@ Total: $${record.get("TotalPrice")} | Paid: $${record.get("AmountPaid")} | Balan
       });
     }
 
-    const clients = await base("Clients").select().all();
-    const matches = clients.filter((c) =>
-      (c.get("Name") || c.get("Full Name") || "").toLowerCase().includes(name)
-    );
+    const { data: clients = [] } = await supabase
+      .from("clients")
+      .select("*")
+      .ilike("full_name", `%${name}%`);
 
     return respond(200, {
       label: `Search Results for "${parsed.name}"`,
       type: "list",
-      result: matches.map((c) => ({
-        Name: c.get("Name") || c.get("Full Name"),
-        Email: c.get("Email"),
-        Phone: c.get("Phone"),
+      result: clients.map((c) => ({
+        Name: c.full_name,
+        Email: c.email,
+        Phone: c.phone,
       })),
     });
   }
