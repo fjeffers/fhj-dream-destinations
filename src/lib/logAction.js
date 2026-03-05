@@ -18,15 +18,15 @@ exports.handler = withFHJ(async (event) => {
       return respond(400, { error: "Missing required logging fields" });
     }
 
-    // Submit to your AuditLog table in Airtable
-    // ⭐ Make sure these column names exactly match your Airtable!
+    // Submit to your AuditLog table in Supabase
+    // ⭐ Make sure these column names exactly match your Supabase table!
     await submitToAirtable("AuditLog", {
       "Admin Email": email,
       "Role": role || "Admin",
       "Action": action,
       "Target": target || "",
       "Record ID": recordId || "",
-      // You don't need to send a date; Airtable usually has a "Created Time" field automatically!
+      // Timestamp is set automatically by Supabase
     });
 
     return respond(200, { success: true });
