@@ -1,81 +1,70 @@
 // netlify/functions/client-timeline.js
-const { respond } = require("./utils");
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 exports.handler = withFHJ(async (event) => {
   const { clientId } = JSON.parse(event.body || "{}");
 
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
-
   // Fetch all related records
-  const trips = await base("Trips")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const bookings = await base("Bookings")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const payments = await base("Payments")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const documents = await base("Documents")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
-
-  const concierge = await base("Concierge")
-    .select({ filterByFormula: `{ClientID} = '${clientId}'` })
-    .all();
+  const [
+    { data: trips },
+    { data: bookings },
+    { data: payments },
+    { data: documents },
+    { data: concierge },
+  ] = await Promise.all([
+    supabase.from("trips").select("*").eq("client_id", clientId),
+    supabase.from("bookings").select("*").eq("client_id", clientId),
+    supabase.from("payments").select("*").eq("client_id", clientId),
+    supabase.from("documents").select("*").eq("client_id", clientId),
+    supabase.from("concierge").select("*").eq("client_id", clientId),
+  ]);
 
   // Normalize into timeline events
   const events = [];
 
-  trips.forEach((t) =>
+  (trips || []).forEach((t) =>
     events.push({
       type: "Trip",
-      date: t.get("StartDate"),
-      title: `Trip to ${t.get("Destination")}`,
-      details: `${t.get("StartDate")} → ${t.get("EndDate")}`,
+      date: t.start_date,
+      title: `Trip to ${t.destination}`,
+      details: `${t.start_date} → ${t.end_date}`,
     })
   );
 
-  bookings.forEach((b) =>
+  (bookings || []).forEach((b) =>
     events.push({
       type: "Booking",
-      date: b.get("CreatedAt"),
+      date: b.created_at,
       title: `Booking created`,
-      details: `Total: $${b.get("TotalPrice")}`,
+      details: `Total: $${b.total_price}`,
     })
   );
 
-  payments.forEach((p) =>
+  (payments || []).forEach((p) =>
     events.push({
       type: "Payment",
-      date: p.get("Date"),
+      date: p.date,
       title: `Payment received`,
-      details: `$${p.get("Amount")}`,
+      details: `$${p.amount}`,
     })
   );
 
-  documents.forEach((d) =>
+  (documents || []).forEach((d) =>
     events.push({
       type: "Document",
-      date: d.get("UploadedAt"),
+      date: d.created_at,
       title: `Document uploaded`,
-      details: d.get("Name"),
+      details: d.name,
     })
   );
 
-  concierge.forEach((c) =>
+  (concierge || []).forEach((c) =>
     events.push({
       type: "Concierge",
-      date: c.get("CreatedAt"),
+      date: c.created_at,
       title: `Concierge message`,
-      details: c.get("Message"),
+      details: c.message,
     })
   );
 

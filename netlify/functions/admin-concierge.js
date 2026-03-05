@@ -1,10 +1,9 @@
 // netlify/functions/admin-concierge.js
 // Admin-facing concierge API: GET (list), PATCH (update status/reply), DELETE (delete)
-// Requires utils/supabaseServer.js exported supabase client using service role key.
 
-import supabase from "../../utils/supabaseServer.js";
+const { supabase, respond } = require('./utils');
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
     const method = event.httpMethod;
 

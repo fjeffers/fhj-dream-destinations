@@ -14,11 +14,10 @@ exports.handler = withFHJ(async (event) => {
       return respond(400, { success: false, error: 'Email parameter is required.' })
     }
 
-    // ⭐ Using "Client Email" to match your Login table logic
+    // Using "Client Email" to match Login table logic
     const formula = `LOWER({Client Email})='${email.toLowerCase()}'`
 
-    // ⭐ IMPORTANT: Ensure this matches your Airtable tab name exactly
-    // If it has a space in Airtable, use 'Client Bookings'
+    // Ensure this matches your table name exactly
     const records = await selectRecords('Client_Bookings', formula)
 
     if (!records) {
