@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CATEGORIES = ["Beach", "Mountain", "City", "Cruise", "Safari", "Cultural", "Adventure", "Wellness", "Exclusive"];
+const CATEGORIES = ["Beach", "Mountain", "City", "Cruise", "Safari", "Cultural", "Adventure", "Wellness", "Exclusive", "Spa"];
 const DIFFICULTY_LEVELS = ["Easy", "Moderate", "Challenging"];
 
 // Image resize utility - OPTIMIZED (smaller files)

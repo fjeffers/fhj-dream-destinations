@@ -13,7 +13,7 @@ exports.handler = withFHJ(async (event) => {
   
   // Safe Parse Body
   const payload = method !== 'GET' ? JSON.parse(event.body || '{}') : {};
-  const TABLE_NAME = 'Client_Bookings'; // Ensure this matches your Airtable tab name exactly
+  const TABLE_NAME = 'Client_Bookings'; // Ensure this matches your Supabase table name exactly
 
   // 🟢 GET: Fetch & Format for Frontend
   if (method === 'GET') {

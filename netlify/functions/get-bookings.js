@@ -14,11 +14,9 @@ exports.handler = withFHJ(async (event) => {
       return respond(400, { success: false, error: 'Email parameter is required.' })
     }
 
-    // ⭐ Using "Client Email" to match your Login table logic
+    // Using "Client Email" to match the login table logic
     const formula = `LOWER({Client Email})='${email.toLowerCase()}'`
 
-    // ⭐ IMPORTANT: Ensure this matches your Airtable tab name exactly
-    // If it has a space in Airtable, use 'Client Bookings'
     const records = await selectRecords('Client_Bookings', formula)
 
     if (!records) {
@@ -27,19 +25,18 @@ exports.handler = withFHJ(async (event) => {
 
     const bookings = records.map(record => ({
       id: record.id,
-      "Trip Name": record.fields['Trip Name'] || "Unnamed Trip",
-      "Travel Dates": record.fields['Travel Dates'] || "TBD",
-      "Trip Status": record.fields['Trip Status'] || "Pending",
-      "Total Balance": record.fields['Total Balance'] || "$0.00",
-      "Payment Link": record.fields['Payment Link'] || "",
-      "Documents": record.fields['Documents'] || []
+      "Trip Name": record["Trip Name"] || record.trip_name || "Unnamed Trip",
+      "Travel Dates": record["Travel Dates"] || record.travel_dates || "TBD",
+      "Trip Status": record["Trip Status"] || record.trip_status || "Pending",
+      "Total Balance": record["Total Balance"] || record.total_balance || "$0.00",
+      "Payment Link": record["Payment Link"] || record.payment_link || "",
+      "Documents": record["Documents"] || record.documents || []
     }))
 
     return respond(200, { success: true, bookings })
 
   } catch (error) {
     console.error("Fetch Bookings Error:", error)
-    // Providing a cleaner error message back to the portal
     return respond(500, { success: false, error: 'Failed to load bookings. ' + error.message })
   }
 })
