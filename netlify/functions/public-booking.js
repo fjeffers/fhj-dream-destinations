@@ -1,5 +1,5 @@
 // Public booking function — detects end column, creates client if needed, inserts booking
-import supabase from "../../utils/supabaseServer.js";
+const { supabase } = require('./utils');
 
 async function getEndColumn() {
   try {
@@ -23,7 +23,7 @@ async function getEndColumn() {
   }
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
     const endCol = await getEndColumn();

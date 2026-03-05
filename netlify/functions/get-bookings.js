@@ -27,12 +27,12 @@ exports.handler = withFHJ(async (event) => {
 
     const bookings = records.map(record => ({
       id: record.id,
-      "Trip Name": record.fields['Trip Name'] || "Unnamed Trip",
-      "Travel Dates": record.fields['Travel Dates'] || "TBD",
-      "Trip Status": record.fields['Trip Status'] || "Pending",
-      "Total Balance": record.fields['Total Balance'] || "$0.00",
-      "Payment Link": record.fields['Payment Link'] || "",
-      "Documents": record.fields['Documents'] || []
+      "Trip Name": record['Trip Name'] || "Unnamed Trip",
+      "Travel Dates": record['Travel Dates'] || "TBD",
+      "Trip Status": record['Trip Status'] || "Pending",
+      "Total Balance": record['Total Balance'] || "$0.00",
+      "Payment Link": record['Payment Link'] || "",
+      "Documents": record['Documents'] || []
     }))
 
     return respond(200, { success: true, bookings })

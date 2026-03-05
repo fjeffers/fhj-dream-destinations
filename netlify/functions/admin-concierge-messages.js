@@ -1,8 +1,8 @@
 // netlify/functions/admin-concierge-messages.js
 // Threaded conversation endpoints for concierge messages
-import supabase from "../../utils/supabaseServer.js";
+const { supabase } = require('./utils');
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
     const method = event.httpMethod;
     const qs = event.queryStringParameters || {};

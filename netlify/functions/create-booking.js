@@ -1,20 +1,10 @@
 
 // netlify/functions/create-booking.js
-import Airtable from "airtable";
+const { supabase, selectRecords, submitToAirtable, respond } = require('./utils');
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "YOUR_AIRTABLE_API_KEY";
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "YOUR_BASE_ID";
-const TRIPS_TABLE = "Trips";
-const CLIENTS_TABLE = "Client Name";
-
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
-
-export const handler = async (event) => {
+exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method Not Allowed",
-    };
+    return respond(405, { error: "Method Not Allowed" });
   }
 
   try {
@@ -39,76 +29,52 @@ export const handler = async (event) => {
     } = body;
 
     if (!fullName || !email || !destination) {
-      return {
-        statusCode: 400,
-        body: "Missing required fields",
-      };
+      return respond(400, { error: "Missing required fields" });
     }
 
     // 1) Find or create client
     let clientId = null;
 
-    const clientMatches = await base(CLIENTS_TABLE)
-      .select({
-        filterByFormula: `LOWER({Email}) = '${String(email).toLowerCase()}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    const clientMatches = await selectRecords("Client Name", `LOWER({Email}) = '${String(email).toLowerCase()}'`);
 
     if (clientMatches && clientMatches.length > 0) {
       clientId = clientMatches[0].id;
     } else {
-      const createdClient = await base(CLIENTS_TABLE).create([
-        {
-          fields: {
-            "Full Name": fullName,
-            Email: email,
-            Phone: phone || "",
-            Address: address || "",
-          },
-        },
-      ]);
-      clientId = createdClient[0].id;
+      const createdClient = await submitToAirtable("Client Name", {
+        "Full Name": fullName,
+        Email: email,
+        Phone: phone || "",
+        Address: address || "",
+      });
+      clientId = createdClient.id;
     }
 
     // 2) Create Trip record
-    const createdTrip = await base(TRIPS_TABLE).create([
-      {
-        fields: {
-          Destination: destination,
-          Client: fullName,
-          client_email: email,
-          Phone: phone || "",
-          Address: address || "",
-          "Trip Type": tripType || "Individual",
-          Occasion: occasion || "",
-          "Start Date": startDate || null,
-          "End Date": endDate || null,
-          "Group Size": travelers || 1,
-          "Flexible Dates": flexibleDates ? "👍" : "",
-          Notes: notes || "",
-          "Estimated Budget Per Person": budgetPerPerson || "",
-          "Source": "Website Booking",
-          "Deal Id": dealId || "",
-          "Deal Name": dealName || "",
-          // If you have a linked field to Client Name table:
-          "Client Name": clientId ? [clientId] : undefined,
-        },
-      },
-    ]);
+    const createdTrip = await submitToAirtable("Trips", {
+      Destination: destination,
+      Client: fullName,
+      client_email: email,
+      Phone: phone || "",
+      Address: address || "",
+      "Trip Type": tripType || "Individual",
+      Occasion: occasion || "",
+      "Start Date": startDate || null,
+      "End Date": endDate || null,
+      "Group Size": travelers || 1,
+      "Flexible Dates": flexibleDates ? "Yes" : "",
+      Notes: notes || "",
+      "Estimated Budget Per Person": budgetPerPerson || "",
+      Source: "Website Booking",
+      "Deal Id": dealId || "",
+      "Deal Name": dealName || "",
+    });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        tripId: createdTrip[0].id,
-      }),
-    };
+    return respond(200, {
+      success: true,
+      tripId: createdTrip.id,
+    });
   } catch (err) {
     console.error("Error creating booking:", err);
-    return {
-      statusCode: 500,
-      body: "Internal Server Error",
-    };
+    return respond(500, { error: err.message || "Internal Server Error" });
   }
 };

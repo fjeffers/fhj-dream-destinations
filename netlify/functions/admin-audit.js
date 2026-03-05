@@ -30,7 +30,7 @@ exports.handler = withFHJ(async (event) => {
     const params = event.queryStringParameters || {};
     const { entityType, action, startDate, endDate, limit } = params;
 
-    // Build Airtable filter formula
+    // Build filter conditions
     const filters = [];
 
     if (entityType) filters.push(`{entityType} = '${entityType}'`);
