@@ -13,13 +13,13 @@ exports.handler = withFHJ(async (event) => {
   
   // Safe Parse Body
   const payload = method !== 'GET' ? JSON.parse(event.body || '{}') : {};
-  const TABLE_NAME = 'Client_Bookings'; // Ensure this matches your Airtable tab name exactly
+  const TABLE_NAME = 'Client_Bookings';
 
   // 🟢 GET: Fetch & Format for Frontend
   if (method === 'GET') {
     const rawRecords = await selectRecords(TABLE_NAME, '', { normalizer: true });
 
-    // Map Airtable columns to Frontend props (AdminBookings.jsx)
+    // Map columns to Frontend props (AdminBookings.jsx)
     const bookings = rawRecords.map(record => ({
       id: record.id,
       ClientName: record["Client Name"] || record["Client Email"] || "Unknown",
