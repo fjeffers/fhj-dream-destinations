@@ -9,12 +9,13 @@ const CATEGORY_FALLBACKS = {
   Event: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80",
   Hotels: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80",
   "Last-Minute": "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&q=80",
+  Spa: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&q=80",
 };
 
 const DEFAULT_FALLBACK = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&q=80";
 
 function extractImage(deal) {
-  // Check all possible field names (Supabase snake_case + legacy Airtable names)
+  // Check all possible field names (Supabase snake_case + field name aliases)
   const urlFields = [
     "Place Image URL", "place_image_url",
     "Image URL", "image_url",

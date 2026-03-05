@@ -1,73 +1,74 @@
 // netlify/functions/admin-insights.js
-const { respond } = require("./utils");
+const { supabase, respond } = require("./utils");
 const { withFHJ } = require("./middleware");
-const Airtable = require("airtable");
 
 exports.handler = withFHJ(async () => {
-  const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-    process.env.AIRTABLE_BASE_ID
-  );
-
   const now = new Date();
   const todayISO = now.toISOString().split("T")[0];
 
   // Fetch all relevant tables
-  const [bookings, trips, payments, concierge, logs] = await Promise.all([
-    base("Bookings").select().all(),
-    base("Trips").select().all(),
-    base("Payments").select().all(),
-    base("Concierge").select().all(),
-    base("AuditLog").select().all(),
+  const [
+    { data: bookings },
+    { data: trips },
+    { data: payments },
+    { data: concierge },
+    { data: logs },
+  ] = await Promise.all([
+    supabase.from("bookings").select("*"),
+    supabase.from("trips").select("*"),
+    supabase.from("payments").select("*"),
+    supabase.from("concierge").select("*"),
+    supabase.from("audit_log").select("*"),
   ]);
 
   // 1. Unpaid balances
-  const unpaid = bookings
-    .filter((b) => (b.get("BalanceDue") || 0) > 0)
+  const unpaid = (bookings || [])
+    .filter((b) => (b.balance_due || 0) > 0)
     .map((b) => ({
-      Client: b.get("ClientName"),
-      Email: b.get("Email"),
-      Balance: b.get("BalanceDue"),
+      Client: b.client_name,
+      Email: b.client_email,
+      Balance: b.balance_due,
     }));
 
   // 2. Trips starting soon (next 7 days)
-  const soonTrips = trips
+  const soonTrips = (trips || [])
     .filter((t) => {
-      const start = new Date(t.get("StartDate"));
+      const start = new Date(t.start_date);
       const diff = (start - now) / (1000 * 60 * 60 * 24);
       return diff >= 0 && diff <= 7;
     })
     .map((t) => ({
-      Client: t.get("ClientName"),
-      Destination: t.get("Destination"),
-      Start: t.get("StartDate"),
+      Client: t.client,
+      Destination: t.destination,
+      Start: t.start_date,
     }));
 
   // 3. Concierge messages needing attention
-  const urgentConcierge = concierge
-    .filter((c) => !c.get("Resolved"))
+  const urgentConcierge = (concierge || [])
+    .filter((c) => !c.resolved)
     .map((c) => ({
-      Name: c.get("Name"),
-      Email: c.get("Email"),
-      Message: c.get("Message"),
+      Name: c.name,
+      Email: c.email,
+      Message: c.message,
     }));
 
   // 4. Activity today
-  const todayActivity = logs
-    .filter((l) => (l.get("Timestamp") || "").startsWith(todayISO))
+  const todayActivity = (logs || [])
+    .filter((l) => (l.timestamp || "").startsWith(todayISO))
     .map((l) => ({
-      Admin: l.get("Admin"),
-      Action: l.get("Action"),
-      Module: l.get("Module"),
-      Timestamp: l.get("Timestamp"),
+      Admin: l.admin,
+      Action: l.action,
+      Module: l.module,
+      Timestamp: l.timestamp,
     }));
 
   // 5. Payments received today
-  const todayPayments = payments
-    .filter((p) => (p.get("Date") || "").startsWith(todayISO))
+  const todayPayments = (payments || [])
+    .filter((p) => (p.date || "").startsWith(todayISO))
     .map((p) => ({
-      Client: p.get("ClientName"),
-      Amount: p.get("Amount"),
-      Date: p.get("Date"),
+      Client: p.client_name,
+      Amount: p.amount,
+      Date: p.date,
     }));
 
   return respond(200, {
