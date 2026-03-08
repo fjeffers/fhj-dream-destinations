@@ -183,7 +183,7 @@ export default function AdminConcierge({ admin }) {
                       {msg.name || "Unknown"}
                     </span>
                     <span style={{ color: "#64748b", fontSize: "0.75rem", flexShrink: 0 }}>
-                      {formatDate(msg.created)}
+                      {formatDate(msg.created_at)}
                     </span>
                   </div>
                   <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.25rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -224,7 +224,7 @@ export default function AdminConcierge({ admin }) {
                     {selected.name || "Unknown"}
                   </h3>
                   <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9rem" }}>
-                    {selected.email} · {selected.source || "Portal"} · {formatDate(selected.created)}
+                    {selected.email} · {selected.source || "Portal"} · {formatDate(selected.created_at)}
                   </p>
                 </div>
 
