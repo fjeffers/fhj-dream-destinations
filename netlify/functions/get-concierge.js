@@ -27,56 +27,56 @@ module.exports.handler = async (event) => {
       const body = safeParse(event.body);
       if (body === null) return respond(400, { error: 'Invalid JSON' });
 
-      const payload = {
+      // Basic payload (guaranteed columns)
+      const basicPayload = {
         name: body.name || '',
         email: body.email || '',
-        phone: body.phone || '',
         message: body.message || '',
         source: body.source || 'Website',
+      };
+
+      // Optional columns (may not exist yet)
+      const optionalPayload = {
+        phone: body.phone || '',
         status: 'New',
         conversation_open: true,
         created_at: new Date().toISOString(),
         last_activity: new Date().toISOString()
       };
 
-      // Insert parent row
-      const { data: parent, error: pErr } = await supabase.from('concierge').insert([payload]).select().single();
-      if (pErr) throw pErr;
+      // Try with all fields, fall back to basic
+      let parent, pErr;
+      ({ data: parent, error: pErr } = await supabase.from('concierge').insert([{ ...basicPayload, ...optionalPayload }]).select().single());
+      if (pErr) {
+        console.warn('Insert with optional fields failed, retrying basic:', pErr.message);
+        ({ data: parent, error: pErr } = await supabase.from('concierge').insert([basicPayload]).select().single());
+        if (pErr) throw pErr;
+      }
 
       const cid = parent.id;
 
-      // Insert initial client message into concierge_messages
-      const insertMsg = {
-        concierge_id: cid,
-        sender: 'client',
-        body: payload.message,
-        metadata: { source: payload.source },
-        created_at: new Date().toISOString()
-      };
-      await supabase.from('concierge_messages').insert([insertMsg]);
+      // Insert initial client message (without created_at — let DB default handle it)
+      try {
+        await supabase.from('concierge_messages').insert([{
+          concierge_id: cid,
+          sender: 'client',
+          body: basicPayload.message,
+          metadata: { source: basicPayload.source },
+        }]);
+      } catch (e) {
+        console.error('Failed to insert initial message:', e);
+      }
 
       // Generate AI clarifying questions server-side by calling ai-suggest function internally
-      // (call via relative function endpoint so the OpenAI logic is centralized)
       const siteOrigin = process.env.SITE_ORIGIN || process.env.URL || '';
-      const aiUrl = (siteOrigin ? siteOrigin.replace(/\/$/, '') : '') + AI_SUGGEST_PATH;
       let suggestions = [];
       try {
-        // Prefer server-side internal call; if SITE_ORIGIN missing, call OpenAI directly here
         if (siteOrigin) {
+          const aiUrl = siteOrigin.replace(/\/$/, '') + AI_SUGGEST_PATH;
           const aiRes = await fetch(aiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: payload.message, context: payload.source, persist: true, concierge_id: cid })
-          });
-          const aiJson = await aiRes.json();
-          suggestions = aiJson?.suggestions || [];
-        } else {
-          // fallback: try direct OpenAI call via local ai-suggest import pattern by invoking the function file
-          // Attempt a POST to /.netlify/functions/ai-suggest with relative path (Netlify dev should handle)
-          const aiRes = await fetch(`http://localhost:8888${AI_SUGGEST_PATH}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: payload.message, context: payload.source, persist: true, concierge_id: cid })
+            body: JSON.stringify({ message: basicPayload.message, context: basicPayload.source, persist: true, concierge_id: cid })
           });
           const aiJson = await aiRes.json();
           suggestions = aiJson?.suggestions || [];
@@ -87,26 +87,19 @@ module.exports.handler = async (event) => {
 
       // After AI messages persisted, send email summary via email-summary function
       try {
-        const site = process.env.SITE_ORIGIN || process.env.URL || '';
-        const emailUrl = (site ? site.replace(/\/$/, '') : '') + EMAIL_SUMMARY_PATH;
-        if (site) {
-          // server-side call to our own function
+        if (siteOrigin) {
+          const emailUrl = siteOrigin.replace(/\/$/, '') + EMAIL_SUMMARY_PATH;
           await fetch(emailUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ concierge_id: cid })
-          });
-        } else {
-          // fallback local call
-          await fetch(`http://localhost:8888${EMAIL_SUMMARY_PATH}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ concierge_id: cid })
           });
         }
 
-        // Auto-archive after sending email
-        await supabase.from('concierge').update({ status: 'Archived', conversation_open: false, last_activity: new Date().toISOString() }).eq('id', cid);
+        // Try to auto-archive (optional columns may not exist)
+        try {
+          await supabase.from('concierge').update({ status: 'Archived', conversation_open: false, last_activity: new Date().toISOString() }).eq('id', cid);
+        } catch (e) { console.warn('Auto-archive update failed (optional columns may not exist):', e.message); }
       } catch (e) {
         console.error('email-summary call failed', e);
       }
@@ -119,4 +112,5 @@ module.exports.handler = async (event) => {
     console.error('get-concierge error', err);
     return respond(500, { error: err.message || String(err) });
   }
-};;
+};
+

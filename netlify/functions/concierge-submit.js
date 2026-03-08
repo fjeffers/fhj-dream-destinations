@@ -57,22 +57,42 @@ exports.handler = async (event) => {
 
     if (!message) return respond(400, { error: "Message is required" });
 
-    // 1. Save to Supabase concierge table
-    const { data, error } = await supabase
+    // 1. Save to Supabase concierge table (only guaranteed columns first)
+    const insertData = {
+      name: name || "",
+      email: email || "",
+      message,
+      source: source || "Chat Widget",
+    };
+
+    // Try adding optional columns — these may not exist yet
+    // If the migration has been run, these will work. If not, we catch and retry without them.
+    const optionalFields = {
+      phone: phone || "",
+      context: context || "",
+      status: "New",
+      conversation_open: true,
+      last_activity: new Date().toISOString(),
+    };
+
+    let data, error;
+
+    // First try with all fields
+    ({ data, error } = await supabase
       .from("concierge")
-      .insert([{
-        name: name || "",
-        email: email || "",
-        phone: phone || "",
-        message,
-        source: source || "Chat Widget",
-        context: context || "",
-        status: "New",
-        conversation_open: true,
-        last_activity: new Date().toISOString(),
-      }])
+      .insert([{ ...insertData, ...optionalFields }])
       .select()
-      .single();
+      .single());
+
+    // If it fails (likely missing columns), retry with only basic fields
+    if (error) {
+      console.warn("Insert with optional fields failed, retrying with basic fields:", error.message);
+      ({ data, error } = await supabase
+        .from("concierge")
+        .insert([insertData])
+        .select()
+        .single());
+    }
 
     if (error) {
       console.error("Supabase insert error:", error);
@@ -81,33 +101,42 @@ exports.handler = async (event) => {
 
     const conciergeId = data.id;
 
-    // 2. Save initial client message to concierge_messages
-    await supabase.from("concierge_messages").insert([{
-      concierge_id: conciergeId,
-      sender: 'client',
-      body: message,
-      metadata: { source: source || "Chat Widget" },
-      created_at: new Date().toISOString()
-    }]);
+    // 2. Save initial client message to concierge_messages (without created_at — let DB default)
+    try {
+      const msgInsert = {
+        concierge_id: conciergeId,
+        sender: 'client',
+        body: message,
+        metadata: { source: source || "Chat Widget" },
+      };
+      const { error: msgError } = await supabase.from("concierge_messages").insert([msgInsert]);
+      if (msgError) console.error("concierge_messages insert error:", msgError.message);
+    } catch (msgErr) {
+      console.error("Failed to insert initial message:", msgErr);
+    }
 
     // 3. Generate AI suggestions and persist them
     let suggestions = [];
-    const aiSuggestions = await generateAISuggestions(message, context || source || '');
-    if (aiSuggestions && aiSuggestions.length > 0) {
-      suggestions = aiSuggestions;
-      const now = new Date().toISOString();
-      const inserts = suggestions.map(s => ({
-        concierge_id: conciergeId,
-        sender: 'assistant',
-        body: s,
-        metadata: { generated_by: 'openai', suggestion: true },
-        created_at: now
-      }));
-      const { error: msgErr } = await supabase.from('concierge_messages').insert(inserts);
-      if (msgErr) console.error('Error persisting AI suggestions:', msgErr);
+    try {
+      const aiSuggestions = await generateAISuggestions(message, context || source || '');
+      if (aiSuggestions && aiSuggestions.length > 0) {
+        suggestions = aiSuggestions;
+        const inserts = suggestions.map(s => ({
+          concierge_id: conciergeId,
+          sender: 'assistant',
+          body: s,
+          metadata: { generated_by: 'openai', suggestion: true },
+        }));
+        const { error: aiMsgErr } = await supabase.from('concierge_messages').insert(inserts);
+        if (aiMsgErr) console.error('Error persisting AI suggestions:', aiMsgErr.message);
 
-      // Update last_activity
-      await supabase.from('concierge').update({ last_activity: now }).eq('id', conciergeId);
+        // Try to update last_activity (may not exist)
+        try {
+          await supabase.from('concierge').update({ last_activity: new Date().toISOString() }).eq('id', conciergeId);
+        } catch (e) { /* column may not exist */ }
+      }
+    } catch (aiErr) {
+      console.error("AI suggestion step failed (non-fatal):", aiErr);
     }
 
     // 4. Send email notification via Resend

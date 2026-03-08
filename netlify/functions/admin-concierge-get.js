@@ -1,25 +1,32 @@
 // netlify/functions/admin-concierge-get.js
-const { selectRecords, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+// Simple GET endpoint for admin concierge list (used by AdminConcierge.jsx)
+const { supabase, respond } = require('./utils');
 
-exports.handler = withFHJ(async () => {
-  const TABLE = "Concierge";
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return respond(204, {});
+  if (event.httpMethod !== 'GET') return respond(405, { error: 'GET only' });
 
-  const records = await selectRecords(TABLE);
+  try {
+    const { data, error } = await supabase
+      .from('concierge')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
 
-  const data = records
-    .map((r) => ({
-      id: r.id,
-      message: r.message || r.Message || "",
-      email: r.email || r.Email || "",
-      name: r.name || r.Name || "",
-      status: r.status || r.Status || "New",
-      created: r.created_at || r.created || r.Created || "",
-      updated: r.updated_at || r.updated || r.Updated || "",
-      source: r.source || r.Source || "",
-      context: r.context || r.Context || "",
-    }))
-    .sort((a, b) => new Date(b.created) - new Date(a.created));
+    // If ordering by created_at fails (column may not exist), retry without ordering
+    if (error) {
+      const { data: d2, error: e2 } = await supabase
+        .from('concierge')
+        .select('*')
+        .limit(200);
+      if (e2) throw e2;
+      return respond(200, { data: d2 || [] });
+    }
 
-  return respond(200, { success: true, data });
-});
+    return respond(200, { data: data || [] });
+  } catch (err) {
+    console.error('admin-concierge-get error:', err);
+    return respond(500, { error: err.message || String(err) });
+  }
+};
+

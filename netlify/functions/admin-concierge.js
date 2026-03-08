@@ -37,9 +37,16 @@ exports.handler = async (event) => {
       const updates = {};
       if (typeof status !== "undefined") updates.status = status;
       if (typeof reply !== "undefined") updates.reply = reply;
-      updates.updated_at = new Date().toISOString();
 
-      const { data, error } = await supabase.from("concierge").update(updates).eq("id", id).select().single();
+      if (Object.keys(updates).length === 0) return respond(400, { error: "Nothing to update" });
+
+      // Try with updated_at first, fall back without (column may not exist yet)
+      let data, error;
+      ({ data, error } = await supabase.from("concierge").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).select().single());
+      if (error) {
+        console.warn("Update with updated_at failed, retrying without it:", error.message);
+        ({ data, error } = await supabase.from("concierge").update(updates).eq("id", id).select().single());
+      }
       if (error) throw error;
       return respond(200, { item: data });
     }
