@@ -14,6 +14,7 @@ const placeholders = {
   email: "Your email address…",
   phone: "Your phone number…",
   message: "Tell us about your dream trip…",
+  conversation: "Reply to your concierge…",
 };
 
 export default function ConciergeChat() {
@@ -22,6 +23,8 @@ export default function ConciergeChat() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
+  const [conciergeId, setConciergeId] = useState(null);
+  const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: "welcome",
@@ -36,9 +39,19 @@ export default function ConciergeChat() {
   // Auto-scroll on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typing]);
 
   const handleToggle = () => setIsOpen(!isOpen);
+
+  const handleEndChat = () => {
+    setStep("done");
+    setTyping(false);
+    setMessages((prev) => [...prev, {
+      id: `concierge-bye-${Date.now()}`,
+      from: "concierge",
+      text: `It was wonderful chatting with you, ${userName}! Our travel team will review everything and reach out to you at ${userEmail} shortly. We can't wait to help you plan your dream trip! ✈️🌍`,
+    }]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,7 +109,48 @@ export default function ConciergeChat() {
       return;
     }
 
-    // step === "message"
+    // step === "conversation" — follow-up message
+    if (step === "conversation") {
+      setSending(true);
+      setTyping(true);
+
+      try {
+        const res = await fetch("/.netlify/functions/concierge-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            concierge_id: conciergeId,
+            message: trimmed,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.reply) {
+          setTimeout(() => {
+            setTyping(false);
+            setMessages((prev) => [...prev, {
+              id: `ai-reply-${Date.now()}`,
+              from: "concierge",
+              text: data.reply,
+            }]);
+          }, 500);
+        } else {
+          setTyping(false);
+        }
+      } catch (err) {
+        setTyping(false);
+        setMessages((prev) => [...prev, {
+          id: `err-${Date.now()}`,
+          from: "concierge",
+          text: "I'm sorry, something went wrong. Please try again or reach out to us directly at info@fhjdreamdestinations.com",
+        }]);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // step === "message" — initial submit
     setSending(true);
 
     try {
@@ -116,13 +170,43 @@ export default function ConciergeChat() {
       const data = await res.json();
 
       if (data.success) {
-        setStep("done");
-        const reply = {
-          id: `concierge-${Date.now()}`,
+        setConciergeId(data.conciergeId);
+
+        // Show thank you message
+        const thankYou = {
+          id: `concierge-thanks-${Date.now()}`,
           from: "concierge",
-          text: `Thank you, ${userName}! 🌴 Your message has been received and we'll reach out to you at ${userEmail} shortly. We look forward to crafting your perfect journey!`,
+          text: `Thank you, ${userName}! 🌴 Your message has been received. Let me ask a few quick questions to help our team plan your perfect trip:`,
         };
-        setTimeout(() => setMessages((prev) => [...prev, reply]), 600);
+        setMessages((prev) => [...prev, thankYou]);
+
+        // Show AI suggestions as individual bubbles with staggered timing
+        if (data.suggestions && data.suggestions.length > 0) {
+          setStep("conversation");
+          setTyping(true);
+          data.suggestions.forEach((suggestion, i) => {
+            setTimeout(() => {
+              setMessages((prev) => [...prev, {
+                id: `ai-suggestion-${Date.now()}-${i}`,
+                from: "concierge",
+                text: suggestion,
+              }]);
+              if (i === data.suggestions.length - 1) {
+                setTyping(false);
+              }
+            }, 800 + (i * 600));
+          });
+        } else {
+          // No suggestions — keep chat open for follow-up
+          setStep("conversation");
+          setTimeout(() => {
+            setMessages((prev) => [...prev, {
+              id: `concierge-followup-${Date.now()}`,
+              from: "concierge",
+              text: "What destinations are you dreaming about? Any specific dates or occasions?",
+            }]);
+          }, 800);
+        }
       } else {
         const errReply = {
           id: `err-${Date.now()}`,
@@ -145,6 +229,23 @@ export default function ConciergeChat() {
 
   return (
     <>
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-4px); opacity: 1; }
+        }
+        .typing-dots span {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          margin: 0 2px;
+          border-radius: 50%;
+          background: #94a3b8;
+          animation: typingBounce 1.2s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+      `}</style>
       <ConciergeToggleButton isOpen={isOpen} onToggle={handleToggle} />
 
       <AnimatePresence>
@@ -181,14 +282,27 @@ export default function ConciergeChat() {
                 </div>
               ))}
 
-              {sending && (
+              {typing && (
                 <div style={{ ...messageBubble, ...conciergeBubble, opacity: 0.6 }}>
-                  <p style={{ margin: 0 }}>Sending...</p>
+                  <p style={{ margin: 0 }}>
+                    <span className="typing-dots">
+                      <span></span><span></span><span></span>
+                    </span>
+                  </p>
                 </div>
               )}
 
               <div ref={messagesEndRef} />
             </div>
+
+            {/* End Chat button */}
+            {step === "conversation" && (
+              <div style={{ padding: "0 1rem 0.5rem", display: "flex", justifyContent: "center" }}>
+                <button onClick={handleEndChat} style={endChatBtnStyle}>
+                  ✓ I'm all set, thank you!
+                </button>
+              </div>
+            )}
 
             {/* Input */}
             {step !== "done" && (
@@ -315,6 +429,17 @@ const sendBtnStyle = {
   color: "#00c48c",
   fontSize: "0.85rem",
   fontWeight: 600,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+};
+
+const endChatBtnStyle = {
+  padding: "0.45rem 1rem",
+  borderRadius: "999px",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.15)",
+  color: "#94a3b8",
+  fontSize: "0.78rem",
   cursor: "pointer",
   transition: "all 0.2s ease",
 };
