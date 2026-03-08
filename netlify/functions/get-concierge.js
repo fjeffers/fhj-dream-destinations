@@ -4,7 +4,6 @@
 // generates AI clarifying questions (persisted), emails owner via Resend, and archives the conversation.
 
 const { supabase, respond } = require('./utils');
-const fetch = require('node-fetch');
 
 const AI_SUGGEST_PATH = '/.netlify/functions/ai-suggest';
 const EMAIL_SUMMARY_PATH = '/.netlify/functions/email-summary';

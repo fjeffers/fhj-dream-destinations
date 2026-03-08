@@ -19,6 +19,7 @@ export default function AdminConcierge({ admin }) {
   const [selected, setSelected] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -68,15 +69,14 @@ export default function AdminConcierge({ admin }) {
     if (!replyText.trim() || !selected) return;
     setSending(true);
     try {
-      await fetch("/.netlify/functions/admin-concierge", {
+      await fetch("/.netlify/functions/admin-concierge-messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          parentId: selected.id,
-          email: selected.email,
-          name: admin?.Name || admin?.Email || "Admin",
-          message: replyText,
-          source: "Admin Reply",
+          concierge_id: selected.id,
+          sender: "admin",
+          body: replyText,
+          metadata: { admin: admin?.Name || admin?.Email || "Admin" }
         }),
       });
       toast.success("Reply sent!");
@@ -86,6 +86,32 @@ export default function AdminConcierge({ admin }) {
       toast.error("Failed to send reply.");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleAISuggest = async () => {
+    if (!selected) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch("/.netlify/functions/generate-concierge-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selected.name,
+          message: selected.message,
+          concierge_id: selected.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        setReplyText(data.reply);
+      } else {
+        toast.error("No suggestion was generated. Please try again.");
+      }
+    } catch (err) {
+      toast.error("AI suggestion failed.");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -263,6 +289,14 @@ export default function AdminConcierge({ admin }) {
                     style={{ alignSelf: "flex-end" }}
                   >
                     {sending ? "Sending..." : "Reply"}
+                  </FHJButton>
+                  <FHJButton
+                    variant="ghost"
+                    onClick={handleAISuggest}
+                    disabled={aiLoading}
+                    style={{ alignSelf: "flex-end" }}
+                  >
+                    {aiLoading ? "Thinking..." : "✨ AI Suggest"}
                   </FHJButton>
                 </div>
               </div>

@@ -1,4 +1,52 @@
+// netlify/functions/concierge-submit.js
+// Public concierge submission from Chat Widget
+// Saves to concierge table, persists initial message, generates AI suggestions, sends email
 const { supabase, respond } = require("./utils");
+
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+
+async function generateAISuggestions(message, context = '') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const system = 'You are a friendly travel concierge assistant for FHJ Dream Destinations. Produce 1-3 short clarifying questions that help fulfill a travel booking request. Keep them concise and natural.';
+    const user = `Client message: ${message}\nContext: ${context}\n\nReturn exactly a JSON array of 1-3 short clarifying questions.`;
+
+    const res = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user }
+        ],
+        temperature: 0.6,
+        max_tokens: 200
+      })
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content ?? '';
+
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
+    } catch (e) {
+      console.error('Failed to parse AI response as JSON, falling back to line split. Content:', content);
+      const lines = content.split(/\r?\n/).map(l => l.replace(/^[\d\.\-\)\s]+/, '').trim()).filter(Boolean);
+      if (lines.length) return lines.slice(0, 3);
+    }
+
+    return [content.trim()].filter(Boolean).slice(0, 3);
+  } catch (err) {
+    console.error('AI suggestion generation failed:', err);
+    return null;
+  }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
@@ -20,6 +68,8 @@ exports.handler = async (event) => {
         source: source || "Chat Widget",
         context: context || "",
         status: "New",
+        conversation_open: true,
+        last_activity: new Date().toISOString(),
       }])
       .select()
       .single();
@@ -29,7 +79,38 @@ exports.handler = async (event) => {
       return respond(500, { error: error.message });
     }
 
-    // 2. Send email notification via Resend
+    const conciergeId = data.id;
+
+    // 2. Save initial client message to concierge_messages
+    await supabase.from("concierge_messages").insert([{
+      concierge_id: conciergeId,
+      sender: 'client',
+      body: message,
+      metadata: { source: source || "Chat Widget" },
+      created_at: new Date().toISOString()
+    }]);
+
+    // 3. Generate AI suggestions and persist them
+    let suggestions = [];
+    const aiSuggestions = await generateAISuggestions(message, context || source || '');
+    if (aiSuggestions && aiSuggestions.length > 0) {
+      suggestions = aiSuggestions;
+      const now = new Date().toISOString();
+      const inserts = suggestions.map(s => ({
+        concierge_id: conciergeId,
+        sender: 'assistant',
+        body: s,
+        metadata: { generated_by: 'openai', suggestion: true },
+        created_at: now
+      }));
+      const { error: msgErr } = await supabase.from('concierge_messages').insert(inserts);
+      if (msgErr) console.error('Error persisting AI suggestions:', msgErr);
+
+      // Update last_activity
+      await supabase.from('concierge').update({ last_activity: now }).eq('id', conciergeId);
+    }
+
+    // 4. Send email notification via Resend
     const resendKey = process.env.RESEND_API_KEY;
     if (resendKey) {
       try {
@@ -66,6 +147,13 @@ exports.handler = async (event) => {
                     ${message}
                   </blockquote>
                 </div>
+                ${suggestions.length > 0 ? `
+                <div style="margin-top: 1.5rem;">
+                  <p style="font-weight: bold; color: #555; margin-bottom: 0.5rem;">AI Follow-up Questions:</p>
+                  <ul style="margin: 0; padding-left: 1.5rem;">
+                    ${suggestions.map(s => `<li style="margin-bottom: 0.25rem; color: #333;">${s}</li>`).join('')}
+                  </ul>
+                </div>` : ''}
                 <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #eee;" />
                 <p style="color: #999; font-size: 0.8rem;">Sent from FHJ Dream Destinations concierge chat · <a href="https://fhjdreamdestinations.com/admin/concierge" style="color: #00c48c;">View in Admin</a></p>
               </div>
@@ -74,11 +162,10 @@ exports.handler = async (event) => {
         });
       } catch (emailErr) {
         console.error("Resend email error (non-fatal):", emailErr);
-        // Don't fail the whole request if email fails
       }
     }
 
-    return respond(200, { success: true, conciergeId: data?.id });
+    return respond(200, { success: true, conciergeId, suggestions });
   } catch (err) {
     console.error("concierge-submit error:", err);
     return respond(500, { error: err.message });
