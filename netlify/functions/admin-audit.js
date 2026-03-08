@@ -13,7 +13,7 @@
 // ==========================================================
 
 const {
-  selectRecords,
+  supabase,
   submitToAirtable,
   respond,
 } = require("./utils");
@@ -30,30 +30,32 @@ exports.handler = withFHJ(async (event) => {
     const params = event.queryStringParameters || {};
     const { entityType, action, startDate, endDate, limit } = params;
 
-    // Build Airtable filter formula
-    const filters = [];
+    // Build Supabase query with chained filters
+    let query = supabase.from("audit_log").select("*");
 
-    if (entityType) filters.push(`{entityType} = '${entityType}'`);
-    if (action) filters.push(`SEARCH('${action}', {Action})`);
-    if (startDate) filters.push(`IS_AFTER({Timestamp}, '${startDate}')`);
-    if (endDate) filters.push(`IS_BEFORE({Timestamp}, '${endDate}')`);
+    if (entityType) query = query.eq("entity_type", entityType);
+    if (action) query = query.ilike("action", `%${escapeLikePattern(action)}%`);
+    if (startDate) query = query.gte("timestamp", startDate);
+    if (endDate) query = query.lte("timestamp", endDate);
 
-    const formula = filters.length > 0 ? `AND(${filters.join(",")})` : "";
+    query = query.order("timestamp", { ascending: false });
 
-    const records = await selectRecords("AuditLog", formula, {
-      normalizer: true,
-      maxRecords: limit ? Number(limit) : 200,
-    });
+    if (limit) query = query.limit(Number(limit));
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const records = data || [];
 
     // Normalize for frontend — handle both column naming conventions
     const logs = records.map((r) => ({
       id: r.id,
-      timestamp: r.Timestamp || r.timestamp || r.createdTime,
-      actor: r.Admin || r["Admin Email"] || r.actor || "system",
-      action: r.Action || r.action || "",
-      entityType: r.Module || r.entityType || "",
-      entityId: r["Record ID"] || r.entityId || "",
-      details: r.Details || r.Target || safeParseJSON(r.metadata),
+      timestamp: r.timestamp || r.created_at,
+      actor: r.admin_email || r.admin || r.actor || "system",
+      action: r.action || "",
+      entityType: r.entity_type || r.module || "",
+      entityId: r.record_id || r.entity_id || "",
+      details: r.details || r.target || safeParseJSON(r.metadata),
     }));
 
     // Sort newest first
@@ -88,7 +90,7 @@ exports.handler = withFHJ(async (event) => {
 });
 
 // -------------------------------------------------------
-// Helper
+// Helpers
 // -------------------------------------------------------
 function safeParseJSON(value) {
   if (!value) return {};
@@ -97,4 +99,9 @@ function safeParseJSON(value) {
   } catch {
     return { raw: value };
   }
+}
+
+// Escape SQL LIKE pattern wildcards to prevent unexpected matches
+function escapeLikePattern(value) {
+  return String(value).replace(/[%_\\]/g, "\\$&");
 }

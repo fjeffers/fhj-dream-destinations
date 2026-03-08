@@ -38,6 +38,8 @@ const TABLE_MAP = {
   "Admins": "admins",
   "AuditLog": "audit_log",
   "Client Login": "client_login",
+  "Client_Bookings": "bookings",
+  "ConciergeMessages": "concierge",
 };
 
 function resolveTable(name) {
