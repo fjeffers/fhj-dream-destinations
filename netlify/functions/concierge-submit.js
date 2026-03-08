@@ -17,7 +17,7 @@ async function generateAISuggestions(message, context = '') {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user }
@@ -27,7 +27,11 @@ async function generateAISuggestions(message, context = '') {
       })
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorBody = await res.text();
+      console.error(`OpenAI request failed: status=${res.status}, body=${errorBody}`);
+      return null;
+    }
 
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content ?? '';
