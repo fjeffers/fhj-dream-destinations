@@ -21,8 +21,7 @@ exports.handler = async (event) => {
       metadata: { source: 'Chat Widget' }
     }]);
     if (insertUserErr) {
-      console.error("Failed to save user message:", insertUserErr);
-      return respond(500, { error: "Failed to save message" });
+      console.error("Failed to save user message (non-fatal):", insertUserErr);
     }
 
     // 2. Fetch full conversation history for context
@@ -67,7 +66,7 @@ exports.handler = async (event) => {
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
             messages: conversationMessages,
             temperature: 0.7,
             max_tokens: 300
@@ -77,6 +76,9 @@ exports.handler = async (event) => {
         if (res.ok) {
           const data = await res.json();
           reply = data?.choices?.[0]?.message?.content?.trim() || '';
+        } else {
+          const errorBody = await res.text();
+          console.error(`OpenAI request failed: status=${res.status}, body=${errorBody}`);
         }
       } catch (err) {
         console.error('OpenAI error:', err);
