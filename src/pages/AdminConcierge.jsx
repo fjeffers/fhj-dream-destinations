@@ -17,9 +17,6 @@ export default function AdminConcierge({ admin }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unresolved | resolved
   const [selected, setSelected] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -61,57 +58,6 @@ export default function AdminConcierge({ admin }) {
       }
     } catch (err) {
       toast.error("Failed to update status.");
-    }
-  };
-
-  // Send reply
-  const handleReply = async () => {
-    if (!replyText.trim() || !selected) return;
-    setSending(true);
-    try {
-      await fetch("/.netlify/functions/admin-concierge-messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          concierge_id: selected.id,
-          sender: "admin",
-          body: replyText,
-          metadata: { admin: admin?.Name || admin?.Email || "Admin" }
-        }),
-      });
-      toast.success("Reply sent!");
-      setReplyText("");
-      loadMessages();
-    } catch (err) {
-      toast.error("Failed to send reply.");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleAISuggest = async () => {
-    if (!selected) return;
-    setAiLoading(true);
-    try {
-      const res = await fetch("/.netlify/functions/generate-concierge-reply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: selected.name,
-          message: selected.message,
-          concierge_id: selected.id,
-        }),
-      });
-      const data = await res.json();
-      if (data.reply) {
-        setReplyText(data.reply);
-      } else {
-        toast.error("No suggestion was generated. Please try again.");
-      }
-    } catch (err) {
-      toast.error("AI suggestion failed.");
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -267,38 +213,9 @@ export default function AdminConcierge({ admin }) {
                 )}
               </div>
 
-              {/* Reply Section */}
-              <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Reply to {selected.name}</p>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type your reply..."
-                    style={replyTextareaStyle}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleReply();
-                      }
-                    }}
-                  />
-                  <FHJButton
-                    onClick={handleReply}
-                    disabled={sending || !replyText.trim()}
-                    style={{ alignSelf: "flex-end" }}
-                  >
-                    {sending ? "Sending..." : "Reply"}
-                  </FHJButton>
-                  <FHJButton
-                    variant="ghost"
-                    onClick={handleAISuggest}
-                    disabled={aiLoading}
-                    style={{ alignSelf: "flex-end" }}
-                  >
-                    {aiLoading ? "Thinking..." : "✨ AI Suggest"}
-                  </FHJButton>
-                </div>
+              {/* Conversation Thread */}
+              <div style={{ marginTop: "1.5rem" }}>
+                <ConciergeThread conciergeId={selected.id} refreshParent={loadMessages} />
               </div>
             </motion.div>
           )}
@@ -363,23 +280,8 @@ const messageItemStyle = {
 };
 
 const messageContentStyle = {
-  flex: 1,
   padding: "1.25rem",
   background: "rgba(255,255,255,0.03)",
   borderRadius: "10px",
   border: "1px solid rgba(255,255,255,0.06)",
-};
-
-const replyTextareaStyle = {
-  flex: 1,
-  padding: "0.75rem",
-  borderRadius: "10px",
-  background: "rgba(0,0,0,0.3)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  color: "white",
-  fontSize: "0.9rem",
-  resize: "none",
-  minHeight: "60px",
-  boxSizing: "border-box",
-  colorScheme: "dark",
 };
