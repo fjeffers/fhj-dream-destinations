@@ -36,16 +36,22 @@ async function generateAISuggestions(message, context = '') {
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content ?? '';
 
+    // Strip markdown code fences that OpenAI sometimes wraps around JSON
+    let cleaned = content.trim();
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
     try {
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
     } catch (e) {
       console.error('Failed to parse AI response as JSON, falling back to line split. Content:', content);
-      const lines = content.split(/\r?\n/).map(l => l.replace(/^[\d\.\-\)\s]+/, '').trim()).filter(Boolean);
+      const lines = cleaned.split(/\r?\n/)
+        .map(l => l.replace(/^[\d\.\-\)\s\[\]"',]+/, '').replace(/[\[\]"',]+$/, '').trim())
+        .filter(Boolean);
       if (lines.length) return lines.slice(0, 3);
     }
 
-    return [content.trim()].filter(Boolean).slice(0, 3);
+    return [cleaned].filter(Boolean).slice(0, 3);
   } catch (err) {
     console.error('AI suggestion generation failed:', err);
     return null;

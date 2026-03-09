@@ -43,18 +43,24 @@ async function callOpenAI(message, context = '') {
   const data = await res.json();
   const assistant = data?.choices?.[0]?.message?.content ?? '';
 
+  // Strip markdown code fences that OpenAI sometimes wraps around JSON
+  let cleaned = assistant.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
   // Try parse JSON array first
   try {
-    const parsed = JSON.parse(assistant);
+    const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
   } catch (e) {
-    // fallback: split lines
-    const lines = assistant.split(/\r?\n/).map(l => l.replace(/^[\d\.\-\)\s]+/, '').trim()).filter(Boolean);
+    // fallback: split lines, also cleaning JSON artifacts
+    const lines = cleaned.split(/\r?\n/)
+      .map(l => l.replace(/^[\d\.\-\)\s\[\]"',]+/, '').replace(/[\[\]"',]+$/, '').trim())
+      .filter(Boolean);
     if (lines.length) return lines.slice(0, 3);
   }
 
-  // Last resort: return whole assistant as single suggestion
-  return [assistant.trim()].filter(Boolean).slice(0, 3);
+  // Last resort: return whole cleaned response as single suggestion
+  return [cleaned].filter(Boolean).slice(0, 3);
 }
 
 module.exports.handler = async (event) => {
