@@ -135,6 +135,9 @@ export default function AdminConcierge({ admin }) {
                   <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.25rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {msg.message}
                   </p>
+                  <p style={{ color: "#64748b", fontSize: "0.75rem", margin: "0.15rem 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {msg.email}{msg.phone ? ` · ${msg.phone}` : ""}
+                  </p>
                 </div>
               </motion.div>
             ))
@@ -170,7 +173,7 @@ export default function AdminConcierge({ admin }) {
                     {selected.name || "Unknown"}
                   </h3>
                   <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9rem" }}>
-                    {selected.email} · {selected.source || "Portal"} · {formatDate(selected.created_at)}
+                    {selected.email}{selected.phone ? ` · ${selected.phone}` : ""} · {selected.source || "Portal"} · {formatDate(selected.created_at)}
                   </p>
                 </div>
 
