@@ -156,7 +156,7 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "FHJ Concierge <onboarding@resend.dev>",
+            from: "FHJ Dream Destinations <notifications@fhjdreamdestinations.com>",
             to: ["info@fhjdreamdestinations.com"],
             subject: `New Concierge Message from ${name || "a visitor"}`,
             html: `
