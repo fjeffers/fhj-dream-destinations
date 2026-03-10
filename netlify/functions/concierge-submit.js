@@ -37,7 +37,9 @@ async function generateAISuggestions(message, context = '') {
     const content = data?.choices?.[0]?.message?.content ?? '';
 
     try {
-      const parsed = JSON.parse(content);
+      let cleaned = content.trim();
+      cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
     } catch (e) {
       console.error('Failed to parse AI response as JSON, falling back to line split. Content:', content);

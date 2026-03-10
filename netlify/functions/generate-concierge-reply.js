@@ -33,7 +33,7 @@ async function generateAIReply({ name, message, occasion, trip, conversationHist
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: userPrompt }

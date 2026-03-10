@@ -20,7 +20,7 @@ async function callOpenAI(message, context = '') {
   const user = `Client message: ${message}\nContext: ${context}\n\nReturn exactly an array of 1-3 short clarifying questions.`;
 
   const body = {
-    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user }
@@ -45,7 +45,9 @@ async function callOpenAI(message, context = '') {
 
   // Try parse JSON array first
   try {
-    const parsed = JSON.parse(assistant);
+    let cleaned = assistant.trim();
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean).slice(0, 3);
   } catch (e) {
     // fallback: split lines
