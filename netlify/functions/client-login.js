@@ -1,5 +1,6 @@
 // ==========================================================
-// FILE: client-login.js - Supabase Version
+// FILE: client-login.js - Supabase Version (Rewritten)
+// Email + Password authentication
 // Location: netlify/functions/client-login.js
 // ==========================================================
 const { supabase, respond } = require("./utils");
@@ -14,13 +15,13 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const email = body.email?.toLowerCase().trim();
-    const accessCode = body.accessCode?.trim();
+    const password = body.password?.trim() || body.accessCode?.trim();
 
     // Validate input
-    if (!email || !accessCode) {
+    if (!email || !password) {
       return respond(400, {
         success: false,
-        error: "Email and Access Code are required.",
+        error: "Email and password are required.",
       });
     }
 
@@ -31,17 +32,16 @@ exports.handler = async (event) => {
       .from("client_login")
       .select("*")
       .ilike("email", email)
-      .eq("token", accessCode)
+      .eq("password", password)
       .single();
 
     if (error) {
       console.error("Supabase error:", error);
       
       if (error.code === 'PGRST116') {
-        // No rows found
         return respond(401, {
           success: false,
-          error: "Invalid email or access code.",
+          error: "Invalid email or password.",
         });
       }
       
@@ -52,7 +52,6 @@ exports.handler = async (event) => {
     }
 
     if (data) {
-      // Build client object
       const client = {
         id: data.id,
         email: data.email,
@@ -66,7 +65,7 @@ exports.handler = async (event) => {
     } else {
       return respond(401, {
         success: false,
-        error: "Invalid email or access code.",
+        error: "Invalid email or password.",
       });
     }
   } catch (error) {
