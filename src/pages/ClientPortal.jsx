@@ -6,12 +6,9 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
-import FHJBackground from "../components/FHJ/FHJBackground.jsx";
+import { fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 
 export default function ClientPortal() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [client, setClient] = useState(null);
@@ -51,7 +48,7 @@ export default function ClientPortal() {
   };
 
   return (
-    <FHJBackground page="home">
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)" }}>
       <div style={{ 
         padding: "6rem 2rem 5rem", 
         maxWidth: "1400px", 
@@ -83,7 +80,7 @@ export default function ClientPortal() {
           )}
         </AnimatePresence>
       </div>
-    </FHJBackground>
+    </div>
   );
 }
 
@@ -169,25 +166,27 @@ function LoginScreen({ email, setEmail, accessCode, setAccessCode, loading, erro
           <form onSubmit={onSubmit} style={{ padding: "2.5rem" }}>
             <div style={{ marginBottom: "1.75rem" }}>
               <label style={labelStyle}>Email Address</label>
-              <FHJInput 
+              <input 
                 type="email" 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
                 placeholder="your@email.com" 
                 required 
-                style={inputOverride}
+                autoComplete="email"
+                style={{ ...inputOverride, color: "white", width: "100%", boxSizing: "border-box", transition: "border 0.2s, background 0.2s" }}
               />
             </div>
 
             <div style={{ marginBottom: "2.5rem" }}>
               <label style={labelStyle}>Access Code</label>
-              <FHJInput 
+              <input 
                 type="password" 
                 value={accessCode} 
                 onChange={(e) => setAccessCode(e.target.value)} 
                 placeholder="••••••" 
                 required 
-                style={inputOverride}
+                autoComplete="current-password"
+                style={{ ...inputOverride, color: "white", width: "100%", boxSizing: "border-box", transition: "border 0.2s, background 0.2s" }}
               />
             </div>
 
