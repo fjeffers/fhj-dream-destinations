@@ -24,6 +24,7 @@ import AdminClients from "./pages/AdminClients.jsx";
 import AdminDeals from "./pages/AdminDeals.jsx";
 import AdminMagic from "./pages/AdminMagic.jsx";
 import AdminTrips from "./pages/AdminTrips.jsx";
+import AdminGroupTrips from "./pages/AdminGroupTrips.jsx";
 import AdminEvents from "./pages/AdminEvents.jsx";
 import AdminBookings from "./pages/AdminBookings.jsx";
 import AdminConcierge from "./pages/AdminConcierge.jsx";
@@ -106,6 +107,7 @@ export default function App() {
                 <Route path="clients" element={<AdminClients admin={admin} />} />
                 <Route path="deals" element={<AdminDeals admin={admin} />} />
                 <Route path="trips" element={<AdminTrips admin={admin} />} />
+                <Route path="group-trips" element={<AdminGroupTrips admin={admin} />} />
                 <Route path="events" element={<AdminEvents admin={admin} />} />
                 <Route path="rsvps" element={<AdminRSVPs admin={admin} />} />
 
