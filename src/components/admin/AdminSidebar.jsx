@@ -36,6 +36,7 @@ export default function AdminSidebar({ admin, onLogout }) {
     { to: "/admin/deals", label: "Deals" },
     { to: "/admin/clients", label: "Clients" },
     { to: "/admin/trips", label: "Trips" },
+    { to: "/admin/group-trips", label: "Group Trips" },
     { to: "/admin/events", label: "Events" },
     { to: "/admin/concierge", label: "Concierge Inbox" },
     { to: "/admin/about", label: "About Page" },
