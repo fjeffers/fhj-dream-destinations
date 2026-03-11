@@ -1,9 +1,4 @@
-// ==========================================================
-// FILE: App.jsx  (UPDATED — Added appointments admin route)
-// Location: src/App.jsx
-// ==========================================================
-
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./AppShell.jsx";
 import { ToastProvider } from "./components/FHJ/FHJToast.jsx";
@@ -11,39 +6,52 @@ import { AuthProvider } from "./lib/providers/AuthProvider.jsx";
 import { ThemeProvider } from "./lib/providers/ThemeProvider.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 
-// Pages
-import Home from "./pages/Home.jsx";
-import Appointments from "./pages/Appointments.jsx";
-import AppointmentPage from "./pages/AppointmentPage.jsx";
-import About from "./pages/About.jsx";
-import DealDetails from "./pages/DealDetails.jsx";
-import ClientPortal from "./pages/ClientPortal.jsx";
-import AdminLogin from "./pages/AdminLogin.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
-import AdminClients from "./pages/AdminClients.jsx";
-import AdminDeals from "./pages/AdminDeals.jsx";
-import AdminMagic from "./pages/AdminMagic.jsx";
-import AdminTrips from "./pages/AdminTrips.jsx";
-import AdminGroupTrips from "./pages/AdminGroupTrips.jsx";
-import AdminEvents from "./pages/AdminEvents.jsx";
-import AdminBookings from "./pages/AdminBookings.jsx";
-import AdminConcierge from "./pages/AdminConcierge.jsx";
-import AdminSettings from "./pages/AdminSettings.jsx";
-import AdminDocuments from "./pages/AdminDocuments.jsx";
-import AdminActivity from "./pages/AdminActivity.jsx";
-import AdminAuditLog from "./pages/AdminAuditLog.jsx";
-import AdminSearch from "./pages/AdminSearch.jsx";
-import AdminAvailability from "./pages/AdminAvailability.jsx";
-import AdminCalendar from "./pages/AdminCalendar.jsx";
-import AdminRSVPs from "./pages/AdminRSVPs.jsx";
-import AdminAbout from "./pages/AdminAbout.jsx";
-import BookingIntake from "./pages/BookingIntake.jsx";
-import ClientTimeline from "./pages/ClientTimeline.jsx";
-import Booking from "./pages/Booking.jsx";
+// Lazy load ALL pages — only download the code when the route is visited
+const Home = lazy(() => import("./pages/Home.jsx"));
+const Appointments = lazy(() => import("./pages/Appointments.jsx"));
+const AppointmentPage = lazy(() => import("./pages/AppointmentPage.jsx"));
+const About = lazy(() => import("./pages/About.jsx"));
+const DealDetails = lazy(() => import("./pages/DealDetails.jsx"));
+const ClientPortal = lazy(() => import("./pages/ClientPortal.jsx"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin.jsx"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
+const AdminClients = lazy(() => import("./pages/AdminClients.jsx"));
+const AdminDeals = lazy(() => import("./pages/AdminDeals.jsx"));
+const AdminMagic = lazy(() => import("./pages/AdminMagic.jsx"));
+const AdminTrips = lazy(() => import("./pages/AdminTrips.jsx"));
+const AdminGroupTrips = lazy(() => import("./pages/AdminGroupTrips.jsx"));
+const AdminEvents = lazy(() => import("./pages/AdminEvents.jsx"));
+const AdminBookings = lazy(() => import("./pages/AdminBookings.jsx"));
+const AdminConcierge = lazy(() => import("./pages/AdminConcierge.jsx"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings.jsx"));
+const AdminDocuments = lazy(() => import("./pages/AdminDocuments.jsx"));
+const AdminActivity = lazy(() => import("./pages/AdminActivity.jsx"));
+const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog.jsx"));
+const AdminSearch = lazy(() => import("./pages/AdminSearch.jsx"));
+const AdminAvailability = lazy(() => import("./pages/AdminAvailability.jsx"));
+const AdminCalendar = lazy(() => import("./pages/AdminCalendar.jsx"));
+const AdminRSVPs = lazy(() => import("./pages/AdminRSVPs.jsx"));
+const AdminAbout = lazy(() => import("./pages/AdminAbout.jsx"));
+const BookingIntake = lazy(() => import("./pages/BookingIntake.jsx"));
+const ClientTimeline = lazy(() => import("./pages/ClientTimeline.jsx"));
+const Booking = lazy(() => import("./pages/Booking.jsx"));
+const EventPage = lazy(() => import("./components/EventPage.jsx"));
+const RSVPPage = lazy(() => import("./components/RSVPPage.jsx"));
 
-// Components used as pages
-import EventPage from "./components/EventPage.jsx";
-import RSVPPage from "./components/RSVPPage.jsx";
+const PageLoader = () => (
+  <div style={{
+    display: "flex", alignItems: "center", justifyContent: "center",
+    minHeight: "100vh", background: "#0a0a0a",
+  }}>
+    <div style={{
+      width: 48, height: 48, borderRadius: "50%",
+      border: "3px solid #1a1a1a",
+      borderTopColor: "#4ade80",
+      animation: "fhj-spin 0.8s linear infinite",
+    }} />
+    <style>{`@keyframes fhj-spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 export default function App() {
   const [admin, setAdmin] = useState(() => {
@@ -68,6 +76,7 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public routes with nav shell */}
               <Route element={<AppShell />}>
@@ -130,6 +139,7 @@ export default function App() {
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
           </Router>
         </ToastProvider>
       </AuthProvider>
