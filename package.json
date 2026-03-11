@@ -14,9 +14,7 @@
     "react-router-dom": "^6.20.0",
     "framer-motion": "^10.16.0",
     "@supabase/supabase-js": "^2.39.0",
-    "airtable": "^0.12.2",
     "qrcode": "^1.5.3",
-    "resend": "^3.0.0",
     "recharts": "^2.10.0"
   },
   "devDependencies": {
