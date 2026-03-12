@@ -25,12 +25,16 @@ exports.handler = async (event) => {
   if (event.httpMethod === "POST") {
     try {
       const body = JSON.parse(event.body || "{}");
+      const fullName = (body.full_name || body.name || body["Full Name"] || "").trim();
+      const email = (body.email || body.Email || "").trim().toLowerCase();
+      const phone = body.phone || body.Phone || "";
+
       const { data, error } = await supabase
         .from("clients")
         .insert([{
-          full_name: (body.full_name || body.name || body["Full Name"] || "").trim(),
-          email: (body.email || body.Email || "").trim().toLowerCase(),
-          phone: body.phone || body.Phone || "",
+          full_name: fullName,
+          email,
+          phone,
           status: body.status || body.Status || "Active",
           notes: body.notes || body.Notes || "",
           tags: body.tags || body.Tags || "",
@@ -39,6 +43,26 @@ exports.handler = async (event) => {
         .select()
         .single();
       if (error) return respond(500, { error: error.message });
+
+      // Auto-create client_login record
+      if (email) {
+        const firstName = fullName.split(" ")[0] || "Client";
+        const lastFour = phone.replace(/\D/g, "").slice(-4);
+        const defaultPassword = lastFour ? `${firstName}${lastFour}` : "Welcome123!";
+
+        const { error: loginError } = await supabase
+          .from("client_login")
+          .upsert([{ email, password: defaultPassword, full_name: fullName, phone }], {
+            onConflict: "email",
+          });
+
+        if (loginError) {
+          console.warn("Could not auto-create client_login for", email, loginError.message);
+        } else {
+          console.log(`Auto-created client_login for ${email}`);
+        }
+      }
+
       return respond(200, { success: true, client: data });
     } catch (err) {
       return respond(500, { error: err.message });

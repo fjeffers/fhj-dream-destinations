@@ -1,23 +1,21 @@
 // ==========================================================
-// FILE: client-login.js - Supabase Version (Rewritten)
-// Email + Password authentication
+// FILE: client-login.js — Email + Password Auth
 // Location: netlify/functions/client-login.js
 // ==========================================================
 const { supabase, respond } = require("./utils");
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return respond(200, {});
-  
+
   if (event.httpMethod !== "POST") {
     return respond(405, { error: "Method not allowed" });
   }
 
   try {
     const body = JSON.parse(event.body || "{}");
-    const email = body.email?.toLowerCase().trim();
-    const password = body.password?.trim() || body.accessCode?.trim();
+    const email = (body.email || "").toLowerCase().trim();
+    const password = (body.password || "").trim();
 
-    // Validate input
     if (!email || !password) {
       return respond(400, {
         success: false,
@@ -25,9 +23,8 @@ exports.handler = async (event) => {
       });
     }
 
-    console.log("Login attempt:", email);
+    console.log("Client login attempt:", email);
 
-    // Query Supabase client_login table
     const { data, error } = await supabase
       .from("client_login")
       .select("*")
@@ -35,41 +32,25 @@ exports.handler = async (event) => {
       .eq("password", password)
       .single();
 
-    if (error) {
-      console.error("Supabase error:", error);
-      
-      if (error.code === 'PGRST116') {
-        return respond(401, {
-          success: false,
-          error: "Invalid email or password.",
-        });
-      }
-      
-      return respond(500, {
-        success: false,
-        error: "Database error. Please try again.",
-      });
-    }
-
-    if (data) {
-      const client = {
-        id: data.id,
-        email: data.email,
-        fullName: data.full_name || "Traveler",
-        phone: data.phone || "",
-      };
-
-      console.log("Login successful:", client.email);
-
-      return respond(200, { success: true, client });
-    } else {
+    if (error || !data) {
+      console.warn("Login failed for:", email, error?.code);
       return respond(401, {
         success: false,
         error: "Invalid email or password.",
       });
     }
-  } catch (error) {
-    console.error("Critical Login Error:", error);
+
+    const client = {
+      id: data.id,
+      email: data.email,
+      fullName: data.full_name || "Traveler",
+      phone: data.phone || "",
+    };
+
+    console.log("Client login successful:", client.email);
+    return respond(200, { success: true, client });
+  } catch (err) {
+    console.error("Client login error:", err);
     return respond(500, {
       success: false,
       error: "Server error. Please try again later.",
