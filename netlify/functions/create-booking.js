@@ -1,15 +1,8 @@
 
 // netlify/functions/create-booking.js
-import Airtable from "airtable";
+const { supabase } = require("./utils");
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "YOUR_AIRTABLE_API_KEY";
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "YOUR_BASE_ID";
-const TRIPS_TABLE = "Trips";
-const CLIENTS_TABLE = "Client Name";
-
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
-
-export const handler = async (event) => {
+exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -48,60 +41,66 @@ export const handler = async (event) => {
     // 1) Find or create client
     let clientId = null;
 
-    const clientMatches = await base(CLIENTS_TABLE)
-      .select({
-        filterByFormula: `LOWER({Email}) = '${String(email).toLowerCase()}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    const { data: existingClients } = await supabase
+      .from("clients")
+      .select("id")
+      .ilike("email", email)
+      .limit(1);
 
-    if (clientMatches && clientMatches.length > 0) {
-      clientId = clientMatches[0].id;
+    if (existingClients && existingClients.length > 0) {
+      clientId = existingClients[0].id;
     } else {
-      const createdClient = await base(CLIENTS_TABLE).create([
-        {
-          fields: {
-            "Full Name": fullName,
-            Email: email,
-            Phone: phone || "",
-            Address: address || "",
+      const { data: createdClient, error: clientError } = await supabase
+        .from("clients")
+        .insert([
+          {
+            full_name: fullName,
+            email: email,
+            phone: phone || "",
+            address: address || "",
           },
-        },
-      ]);
-      clientId = createdClient[0].id;
+        ])
+        .select("id")
+        .single();
+
+      if (clientError) throw clientError;
+      clientId = createdClient.id;
     }
 
     // 2) Create Trip record
-    const createdTrip = await base(TRIPS_TABLE).create([
-      {
-        fields: {
-          Destination: destination,
-          Client: fullName,
+    const { data: createdTrip, error: tripError } = await supabase
+      .from("trips")
+      .insert([
+        {
+          destination: destination,
+          client_name: fullName,
           client_email: email,
-          Phone: phone || "",
-          Address: address || "",
-          "Trip Type": tripType || "Individual",
-          Occasion: occasion || "",
-          "Start Date": startDate || null,
-          "End Date": endDate || null,
-          "Group Size": travelers || 1,
-          "Flexible Dates": flexibleDates ? "👍" : "",
-          Notes: notes || "",
-          "Estimated Budget Per Person": budgetPerPerson || "",
-          "Source": "Website Booking",
-          "Deal Id": dealId || "",
-          "Deal Name": dealName || "",
-          // If you have a linked field to Client Name table:
-          "Client Name": clientId ? [clientId] : undefined,
+          phone: phone || "",
+          address: address || "",
+          trip_type: tripType || "Individual",
+          occasion: occasion || "",
+          start_date: startDate || null,
+          end_date: endDate || null,
+          group_size: travelers || 1,
+          flexible_dates: flexibleDates ? true : false,
+          notes: notes || "",
+          estimated_budget_per_person: budgetPerPerson || null,
+          source: "Website Booking",
+          deal_id: dealId || null,
+          deal_name: dealName || "",
+          client_id: clientId || null,
         },
-      },
-    ]);
+      ])
+      .select("id")
+      .single();
+
+    if (tripError) throw tripError;
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        tripId: createdTrip[0].id,
+        tripId: createdTrip.id,
       }),
     };
   } catch (err) {
