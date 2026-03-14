@@ -5,7 +5,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('supabaseServer: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured');
@@ -24,18 +24,18 @@ async function verifySupabaseJWT(accessToken) {
   }
 
   try {
-    // Modern API
+    // Modern API: supabase.auth.getUser(token)
     if (supabase.auth && typeof supabase.auth.getUser === 'function') {
       try {
         const resp = await supabase.auth.getUser(accessToken);
         const user = resp?.data?.user ?? resp?.user ?? null;
         if (user) return user;
       } catch (e) {
-        // continue to legacy method
+        // fall through to legacy method
       }
     }
 
-    // Legacy API
+    // Legacy API: supabase.auth.api.getUser(token)
     if (supabase.auth && supabase.auth.api && typeof supabase.auth.api.getUser === 'function') {
       try {
         const resp = await supabase.auth.api.getUser(accessToken);
@@ -48,7 +48,6 @@ async function verifySupabaseJWT(accessToken) {
   } catch (err) {
     console.error('verifySupabaseJWT error', err);
   }
-
   return null;
 }
 
