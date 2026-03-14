@@ -1,20 +1,11 @@
-
 // netlify/functions/create-booking.js
-import Airtable from "airtable";
+const { supabase, respond } = require("./utils");
 
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "YOUR_AIRTABLE_API_KEY";
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "YOUR_BASE_ID";
-const TRIPS_TABLE = "Trips";
-const CLIENTS_TABLE = "Client Name";
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return respond(200, {});
 
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
-
-export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method Not Allowed",
-    };
+    return respond(405, { error: "Method Not Allowed" });
   }
 
   try {
@@ -39,76 +30,76 @@ export const handler = async (event) => {
     } = body;
 
     if (!fullName || !email || !destination) {
-      return {
-        statusCode: 400,
-        body: "Missing required fields",
-      };
+      return respond(400, { error: "Missing required fields" });
     }
 
     // 1) Find or create client
     let clientId = null;
 
-    const clientMatches = await base(CLIENTS_TABLE)
-      .select({
-        filterByFormula: `LOWER({Email}) = '${String(email).toLowerCase()}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    const { data: existingClient } = await supabase
+      .from("clients")
+      .select("*")
+      .ilike("email", email)
+      .single();
 
-    if (clientMatches && clientMatches.length > 0) {
-      clientId = clientMatches[0].id;
+    if (existingClient) {
+      clientId = existingClient.id;
     } else {
-      const createdClient = await base(CLIENTS_TABLE).create([
-        {
-          fields: {
-            "Full Name": fullName,
-            Email: email,
-            Phone: phone || "",
-            Address: address || "",
-          },
-        },
-      ]);
-      clientId = createdClient[0].id;
+      const { data: newClient, error: clientError } = await supabase
+        .from("clients")
+        .insert([{
+          full_name: fullName,
+          email: email,
+          phone: phone || "",
+          address: address || "",
+        }])
+        .select()
+        .single();
+
+      if (clientError) {
+        console.error("Error creating client:", clientError);
+        return respond(500, { error: "Failed to create client" });
+      }
+      clientId = newClient.id;
     }
 
     // 2) Create Trip record
-    const createdTrip = await base(TRIPS_TABLE).create([
-      {
-        fields: {
-          Destination: destination,
-          Client: fullName,
-          client_email: email,
-          Phone: phone || "",
-          Address: address || "",
-          "Trip Type": tripType || "Individual",
-          Occasion: occasion || "",
-          "Start Date": startDate || null,
-          "End Date": endDate || null,
-          "Group Size": travelers || 1,
-          "Flexible Dates": flexibleDates ? "👍" : "",
-          Notes: notes || "",
-          "Estimated Budget Per Person": budgetPerPerson || "",
-          "Source": "Website Booking",
-          "Deal Id": dealId || "",
-          "Deal Name": dealName || "",
-          // If you have a linked field to Client Name table:
-          "Client Name": clientId ? [clientId] : undefined,
-        },
-      },
-    ]);
+    const { data: newTrip, error: tripError } = await supabase
+      .from("trips")
+      .insert([{
+        destination,
+        client: fullName,
+        client_email: email,
+        client_id: clientId,
+        phone: phone || "",
+        address: address || "",
+        trip_type: tripType || "Individual",
+        occasion: occasion || "",
+        start_date: startDate || null,
+        end_date: endDate || null,
+        group_size: travelers || 1,
+        flexible_dates: flexibleDates ? true : false,
+        notes: notes || "",
+        budget_range: budgetPerPerson || "",
+        source: "Website Booking",
+        deal_id: dealId || "",
+        deal_name: dealName || "",
+        status: "New Request",
+      }])
+      .select()
+      .single();
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        tripId: createdTrip[0].id,
-      }),
-    };
+    if (tripError) {
+      console.error("Error creating trip:", tripError);
+      return respond(500, { error: "Failed to create trip" });
+    }
+
+    return respond(200, {
+      success: true,
+      tripId: newTrip.id,
+    });
   } catch (err) {
     console.error("Error creating booking:", err);
-    return {
-      statusCode: 500,
-      body: "Internal Server Error",
-    };
+    return respond(500, { error: "Internal Server Error" });
   }
 };
