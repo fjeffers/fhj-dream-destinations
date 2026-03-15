@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { FHJButton, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import FHJBackground from "../components/FHJ/FHJBackground.jsx";
 
-const GREEN = "#00c48c";
+const GREEN = fhjTheme.primary;
 
 const defaults = {
   hero_title: "Travel, Reimagined.",
@@ -37,6 +40,7 @@ const fadeUp = (delay = 0) => ({
 export default function About() {
   const [content, setContent] = useState(defaults);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
@@ -59,14 +63,17 @@ export default function About() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.1rem" }}>Loading…</div>
-      </div>
+      <FHJBackground page="home">
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.1rem" }}>Loading…</div>
+        </div>
+      </FHJBackground>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", color: "white" }}>
+    <FHJBackground page="home">
+      <div style={{ color: "white" }}>
 
       {/* ── HERO ────────────────────────────────────────── */}
       <section style={{ padding: "8rem 2rem 6rem", textAlign: "center", maxWidth: "860px", margin: "0 auto" }}>
@@ -165,13 +172,14 @@ export default function About() {
           {c.cta_subtitle}
         </motion.p>
         <motion.div {...fadeUp(0.2)}>
-          <a href="/concierge" style={{ display: "inline-block", background: `linear-gradient(135deg, ${GREEN} 0%, #00a67a 100%)`, color: "#000", fontWeight: 700, fontSize: "1rem", padding: "1rem 2.5rem", borderRadius: "14px", textDecoration: "none", boxShadow: "0 8px 24px rgba(0,196,140,0.3)", letterSpacing: "0.3px" }}>
-            Start Planning →
-          </a>
+          <FHJButton onClick={() => navigate("/appointments")}>
+            Book a Consultation
+          </FHJButton>
         </motion.div>
       </section>
 
-    </div>
+      </div>
+    </FHJBackground>
   );
 }
 
