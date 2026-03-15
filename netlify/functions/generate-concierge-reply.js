@@ -1,92 +1,82 @@
 // netlify/functions/generate-concierge-reply.js
-// Generate an AI-powered reply for admin to use when responding to concierge messages
-const { supabase, respond } = require("./utils");
-const { withFHJ } = require("./middleware");
+// Generate an FHJ-styled reply for admin or assistant replies.
+// - Ensures the assistant response uses FHJ persona and sanitizes external mentions.
+// POST JSON: { prompt: string, context?: string }
+
+const fetch = require('node-fetch');
+const { respond } = require('./utils/respond');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
-async function generateAIReply({ name, message, occasion, trip, conversationHistory }) {
-  const apiKey = process.env.OPENAI_API_KEY;
+const FHJ_REPLY_SYSTEM = `
+You are the FHJ Dream Destinations concierge assistant responding on behalf of FHJ.
+Follow these rules:
+- Use FHJ voice: professional, friendly, and action-oriented.
+- Do NOT recommend external booking websites or provide direct URLs. Offer to arrange bookings through FHJ partners.
+- Keep responses concise and include a next action (e.g., "May I confirm X so FHJ can proceed?").
+- Close with: "We’ll review your inquiry and get back to you shortly."
+`;
 
-  if (!apiKey) {
-    // Fallback to rule-based if no API key
-    const intro = `Hi ${name || 'there'}, thanks so much for reaching out.`;
-    let body = "";
-    if (occasion) body += ` I see you're planning something for ${occasion}. `;
-    if (trip) body += ` Regarding your trip to ${trip}, I'd be happy to help with anything you need. `;
-    if (message) body += ` About your message: "${message}", here's what I recommend. `;
-    const closing = "Let me know if you'd like me to arrange anything or provide more details.";
-    return `${intro} ${body} ${closing}`;
+function sanitizeAssistantText(text) {
+  if (!text) return text;
+  text = text.replace(/https?:\/\/\S+/gi, '[link removed — FHJ will arrange this for you]');
+  const banned = ['expedia', 'viator', 'booking', 'airbnb', 'kayak', 'skyscanner', 'tripadvisor'];
+  banned.forEach(site => { text = text.replace(new RegExp(site, 'gi'), 'FHJ (we will arrange this for you)'); });
+  if (!/We’ll review your inquiry and get back to you shortly\./i.test(text)) {
+    text = text.trim() + '\n\nWe’ll review your inquiry and get back to you shortly.';
   }
-
-  try {
-    const system = `You are a professional travel concierge for FHJ Dream Destinations, a luxury travel agency. Write a warm, helpful, and professional reply to a client inquiry. Keep the tone friendly but professional. Include specific next steps or questions if appropriate. Sign off warmly.`;
-
-    let userPrompt = `Client name: ${name || 'Unknown'}\n`;
-    if (occasion) userPrompt += `Occasion: ${occasion}\n`;
-    if (trip) userPrompt += `Trip/Destination: ${trip}\n`;
-    userPrompt += `Client message: ${message}\n`;
-    if (conversationHistory) userPrompt += `\nPrevious conversation:\n${conversationHistory}\n`;
-    userPrompt += `\nWrite a professional reply from the FHJ Dream Destinations concierge team.`;
-
-    const res = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      })
-    });
-
-    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content?.trim() || null;
-  } catch (err) {
-    console.error('OpenAI reply generation failed:', err);
-    return null;
-  }
+  return text;
 }
 
-exports.handler = withFHJ(async (event) => {
-  const body = JSON.parse(event.body || "{}");
+async function callOpenAI(userMessage) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 
-  // If concierge_id provided, fetch conversation history
-  let conversationHistory = '';
-  if (body.concierge_id && supabase) {
-    try {
-      const { data: msgs } = await supabase
-        .from('concierge_messages')
-        .select('sender, body, created_at')
-        .eq('concierge_id', body.concierge_id)
-        .order('created_at', { ascending: true });
+  const body = {
+    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: FHJ_REPLY_SYSTEM },
+      { role: 'user', content: userMessage }
+    ],
+    temperature: 0.6,
+    max_tokens: 400
+  };
 
-      if (msgs && msgs.length) {
-        conversationHistory = msgs.map(m => `${m.sender}: ${m.body}`).join('\n');
-      }
-    } catch (e) {
-      console.error('Error fetching conversation history:', e);
-    }
-  }
-
-  const reply = await generateAIReply({
-    name: body.name || "there",
-    message: body.message || "",
-    occasion: body.occasion || "",
-    trip: body.trip || "",
-    conversationHistory,
+  const res = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
-
-  if (!reply) {
-    // Fallback
-    const fallback = `Hi ${body.name || 'there'}, thanks for reaching out! I'd love to help you with your travel plans. Could you share a few more details so I can provide the best recommendations? Looking forward to helping you plan your dream trip!`;
-    return respond(200, { reply: fallback });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`OpenAI error: ${res.status} ${txt}`);
   }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content ?? '';
+}
 
-  return respond(200, { reply });
-});
+module.exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return respond(204, {});
+  if (event.httpMethod !== 'POST') return respond(405, { error: 'Method Not Allowed' });
+
+  let body = {};
+  try { body = event.body ? JSON.parse(event.body) : {}; } catch (e) { return respond(400, { error: 'Invalid JSON' }); }
+
+  const prompt = (body.prompt || '').toString().trim();
+  if (!prompt) return respond(400, { error: 'prompt required' });
+
+  try {
+    let assistantRaw = '';
+    try {
+      assistantRaw = await callOpenAI(prompt);
+    } catch (e) {
+      console.error('OpenAI call failed for generate-concierge-reply', e);
+      assistantRaw = 'Thank you — may I confirm the key details so FHJ can proceed with booking?';
+    }
+    const assistant = sanitizeAssistantText(assistantRaw);
+    return respond(200, { reply: assistant });
+  } catch (err) {
+    console.error('generate-concierge-reply handler error', err);
+    return respond(500, { error: err.message || String(err) });
+  }
+};
