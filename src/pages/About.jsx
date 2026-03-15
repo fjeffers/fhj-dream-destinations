@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import FHJBackground from "../components/FHJ/FHJBackground.jsx";
 
 const GREEN = "#00c48c";
 
@@ -59,14 +60,17 @@ export default function About() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.1rem" }}>Loading…</div>
-      </div>
+      <FHJBackground page="home">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.1rem" }}>Loading…</div>
+        </div>
+      </FHJBackground>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", color: "white" }}>
+    <FHJBackground page="home">
+    <div style={{ color: "white" }}>
 
       {/* ── HERO ────────────────────────────────────────── */}
       <section style={{ padding: "8rem 2rem 6rem", textAlign: "center", maxWidth: "860px", margin: "0 auto" }}>
@@ -172,6 +176,7 @@ export default function About() {
       </section>
 
     </div>
+    </FHJBackground>
   );
 }
 
