@@ -1,22 +1,36 @@
 // netlify/functions/email-summary.js
-// Build a friendly summary of a concierge thread and send via Resend API to OWNER_NOTIFY_EMAIL.
-// POST JSON: { concierge_id: uuid, send_to?: email }  (if send_to not provided, uses OWNER_NOTIFY_EMAIL env var)
+// Build a friendly FHJ email summary and send via Resend API.
+// Ensures conversation content is sanitized to avoid external links.
 
-const { supabase, respond } = require('./utils');
+const fetch = require('node-fetch');
+const supabase = require('./utils/supabaseServer');
+const { respond } = require('./utils/respond');
 
 const RESEND_URL = 'https://api.resend.com/emails';
 
+function escapeHtml(s = '') {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>');
+}
+
+function sanitizeTextForEmail(text = '') {
+  if (!text) return '';
+  // Remove URLs
+  text = text.replace(/https?:\/\/\S+/gi, '[link removed — FHJ will arrange this for you]');
+  // Replace common vendor names
+  const banned = ['expedia', 'viator', 'booking', 'airbnb', 'kayak', 'skyscanner', 'tripadvisor'];
+  banned.forEach(site => {
+    text = text.replace(new RegExp(site, 'gi'), 'FHJ (we will arrange this for you)');
+  });
+  return text;
+}
+
 function formatConversation(messages) {
-  // returns HTML list
-  return messages
-    .map((m) => {
-      const time = m.created_at ? new Date(m.created_at).toLocaleString() : '';
-      const who = m.sender || 'client';
-      // escape basic HTML (minimal)
-      const body = (m.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
-      return `<p><strong>[${time}] ${who}:</strong><br/>${body}</p>`;
-    })
-    .join('\n');
+  return messages.map((m) => {
+    const time = m.created_at ? new Date(m.created_at).toLocaleString() : '';
+    const who = m.sender || 'client';
+    const body = escapeHtml(sanitizeTextForEmail(m.body || ''));
+    return `<p><strong>[${time}] ${who}:</strong><br/>${body}</p>`;
+  }).join('\n');
 }
 
 async function generateAISummary(messages, client) {
@@ -25,7 +39,7 @@ async function generateAISummary(messages, client) {
   if (!apiKey) return '';
 
   const lastMessages = (messages || []).slice(-10).map(m => `${m.sender}: ${m.body}`).join('\n');
-  const prompt = `Summarize the following travel concierge conversation into a short professional paragraph (2-4 sentences). Mention the client's name and contact details where present and list key requests and next recommended steps. Conversation:\n${lastMessages}\nClient details: ${client?.name || ''} ${client?.email || ''} ${client?.phone || ''}`;
+  const prompt = `Summarize the following FHJ Dream Destinations conversation into a short professional paragraph (2-4 sentences). Mention the client's name and contact details and list the client's key requests and recommended next steps for FHJ staff. Conversation:\n${lastMessages}\nClient details: ${client?.name || ''} ${client?.email || ''} ${client?.phone || ''}`;
 
   try {
     const res = await fetch(OPENAI_URL, {
@@ -33,7 +47,7 @@ async function generateAISummary(messages, client) {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-        messages: [{ role: 'system', content: 'You summarize concierge/travel conversation.' }, { role: 'user', content: prompt }],
+        messages: [{ role: 'system', content: 'You summarize FHJ Dream Destinations concierge conversations.' }, { role: 'user', content: prompt }],
         temperature: 0.2,
         max_tokens: 200
       })
@@ -60,13 +74,13 @@ module.exports.handler = async (event) => {
 
   const concierge_id = body.concierge_id;
   const send_to = body.send_to || process.env.OWNER_NOTIFY_EMAIL;
-  const from = process.env.SENDER_EMAIL || `no-reply@${(process.env.SUPABASE_URL || 'fhjdreamdestinations.com').replace(/^https?:\/\/,'')}`;
+  const from = process.env.SENDER_EMAIL || `no-reply@${(process.env.SUPABASE_URL || 'fhjdreamdestinations.com').replace(/^https?:\/\//,'')}`;
 
   if (!concierge_id) return respond(400, { error: 'concierge_id required' });
-  if (!send_to) return respond(400, { error: 'OWNER_NOTIFY_EMAIL not configured and send_to not provided' });
+  if (!send_to) return respond(400, { error: 'OWNER_NOTIFY_EMAIL not configured' });
+  if (!supabase) return respond(500, { error: 'Supabase client not configured' });
 
   try {
-    // fetch parent and messages
     const { data: parent, error: pErr } = await supabase.from('concierge').select('id, name, email, phone, message, status, created_at').eq('id', concierge_id).single();
     if (pErr) throw pErr;
 
@@ -75,39 +89,29 @@ module.exports.handler = async (event) => {
 
     const convHtml = formatConversation(messages || []);
     const aiSummary = await generateAISummary(messages || [], parent || {});
-    const subject = `New Concierge Inquiry: ${parent?.name || parent?.email || 'No name'} — ${parent?.message ? parent.message.slice(0, 40) : ''}`;
+    const subject = `FHJ Concierge Inquiry: ${parent?.name || parent?.email || 'No name'} — ${parent?.message ? parent.message.slice(0, 40) : ''}`;
 
     const html = `
       <div>
-        <p>Hello,</p>
-        <p>There is a new concierge inquiry. Below is the conversation so far:</p>
+        <p>Hello FHJ Team,</p>
+        <p>A new concierge inquiry was submitted. Below is the conversation so far (sanitized). FHJ will arrange bookings and follow up with the client.</p>
         <hr/>
         ${convHtml}
         <hr/>
-        <p><strong>Summary:</strong> ${aiSummary || 'No summary available.'}</p>
-        <p><strong>Client:</strong> ${parent?.name || '—'} • ${parent?.email || '—'} • ${parent?.phone || '—'}</p>
-        <p>This message was auto-generated by the concierge assistant. We'll review the inquiry and follow up as soon as possible.</p>
+        <p><strong>AI Summary:</strong> ${escapeHtml(aiSummary || 'No summary available.')}</p>
+        <p><strong>Client:</strong> ${escapeHtml(parent?.name || '—')} • ${escapeHtml(parent?.email || '—')} • ${escapeHtml(parent?.phone || '—')}</p>
+        <p>This message was auto-generated by the FHJ concierge assistant. We’ll review the inquiry and follow up as soon as possible.</p>
         <p><em>Open the admin console to reply or manage this conversation.</em></p>
       </div>
     `;
 
-    // Send via Resend API
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) return respond(500, { error: 'RESEND_API_KEY not configured' });
 
-    const payload = {
-      from,
-      to: send_to,
-      subject,
-      html
-    };
-
+    const payload = { from, to: send_to, subject, html };
     const res = await fetch(RESEND_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
@@ -118,7 +122,6 @@ module.exports.handler = async (event) => {
     }
 
     const sendResp = await res.json();
-
     return respond(200, { success: true, sent: sendResp });
   } catch (err) {
     console.error('email-summary error', err);
