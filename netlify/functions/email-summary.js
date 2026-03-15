@@ -2,9 +2,7 @@
 // Build a friendly FHJ email summary and send via Resend API.
 // Ensures conversation content is sanitized to avoid external links.
 
-const fetch = require('node-fetch');
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require("./utils");
 
 const RESEND_URL = 'https://api.resend.com/emails';
 

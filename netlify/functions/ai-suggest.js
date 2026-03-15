@@ -5,9 +5,7 @@
 // - Sanitizes assistant output to remove external links / vendor names.
 // - If persist=true and concierge_id provided, stores assistant messages in concierge_messages.
 
-const fetch = require('node-fetch'); // node-fetch@2.x for CommonJS
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require("./utils");
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 

@@ -3,8 +3,7 @@
 // - Ensures the assistant response uses FHJ persona and sanitizes external mentions.
 // POST JSON: { prompt: string, context?: string }
 
-const fetch = require('node-fetch');
-const { respond } = require('./utils/respond');
+const { respond } = require("./utils");
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
