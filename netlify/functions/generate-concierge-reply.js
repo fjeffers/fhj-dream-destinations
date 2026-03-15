@@ -3,8 +3,7 @@
 // - Ensures the assistant response uses FHJ persona and sanitizes external mentions.
 // POST JSON: { prompt: string, context?: string }
 
-const fetch = require('node-fetch');
-const { respond } = require('./utils/respond');
+const { respond } = require("./utils");
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -14,7 +13,7 @@ Follow these rules:
 - Use FHJ voice: professional, friendly, and action-oriented.
 - Do NOT recommend external booking websites or provide direct URLs. Offer to arrange bookings through FHJ partners.
 - Keep responses concise and include a next action (e.g., "May I confirm X so FHJ can proceed?").
-- Close with: "We’ll review your inquiry and get back to you shortly."
+- Close with: "We'll review your inquiry and get back to you shortly."
 `;
 
 function sanitizeAssistantText(text) {
@@ -22,8 +21,8 @@ function sanitizeAssistantText(text) {
   text = text.replace(/https?:\/\/\S+/gi, '[link removed — FHJ will arrange this for you]');
   const banned = ['expedia', 'viator', 'booking', 'airbnb', 'kayak', 'skyscanner', 'tripadvisor'];
   banned.forEach(site => { text = text.replace(new RegExp(site, 'gi'), 'FHJ (we will arrange this for you)'); });
-  if (!/We’ll review your inquiry and get back to you shortly\./i.test(text)) {
-    text = text.trim() + '\n\nWe’ll review your inquiry and get back to you shortly.';
+  if (!/We'll review your inquiry and get back to you shortly\./i.test(text)) {
+    text = text.trim() + '\n\nWe\u2019ll review your inquiry and get back to you shortly.';
   }
   return text;
 }
@@ -71,7 +70,7 @@ module.exports.handler = async (event) => {
       assistantRaw = await callOpenAI(prompt);
     } catch (e) {
       console.error('OpenAI call failed for generate-concierge-reply', e);
-      assistantRaw = 'Thank you — may I confirm the key details so FHJ can proceed with booking?';
+      assistantRaw = 'Thank you \u2014 may I confirm the key details so FHJ can proceed with booking?';
     }
     const assistant = sanitizeAssistantText(assistantRaw);
     return respond(200, { reply: assistant });
