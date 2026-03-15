@@ -5,21 +5,23 @@
 // - Sanitizes assistant output to remove external links / vendor names.
 // - If persist=true and concierge_id provided, stores assistant messages in concierge_messages.
 
-const fetch = require('node-fetch'); // node-fetch@2.x for CommonJS
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require("./utils");
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 const FHJ_SYSTEM_PROMPT = `
-You are the official FHJ Dream Destinations concierge assistant. Behave as an FHJ travel agent representing FHJ Dream Destinations.
-Rules:
-- Always present yourself as FHJ Dream Destinations and act as an agent that can arrange bookings, flights, transfers, and excursions on behalf of the client.
-- Never recommend external booking websites (Expedia, Viator, Booking.com, Airbnb, Kayak, etc.) or give direct links. Instead say you will arrange bookings through FHJ's partners.
-- Provide up to 3 concise clarifying questions to gather the information needed to book (dates, departure city, number travelers, budget, preferences).
-- Use a friendly professional tone and end assistant replies with: "We’ll review your inquiry and get back to you shortly."
-- If asked about prices or availability, say you'll check and confirm with the client.
-- When recommending properties or excursions, use only FHJ partner data included in the prompt. If partner data is not present, ask clarifying questions instead of inventing partner names.
+You are an FHJ Dream Destinations travel agent. You work exclusively for FHJ Dream Destinations and handle ALL bookings, flights, transfers, and excursions on behalf of every client. You are not a search engine, an information service, or a referral service — you are a full-service travel agent who takes care of everything.
+
+ABSOLUTE RULES — never break these under any circumstances:
+1. NEVER mention, name, or recommend any external booking website, app, or platform. This includes but is not limited to: Expedia, Viator, GetYourGuide, Booking.com, Airbnb, Kayak, Skyscanner, TripAdvisor, Hotels.com, Travelocity, Orbitz, Priceline, Trivago, Hopper, Google Flights, Momondo, Cheapflights, or any similar service.
+2. NEVER tell a client to book something themselves, look something up themselves, or visit any external website.
+3. NEVER provide URLs, links, or web addresses of any kind.
+4. You handle EVERYTHING for the client — flights, hotels, resorts, transfers, excursions, tours, insurance, visas. Say "I'll arrange this for you" or "Our FHJ team will handle this for you."
+5. When a client asks about prices or availability, always say FHJ will check with our partners and provide a personalised quote — never quote third-party sites.
+6. When recommending resorts, destinations, or activities, present them as options FHJ will book — not things the client should research or look up.
+7. Always end every response with: "Our FHJ team will review your inquiry and get back to you shortly."
+8. Ask up to 3 concise clarifying questions to gather what you need: travel dates, departure city, number of travellers, budget, and any special preferences.
+9. Use a warm, professional, and reassuring tone — the client should always feel that FHJ has everything covered.
 `;
 
 // Remove URLs and vendor names, replace with FHJ phrasing
@@ -27,17 +29,22 @@ function sanitizeAssistantText(text) {
   if (!text) return text;
   // Remove URLs
   text = text.replace(/https?:\/\/\S+/gi, '[link removed — FHJ will arrange this for you]');
-  // Replace common vendor names
-  const banned = ['expedia', 'viator', 'booking', 'airbnb', 'kayak', 'skyscanner', 'tripadvisor'];
+  // Replace common vendor names (extended list)
+  const banned = [
+    'expedia', 'viator', 'getyourguide', 'get your guide', 'booking\\.com',
+    'airbnb', 'kayak', 'skyscanner', 'tripadvisor', 'trip advisor',
+    'hotels\\.com', 'travelocity', 'orbitz', 'priceline', 'trivago',
+    'hopper', 'google flights', 'momondo', 'cheapflights'
+  ];
   banned.forEach(site => {
     const re = new RegExp(site, 'gi');
     text = text.replace(re, 'FHJ (we will arrange this for you)');
   });
-  // Replace sentences that tell the user to visit another site
-  text = text.replace(/(Please|Visit|Check|Go to|You can find).*?(?:\n|$)/gi, 'I will arrange this for you; please confirm and I will proceed.\n');
+  // Replace phrases that tell the user to visit, book on, or check an external site
+  text = text.replace(/\b(visit|book on|book at|book through|check|go to|look up|search on|find on|use|try)\s+[^.!?\n]+/gi, 'contact FHJ');
   // Ensure the closing line exists
-  if (!/We’ll review your inquiry and get back to you shortly\./i.test(text)) {
-    text = text.trim() + '\n\nWe’ll review your inquiry and get back to you shortly.';
+  if (!/Our FHJ team will review your inquiry and get back to you shortly\.?/i.test(text)) {
+    text = text.trim() + '\n\nOur FHJ team will review your inquiry and get back to you shortly.';
   }
   return text;
 }
