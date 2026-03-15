@@ -5,9 +5,7 @@
 // - Sanitizes assistant output to remove external links / vendor names.
 // - If persist=true and concierge_id provided, stores assistant messages in concierge_messages.
 
-const fetch = require('node-fetch'); // node-fetch@2.x for CommonJS
-const supabase = require('./utils/supabaseServer');
-const { respond } = require('./utils/respond');
+const { supabase, respond } = require("./utils");
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -17,7 +15,7 @@ Rules:
 - Always present yourself as FHJ Dream Destinations and act as an agent that can arrange bookings, flights, transfers, and excursions on behalf of the client.
 - Never recommend external booking websites (Expedia, Viator, Booking.com, Airbnb, Kayak, etc.) or give direct links. Instead say you will arrange bookings through FHJ's partners.
 - Provide up to 3 concise clarifying questions to gather the information needed to book (dates, departure city, number travelers, budget, preferences).
-- Use a friendly professional tone and end assistant replies with: "We’ll review your inquiry and get back to you shortly."
+- Use a friendly professional tone and end assistant replies with: "We'll review your inquiry and get back to you shortly."
 - If asked about prices or availability, say you'll check and confirm with the client.
 - When recommending properties or excursions, use only FHJ partner data included in the prompt. If partner data is not present, ask clarifying questions instead of inventing partner names.
 `;
@@ -36,8 +34,8 @@ function sanitizeAssistantText(text) {
   // Replace sentences that tell the user to visit another site
   text = text.replace(/(Please|Visit|Check|Go to|You can find).*?(?:\n|$)/gi, 'I will arrange this for you; please confirm and I will proceed.\n');
   // Ensure the closing line exists
-  if (!/We’ll review your inquiry and get back to you shortly\./i.test(text)) {
-    text = text.trim() + '\n\nWe’ll review your inquiry and get back to you shortly.';
+  if (!/We.ll review your inquiry and get back to you shortly\./i.test(text)) {
+    text = text.trim() + '\n\nWe\u2019ll review your inquiry and get back to you shortly.';
   }
   return text;
 }
