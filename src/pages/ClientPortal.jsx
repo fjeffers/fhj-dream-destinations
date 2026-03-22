@@ -65,11 +65,34 @@ function Badge({ label, color = "#00c48c" }) {
   );
 }
 
-function EmptyState({ icon, message }) {
+function EmptyState({ icon, message, ctaLabel, ctaHref }) {
+  const [ctaFocused, setCtaFocused] = React.useState(false);
   return (
     <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.6 }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{icon}</div>
-      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>{message}</p>
+      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem", marginBottom: ctaLabel ? "1.5rem" : 0 }}>{message}</p>
+      {ctaLabel && ctaHref && (
+        <a
+          href={ctaHref}
+          onFocus={() => setCtaFocused(true)}
+          onBlur={() => setCtaFocused(false)}
+          style={{
+            display: "inline-block",
+            background: "linear-gradient(135deg, #00c48c 0%, #00a67a 100%)",
+            color: "#000",
+            fontWeight: 700,
+            fontSize: "0.95rem",
+            padding: "0.75rem 2rem",
+            borderRadius: "12px",
+            textDecoration: "none",
+            boxShadow: "0 8px 24px rgba(0,196,140,0.3)",
+            letterSpacing: "0.3px",
+            ...(ctaFocused ? { outline: "2px solid #00c48c", outlineOffset: "3px" } : {}),
+          }}
+        >
+          {ctaLabel}
+        </a>
+      )}
     </div>
   );
 }
@@ -449,7 +472,7 @@ function ProfileTab({ client, profile }) {
 // --------------- Bookings Tab ---------------
 function BookingsTab({ bookings }) {
   if (!bookings.length) {
-    return <EmptyState icon="📅" message="No bookings on record yet." />;
+    return <EmptyState icon="📅" message="No bookings on record yet." ctaLabel="Book a Trip →" ctaHref="/appointment" />;
   }
 
   const now = new Date();
@@ -502,7 +525,7 @@ function BookingsTab({ bookings }) {
 // --------------- Trips Tab ---------------
 function TripsTab({ trips }) {
   if (!trips.length) {
-    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" />;
+    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" ctaLabel="Explore Deals →" ctaHref="/deals" />;
   }
 
   const now = new Date();
