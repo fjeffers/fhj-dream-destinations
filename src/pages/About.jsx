@@ -35,11 +35,26 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay },
 });
 
+function SectionDivider() {
+  return (
+    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 2rem" }}>
+      <div style={{
+        height: "1px",
+        background: `linear-gradient(90deg, transparent 0%, ${GREEN}66 40%, ${GREEN}aa 50%, ${GREEN}66 60%, transparent 100%)`,
+        boxShadow: `0 0 12px 2px ${GREEN}44`,
+        borderRadius: "1px",
+      }} />
+    </div>
+  );
+}
+
 export default function About() {
   const [content, setContent] = useState(defaults);
   const [loading, setLoading] = useState(true);
+  const [hoveredPillar, setHoveredPillar] = useState(null);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
     const load = async () => {
       try {
         const res = await fetch("/.netlify/functions/get-about");
@@ -94,6 +109,9 @@ export default function About() {
         </motion.p>
       </section>
 
+      {/* ── DIVIDER ─────────────────────────────────────── */}
+      <SectionDivider />
+
       {/* ── PHILOSOPHY ──────────────────────────────────── */}
       <section style={{ padding: "5rem 2rem", maxWidth: "900px", margin: "0 auto" }}>
         <motion.h2 {...fadeUp(0)} style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 800, marginBottom: "2rem", color: GREEN }}>
@@ -107,6 +125,9 @@ export default function About() {
         </motion.p>
       </section>
 
+      {/* ── DIVIDER ─────────────────────────────────────── */}
+      <SectionDivider />
+
       {/* ── THREE PILLARS ───────────────────────────────── */}
       <section style={{ padding: "5rem 2rem", maxWidth: "1200px", margin: "0 auto" }}>
         <motion.h2 {...fadeUp(0)} style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", fontWeight: 800, textAlign: "center", marginBottom: "3rem", color: "white" }}>
@@ -118,7 +139,23 @@ export default function About() {
             { title: c.pillar_2_title, text: c.pillar_2_text, icon: "🗝️" },
             { title: c.pillar_3_title, text: c.pillar_3_text, icon: "💬" },
           ].map(({ title, text, icon }, i) => (
-            <motion.div key={i} {...fadeUp(i * 0.15)} style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <motion.div
+              key={i}
+              {...fadeUp(i * 0.15)}
+              onHoverStart={() => setHoveredPillar(i)}
+              onHoverEnd={() => setHoveredPillar(null)}
+              style={{
+                background: hoveredPillar === i ? "rgba(0,196,140,0.07)" : "rgba(255,255,255,0.04)",
+                backdropFilter: "blur(20px)",
+                border: hoveredPillar === i ? `1px solid ${GREEN}66` : "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "20px",
+                padding: "2rem",
+                boxShadow: hoveredPillar === i ? `0 8px 32px rgba(0,0,0,0.2), 0 0 20px ${GREEN}22` : "0 8px 32px rgba(0,0,0,0.2)",
+                transform: hoveredPillar === i ? "scale(1.03)" : "scale(1)",
+                transition: "all 0.25s ease",
+                cursor: "default",
+              }}
+            >
               <div style={{ fontSize: "2.5rem", marginBottom: "1.25rem" }}>{icon}</div>
               <h3 style={{ color: GREEN, fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.75rem" }}>{title}</h3>
               <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: 0, fontSize: "0.95rem" }}>{text}</p>
@@ -126,6 +163,9 @@ export default function About() {
           ))}
         </div>
       </section>
+
+      {/* ── DIVIDER ─────────────────────────────────────── */}
+      <SectionDivider />
 
       {/* ── FOUNDER ─────────────────────────────────────── */}
       <section style={{ padding: "5rem 2rem", maxWidth: "900px", margin: "0 auto" }}>
@@ -166,6 +206,9 @@ export default function About() {
           )}
         </motion.div>
       </section>
+
+      {/* ── DIVIDER ─────────────────────────────────────── */}
+      <SectionDivider />
 
       {/* ── CTA ─────────────────────────────────────────── */}
       <section style={{ padding: "6rem 2rem 8rem", textAlign: "center" }}>
