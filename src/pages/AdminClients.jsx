@@ -16,6 +16,7 @@ export default function AdminClients({ admin }) {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [search, setSearch] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -150,6 +151,19 @@ export default function AdminClients({ admin }) {
         </div>
       )}
 
+      {/* Search Bar */}
+      {!loading && clients.length > 0 && (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or email…"
+            style={searchInputStyle}
+          />
+        </div>
+      )}
+
       {/* Form */}
       <AnimatePresence>
         {showForm && (
@@ -222,27 +236,41 @@ export default function AdminClients({ admin }) {
           <span style={{ fontSize: "3rem" }}>👥</span>
           <p style={{ color: "#94a3b8", marginTop: "1rem" }}>No clients yet. Click "+ Add Client" to create your first one.</p>
         </FHJCard>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
-          {clients.map(client => (
-            <motion.div key={client.id} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
-              <FHJCard style={{ padding: "1.5rem" }}>
-                <h4 style={{ color: "white", margin: 0, fontSize: "1.1rem" }}>{client.name}</h4>
-                <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.5rem 0" }}>{client.email}</p>
-                {client.phone && <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.25rem 0" }}>{client.phone}</p>}
-                {client.address && <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.5rem 0 0", opacity: 0.7 }}>{client.address}</p>}
+      ) : (() => {
+        const q = search.trim().toLowerCase();
+        const filtered = q
+          ? clients.filter(c =>
+              (c.name || "").toLowerCase().includes(q) ||
+              (c.email || "").toLowerCase().includes(q)
+            )
+          : clients;
+        return filtered.length === 0 ? (
+          <FHJCard style={{ padding: "3rem", textAlign: "center" }}>
+            <span style={{ fontSize: "3rem" }}>🔍</span>
+            <p style={{ color: "#94a3b8", marginTop: "1rem" }}>No clients match "{search}".</p>
+          </FHJCard>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
+            {filtered.map(client => (
+              <motion.div key={client.id} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                <FHJCard style={{ padding: "1.5rem" }}>
+                  <h4 style={{ color: "white", margin: 0, fontSize: "1.1rem" }}>{client.name}</h4>
+                  <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.5rem 0" }}>{client.email}</p>
+                  {client.phone && <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.25rem 0" }}>{client.phone}</p>}
+                  {client.address && <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.5rem 0 0", opacity: 0.7 }}>{client.address}</p>}
 
-                {!isAssistant && (
-                  <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                    <button onClick={() => handleEdit(client)} style={actionBtnStyle}>Edit</button>
-                    <button onClick={() => handleDelete(client)} style={{ ...actionBtnStyle, color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}>Delete</button>
-                  </div>
-                )}
-              </FHJCard>
-            </motion.div>
-          ))}
-        </div>
-      )}
+                  {!isAssistant && (
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                      <button onClick={() => handleEdit(client)} style={actionBtnStyle}>Edit</button>
+                      <button onClick={() => handleDelete(client)} style={{ ...actionBtnStyle, color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}>Delete</button>
+                    </div>
+                  )}
+                </FHJCard>
+              </motion.div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -287,4 +315,16 @@ const actionBtnStyle = {
   color: "#94a3b8",
   cursor: "pointer",
   transition: "all 0.2s",
+};
+
+const searchInputStyle = {
+  width: "100%",
+  padding: "0.65rem 1rem",
+  borderRadius: "10px",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  color: "white",
+  fontSize: "0.9rem",
+  outline: "none",
+  boxSizing: "border-box",
 };
