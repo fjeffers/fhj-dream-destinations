@@ -23,8 +23,20 @@ export default function AppShell() {
       {/* 2. Animated Content */}
       <main style={{ flex: 1, position: "relative" }}>
         <Suspense fallback={
-          <div style={{ color: "white", padding: "2rem", textAlign: "center" }}>
-            Loading...
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            minHeight: "60vh", gap: "1rem",
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: "50%",
+              border: "3px solid rgba(255,255,255,0.08)",
+              borderTopColor: "#00c48c",
+              animation: "fhj-spin 0.7s linear infinite",
+            }} />
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", letterSpacing: "0.05em", margin: 0 }}>
+              Loading…
+            </p>
+            <style>{`@keyframes fhj-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         }>
           <AnimatePresence mode="wait">

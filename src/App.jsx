@@ -40,15 +40,25 @@ const RSVPPage = lazy(() => import("./components/RSVPPage.jsx"));
 
 const PageLoader = () => (
   <div style={{
-    display: "flex", alignItems: "center", justifyContent: "center",
-    minHeight: "100vh", background: "#0a0a0a",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
+    gap: "1.5rem",
   }}>
     <div style={{
-      width: 48, height: 48, borderRadius: "50%",
-      border: "3px solid #1a1a1a",
-      borderTopColor: "#4ade80",
-      animation: "fhj-spin 0.8s linear infinite",
+      width: 56, height: 56, borderRadius: "50%",
+      border: "3px solid rgba(255,255,255,0.08)",
+      borderTopColor: "#00c48c",
+      animation: "fhj-spin 0.7s linear infinite",
     }} />
+    <p style={{
+      color: "rgba(255,255,255,0.4)",
+      fontSize: "0.9rem",
+      fontWeight: 500,
+      letterSpacing: "0.05em",
+      margin: 0,
+    }}>
+      Preparing your FHJ experience…
+    </p>
     <style>{`@keyframes fhj-spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );

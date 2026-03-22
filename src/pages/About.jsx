@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import FHJBackground from "../components/FHJ/FHJBackground.jsx";
 
 const GREEN = "#00c48c";
 
@@ -59,14 +60,24 @@ export default function About() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.1rem" }}>Loading…</div>
-      </div>
+      <FHJBackground page="about">
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: "50%",
+            border: "3px solid rgba(255,255,255,0.08)",
+            borderTopColor: "#00c48c",
+            animation: "fhj-spin 0.7s linear infinite",
+          }} />
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.9rem", letterSpacing: "0.05em" }}>Loading…</p>
+          <style>{`@keyframes fhj-spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </FHJBackground>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)", color: "white" }}>
+    <FHJBackground page="about">
+      <div style={{ minHeight: "100vh", color: "white" }}>
 
       {/* ── HERO ────────────────────────────────────────── */}
       <section style={{ padding: "8rem 2rem 6rem", textAlign: "center", maxWidth: "860px", margin: "0 auto" }}>
@@ -171,7 +182,8 @@ export default function About() {
         </motion.div>
       </section>
 
-    </div>
+      </div>
+    </FHJBackground>
   );
 }
 
