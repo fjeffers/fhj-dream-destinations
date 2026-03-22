@@ -9,6 +9,7 @@ export default function FHJBackground({ children, page = "default" }) {
     deals: "url('/fhj-deals.png')",
     appointment: "url('/fhj-appointment.png')",
     about: "url('/fhj-about.png')",
+    admin: "url('/fhj-admin.png')",
     default: "url('/fhj-hero.png')"
   };
 
@@ -19,6 +20,7 @@ export default function FHJBackground({ children, page = "default" }) {
     deals: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
     appointment: "linear-gradient(135deg, #0a1a14 0%, #0a1520 40%, #0d1117 100%)",
     about: "linear-gradient(135deg, #0a0e1a 0%, #0d1f2d 50%, #0a131a 100%)",
+    admin: "linear-gradient(135deg, #0d0d12 0%, #111827 50%, #0d0d12 100%)",
     default: "linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%)",
   };
 

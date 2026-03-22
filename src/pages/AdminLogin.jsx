@@ -55,7 +55,7 @@ export default function AdminLogin({ onLogin }) {
   };
 
   return (
-    <FHJBackground page="home">
+    <FHJBackground page="admin">
       <div style={container}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

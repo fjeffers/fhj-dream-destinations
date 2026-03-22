@@ -118,7 +118,7 @@ export default function About() {
             { title: c.pillar_2_title, text: c.pillar_2_text, icon: "🗝️" },
             { title: c.pillar_3_title, text: c.pillar_3_text, icon: "💬" },
           ].map(({ title, text, icon }, i) => (
-            <motion.div key={i} {...fadeUp(i * 0.15)} style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <motion.div key={i} {...fadeUp(i * 0.15)} whileHover={{ scale: 1.03, boxShadow: "0 12px 40px rgba(0,196,140,0.18), 0 0 0 1px rgba(0,196,140,0.3)" }} style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "2rem", cursor: "default" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "1.25rem" }}>{icon}</div>
               <h3 style={{ color: GREEN, fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.75rem" }}>{title}</h3>
               <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: 0, fontSize: "0.95rem" }}>{text}</p>

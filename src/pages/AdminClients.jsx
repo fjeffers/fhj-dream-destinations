@@ -4,7 +4,7 @@
 // Location: src/pages/AdminClients.jsx
 // ==========================================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FHJCard, FHJButton, FHJInput, fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,6 +16,7 @@ export default function AdminClients({ admin }) {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [search, setSearch] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -27,6 +28,16 @@ export default function AdminClients({ admin }) {
   });
 
   const isAssistant = (admin?.role || admin?.Role) === "Assistant";
+
+  const filteredClients = useMemo(() => {
+    if (!search.trim()) return clients;
+    const q = search.toLowerCase();
+    return clients.filter(c =>
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.email || "").toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q)
+    );
+  }, [clients, search]);
 
   const loadClients = async () => {
     setLoading(true);
@@ -208,6 +219,17 @@ export default function AdminClients({ admin }) {
         )}
       </AnimatePresence>
 
+      {/* Search Bar */}
+      {!loading && clients.length > 0 && (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <FHJInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍  Search clients by name, email, or phone…"
+          />
+        </div>
+      )}
+
       {/* Clients List */}
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
@@ -224,7 +246,7 @@ export default function AdminClients({ admin }) {
         </FHJCard>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
-          {clients.map(client => (
+          {filteredClients.map(client => (
             <motion.div key={client.id} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <FHJCard style={{ padding: "1.5rem" }}>
                 <h4 style={{ color: "white", margin: 0, fontSize: "1.1rem" }}>{client.name}</h4>
