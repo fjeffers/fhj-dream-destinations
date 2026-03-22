@@ -48,6 +48,19 @@ const tabBtnBase = {
   gap: "0.4rem",
 };
 
+const emptyCTAStyle = {
+  display: "inline-block",
+  marginTop: "1.25rem",
+  background: "linear-gradient(135deg, #00c48c 0%, #00a67a 100%)",
+  color: "#000",
+  fontWeight: 700,
+  fontSize: "0.9rem",
+  padding: "0.65rem 1.75rem",
+  borderRadius: "10px",
+  textDecoration: "none",
+  letterSpacing: "0.3px",
+};
+
 // --------------- Helpers ---------------
 function Badge({ label, color = "#00c48c" }) {
   return (
@@ -65,11 +78,16 @@ function Badge({ label, color = "#00c48c" }) {
   );
 }
 
-function EmptyState({ icon, message }) {
+function EmptyState({ icon, message, ctaText, ctaHref }) {
   return (
     <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.6 }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{icon}</div>
       <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>{message}</p>
+      {ctaText && ctaHref && (
+        <a href={ctaHref} style={emptyCTAStyle}>
+          {ctaText}
+        </a>
+      )}
     </div>
   );
 }
@@ -449,7 +467,7 @@ function ProfileTab({ client, profile }) {
 // --------------- Bookings Tab ---------------
 function BookingsTab({ bookings }) {
   if (!bookings.length) {
-    return <EmptyState icon="📅" message="No bookings on record yet." />;
+    return <EmptyState icon="📅" message="No bookings on record yet." ctaText="Explore Deals →" ctaHref="/deals" />;
   }
 
   const now = new Date();
@@ -502,7 +520,7 @@ function BookingsTab({ bookings }) {
 // --------------- Trips Tab ---------------
 function TripsTab({ trips }) {
   if (!trips.length) {
-    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" />;
+    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" ctaText="Book a Trip →" ctaHref="/book" />;
   }
 
   const now = new Date();
