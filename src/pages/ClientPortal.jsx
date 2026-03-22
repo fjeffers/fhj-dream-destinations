@@ -65,20 +65,26 @@ function Badge({ label, color = "#00c48c" }) {
   );
 }
 
+const emptyCTAStyle = {
+  display: "inline-block",
+  marginTop: "1rem",
+  color: "#00c48c",
+  fontWeight: 600,
+  fontSize: "0.95rem",
+  textDecoration: "none",
+  border: "1px solid rgba(0,196,140,0.3)",
+  borderRadius: "50px",
+  padding: "0.4rem 1.2rem",
+  background: "rgba(0,196,140,0.08)",
+};
+
 function EmptyState({ icon, message, cta }) {
   return (
     <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.6 }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{icon}</div>
       <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>{message}</p>
       {cta && (
-        <a
-          href={cta.href}
-          style={{ display: "inline-block", marginTop: "1rem", color: "#00c48c", fontSize: "0.9rem", fontWeight: 600, textDecoration: "none", letterSpacing: "0.3px", borderRadius: "4px", outline: "none" }}
-          onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }}
-          onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}
-          onFocus={e => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,196,140,0.5)"; }}
-          onBlur={e => { e.currentTarget.style.boxShadow = "none"; }}
-        >
+        <a href={cta.href} style={emptyCTAStyle}>
           {cta.label}
         </a>
       )}
@@ -461,7 +467,7 @@ function ProfileTab({ client, profile }) {
 // --------------- Bookings Tab ---------------
 function BookingsTab({ bookings }) {
   if (!bookings.length) {
-    return <EmptyState icon="📅" message="No bookings on record yet." cta={{ href: "/appointment", label: "Book a Trip →" }} />;
+    return <EmptyState icon="📅" message="No bookings on record yet." cta={{ label: "Book a Trip →", href: "/appointments" }} />;
   }
 
   const now = new Date();
@@ -514,7 +520,7 @@ function BookingsTab({ bookings }) {
 // --------------- Trips Tab ---------------
 function TripsTab({ trips }) {
   if (!trips.length) {
-    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" cta={{ href: "/deals", label: "Explore Deals →" }} />;
+    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" cta={{ label: "Explore Deals →", href: "/deals" }} />;
   }
 
   const now = new Date();
@@ -567,7 +573,7 @@ function TripsTab({ trips }) {
 // --------------- Payments Tab ---------------
 function PaymentsTab({ payments }) {
   if (!payments.length) {
-    return <EmptyState icon="💳" message="No payment records yet." />;
+    return <EmptyState icon="💳" message="No payment records yet." cta={{ label: "Book a Trip →", href: "/appointments" }} />;
   }
 
   return (
@@ -603,7 +609,7 @@ function PaymentsTab({ payments }) {
 // --------------- Documents Tab ---------------
 function DocumentsTab({ documents }) {
   if (!documents.length) {
-    return <EmptyState icon="📄" message="No documents yet." />;
+    return <EmptyState icon="📄" message="No documents yet." cta={{ label: "Contact Us →", href: "/concierge" }} />;
   }
 
   return (

@@ -60,6 +60,8 @@ export default function FHJBackground({ children, page = "default" }) {
           top: 0, left: 0, width: "100%", height: "100%",
           background: page === "appointment"
             ? "linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.55))"
+            : page === "admin"
+            ? "linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.85))"
             : "linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8))",
           zIndex: 1,
         }}
