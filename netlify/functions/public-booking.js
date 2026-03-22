@@ -1,5 +1,5 @@
 // Public booking function — detects end column, creates client if needed, inserts booking
-import supabase from "../../utils/supabaseServer.js";
+const { supabase, respond } = require("./utils");
 
 async function getEndColumn() {
   try {
@@ -23,15 +23,15 @@ async function getEndColumn() {
   }
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   try {
-    if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
+    if (event.httpMethod !== "POST") return respond(405, { error: "Method Not Allowed" });
     const endCol = await getEndColumn();
 
     const payload = JSON.parse(event.body || "{}");
     const { client, start, end, returningClientId = null, deal_id = null, notes = "" } = payload;
     if (!client || !client.name || !client.email || !start || !end) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing required fields" }) };
+      return respond(400, { error: "Missing required fields" });
     }
 
     // Conflict check
@@ -43,7 +43,7 @@ export const handler = async (event) => {
 
     if (cErr) throw cErr;
     if (conflicts && conflicts.length > 0) {
-      return { statusCode: 409, body: JSON.stringify({ error: "Requested slot not available", conflicts }) };
+      return respond(409, { error: "Requested slot not available", conflicts });
     }
 
     // Create client if necessary
@@ -86,9 +86,9 @@ export const handler = async (event) => {
     if (bErr) throw bErr;
 
     const bookingMapped = { ...booking, end: booking[endCol] || booking.end_time || booking.end };
-    return { statusCode: 201, body: JSON.stringify({ booking: bookingMapped }) };
+    return respond(201, { booking: bookingMapped });
   } catch (err) {
     console.error("public-booking error:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
+    return respond(500, { error: err.message || String(err) });
   }
 };

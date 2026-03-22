@@ -18,6 +18,18 @@ const glassCard = {
   WebkitBackdropFilter: "blur(20px)",
 };
 
+const ctaLinkStyle = {
+  display: "inline-block",
+  background: "linear-gradient(135deg, #00c48c 0%, #00a67a 100%)",
+  color: "#000",
+  fontWeight: 700,
+  fontSize: "0.9rem",
+  padding: "0.65rem 1.75rem",
+  borderRadius: "12px",
+  textDecoration: "none",
+  letterSpacing: "0.02em",
+};
+
 const labelStyle = {
   display: "block",
   color: "rgba(255,255,255,0.7)",
@@ -65,11 +77,12 @@ function Badge({ label, color = "#00c48c" }) {
   );
 }
 
-function EmptyState({ icon, message }) {
+function EmptyState({ icon, message, children }) {
   return (
-    <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.6 }}>
-      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{icon}</div>
-      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>{message}</p>
+    <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+      <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.6 }}>{icon}</div>
+      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem", opacity: 0.6 }}>{message}</p>
+      {children && <div style={{ marginTop: "1.25rem" }}>{children}</div>}
     </div>
   );
 }
@@ -449,7 +462,11 @@ function ProfileTab({ client, profile }) {
 // --------------- Bookings Tab ---------------
 function BookingsTab({ bookings }) {
   if (!bookings.length) {
-    return <EmptyState icon="📅" message="No bookings on record yet." />;
+    return (
+      <EmptyState icon="📅" message="No bookings on record yet.">
+        <a href="/appointment" style={ctaLinkStyle}>Book a Trip →</a>
+      </EmptyState>
+    );
   }
 
   const now = new Date();
@@ -502,7 +519,11 @@ function BookingsTab({ bookings }) {
 // --------------- Trips Tab ---------------
 function TripsTab({ trips }) {
   if (!trips.length) {
-    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" />;
+    return (
+      <EmptyState icon="✈️" message="No trips found yet. Your adventures await!">
+        <a href="/deals" style={ctaLinkStyle}>Explore Deals →</a>
+      </EmptyState>
+    );
   }
 
   const now = new Date();

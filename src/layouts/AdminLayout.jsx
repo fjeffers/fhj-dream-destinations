@@ -8,6 +8,7 @@ import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import AdminSidebar from "../components/admin/AdminSidebar.jsx";
 import { fhjTheme } from "../components/FHJ/FHJUIKit.jsx";
+import FHJBackground from "../components/FHJ/FHJBackground.jsx";
 
 export default function AdminLayout({ admin, onLogout }) {
   // Initialize sidebar open state from localStorage or screen width
@@ -27,6 +28,7 @@ export default function AdminLayout({ admin, onLogout }) {
   }, [sidebarOpen]);
 
   return (
+    <FHJBackground page="admin">
     <div style={layoutStyle}>
       {/* SIDEBAR */}
       <AnimatePresence>
@@ -71,6 +73,7 @@ export default function AdminLayout({ admin, onLogout }) {
         <Outlet />
       </main>
     </div>
+    </FHJBackground>
   );
 }
 
@@ -79,7 +82,7 @@ export default function AdminLayout({ admin, onLogout }) {
 const layoutStyle = {
   display: "flex",
   minHeight: "100vh",
-  background: "linear-gradient(135deg, #0a0a0a, #111, #0d0d0d)",
+  background: "transparent",
   color: "white",
 };
 
