@@ -16,6 +16,7 @@ export default function AdminClients({ admin }) {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -123,6 +124,16 @@ export default function AdminClients({ admin }) {
     }
   };
 
+  const filteredClients = clients.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.email || "").toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
       {/* Header */}
@@ -136,6 +147,27 @@ export default function AdminClients({ admin }) {
         {!isAssistant && (
           <FHJButton onClick={() => { resetForm(); setShowForm(true); }}>+ Add Client</FHJButton>
         )}
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="🔍  Search by name, email, or phone…"
+          style={{
+            width: "100%",
+            padding: "0.65rem 1rem",
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "white",
+            fontSize: "0.9rem",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
       </div>
 
       {/* Messages */}
@@ -217,20 +249,29 @@ export default function AdminClients({ admin }) {
             </FHJCard>
           ))}
         </div>
-      ) : clients.length === 0 ? (
+      ) : filteredClients.length === 0 ? (
         <FHJCard style={{ padding: "3rem", textAlign: "center" }}>
           <span style={{ fontSize: "3rem" }}>👥</span>
-          <p style={{ color: "#94a3b8", marginTop: "1rem" }}>No clients yet. Click "+ Add Client" to create your first one.</p>
+          <p style={{ color: "#94a3b8", marginTop: "1rem" }}>
+            {clients.length === 0
+              ? "No clients yet. Click \"+ Add Client\" to create your first one."
+              : `No clients match "${searchQuery}".`}
+          </p>
         </FHJCard>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1.25rem" }}>
-          {clients.map(client => (
+          {filteredClients.map(client => (
             <motion.div key={client.id} whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <FHJCard style={{ padding: "1.5rem" }}>
                 <h4 style={{ color: "white", margin: 0, fontSize: "1.1rem" }}>{client.name}</h4>
                 <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0.5rem 0" }}>{client.email}</p>
                 {client.phone && <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0.25rem 0" }}>{client.phone}</p>}
                 {client.address && <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: "0.5rem 0 0", opacity: 0.7 }}>{client.address}</p>}
+                {client.created_at && (
+                  <p style={{ color: "#475569", fontSize: "0.75rem", margin: "0.5rem 0 0" }}>
+                    Added {timeAgo(client.created_at)}
+                  </p>
+                )}
 
                 {!isAssistant && (
                   <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
@@ -288,3 +329,20 @@ const actionBtnStyle = {
   cursor: "pointer",
   transition: "all 0.2s",
 };
+
+function timeAgo(dateStr) {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  const seconds = Math.floor((Date.now() - date) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months !== 1 ? "s" : ""} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years !== 1 ? "s" : ""} ago`;
+}

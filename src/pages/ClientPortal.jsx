@@ -65,11 +65,31 @@ function Badge({ label, color = "#00c48c" }) {
   );
 }
 
-function EmptyState({ icon, message }) {
+function EmptyState({ icon, message, ctaHref, ctaLabel }) {
   return (
-    <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.6 }}>
+    <div style={{ textAlign: "center", padding: "4rem 2rem", opacity: 0.8 }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{icon}</div>
-      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>{message}</p>
+      <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem", marginBottom: ctaHref ? "1.5rem" : 0 }}>{message}</p>
+      {ctaHref && (
+        <a
+          href={ctaHref}
+          style={{
+            display: "inline-block",
+            background: "linear-gradient(135deg, #00c48c 0%, #00a67a 100%)",
+            color: "#000",
+            fontWeight: 700,
+            fontSize: "0.9rem",
+            padding: "0.65rem 1.75rem",
+            borderRadius: "50px",
+            textDecoration: "none",
+            boxShadow: "0 4px 16px rgba(0,196,140,0.25)",
+            letterSpacing: "0.3px",
+            transition: "opacity 0.2s",
+          }}
+        >
+          {ctaLabel || "Explore →"}
+        </a>
+      )}
     </div>
   );
 }
@@ -449,7 +469,7 @@ function ProfileTab({ client, profile }) {
 // --------------- Bookings Tab ---------------
 function BookingsTab({ bookings }) {
   if (!bookings.length) {
-    return <EmptyState icon="📅" message="No bookings on record yet." />;
+    return <EmptyState icon="📅" message="No bookings on record yet." ctaHref="/book" ctaLabel="Book a Trip →" />;
   }
 
   const now = new Date();
@@ -502,7 +522,7 @@ function BookingsTab({ bookings }) {
 // --------------- Trips Tab ---------------
 function TripsTab({ trips }) {
   if (!trips.length) {
-    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" />;
+    return <EmptyState icon="✈️" message="No trips found yet. Your adventures await!" ctaHref="/deals" ctaLabel="Explore Deals →" />;
   }
 
   const now = new Date();
