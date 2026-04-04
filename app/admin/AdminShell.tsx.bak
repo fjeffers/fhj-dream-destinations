@@ -1,0 +1,69 @@
+﻿'use client'
+import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+
+const sections = [
+  { href: '/admin', label: 'Overview', icon: '⌂' },
+  { href: '/admin/clients', label: 'Clients', icon: '👥' },
+  { href: '/admin/deals', label: 'Deals', icon: '★' },
+  { href: '/admin/events', label: 'Events & RSVP', icon: '🎟' },
+  { href: '/admin/group-trips', label: 'Group Trips', icon: '🌍' },
+  { href: '/admin/calendar', label: 'Calendar', icon: '📅' },
+  { href: '/admin/appointments', label: 'Appointments', icon: '🔔' },
+  { href: '/admin/bookings', label: 'Bookings', icon: '📋' },
+  { href: '/admin/intake', label: 'Intake Requests', icon: '📥' },
+  { href: '/admin/messages', label: 'Messages', icon: '✉' },
+  { href: '/admin/content', label: 'Content Manager', icon: '✏️' },
+]
+
+export default function AdminShell({ children, profile }: { children: React.ReactNode, profile: any }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div style={{ width: 230, background: 'white', borderRight: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, bottom: 0, left: 0 }}>
+        <div style={{ padding: '20px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: 'var(--gold)', fontStyle: 'italic' }}>FHJ Admin</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 3, color: 'var(--muted)', marginTop: 2 }}>CONTROL CENTER</div>
+        </div>
+        <nav style={{ padding: '10px 0', flex: 1, overflowY: 'auto' }}>
+          {sections.map(s => (
+            <Link key={s.href} href={s.href}
+              className={`sidebar-item ${pathname === s.href ? 'active' : ''}`}>
+              <span style={{ fontSize: 14 }}>{s.icon}</span>
+              <span>{s.label}</span>
+            </Link>
+          ))}
+        </nav>
+        <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Signed in as</div>
+          <div style={{ fontSize: 12, color: 'var(--text)', marginBottom: 10 }}>{profile.full_name || profile.email}</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link href="/" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: 'var(--muted)', textDecoration: 'none', border: '1px solid var(--border)', padding: '6px 10px', flex: 1, textAlign: 'center', transition: 'all 0.2s' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              VIEW SITE
+            </Link>
+            <button onClick={signOut} style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', padding: '6px 10px', cursor: 'pointer', transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--danger)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--danger)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)' }}>
+              OUT
+            </button>
+          </div>
+        </div>
+      </div>
+      <div style={{ flex: 1, marginLeft: 230, padding: 32, overflowY: 'scroll', minHeight: '100vh', background: 'var(--ivory)' }}>
+        {children}
+      </div>
+    </div>
+  )
+}

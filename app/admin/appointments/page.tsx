@@ -1,0 +1,390 @@
+'use client'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+export default function AdminAppointmentsPage() {
+  const [requests, setRequests] = useState<any[]>([])
+  const [filter, setFilter] = useState('All')
+  const [loading, setLoading] = useState(true)
+  const [baseUrl, setBaseUrl] = useState('')
+  const [copied, setCopied] = useState('')
+
+  // Share modal state
+  const [shareModal, setShareModal] = useState(false)
+  const [clientName, setClientName] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+  const [sendMethod, setSendMethod] = useState<'email'|'sms'|'qr'|'copy'>('copy')
+  const [shareLink, setShareLink] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [qrVisible, setQrVisible] = useState(false)
+  const qrRef = useRef<HTMLDivElement>(null)
+
+  const supabase = createClient()
+
+  useEffect(() => {
+    setBaseUrl(window.location.origin)
+    fetchRequests()
+  }, [filter])
+
+  useEffect(() => {
+    if (clientName) {
+      const slug = clientName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      setShareLink(`${baseUrl}/book-appointment?ref=${slug}&name=${encodeURIComponent(clientName.trim())}`)
+    } else {
+      setShareLink(`${baseUrl}/book-appointment`)
+    }
+  }, [clientName, baseUrl])
+
+  // Load QR code library and render
+  useEffect(() => {
+    if (qrVisible && shareLink && qrRef.current) {
+      qrRef.current.innerHTML = ''
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+      script.onload = () => {
+        if (qrRef.current && (window as any).QRCode) {
+          new (window as any).QRCode(qrRef.current, {
+            text: shareLink,
+            width: 200,
+            height: 200,
+            colorDark: '#076060',
+            colorLight: '#ffffff',
+          })
+        }
+      }
+      // If already loaded
+      if ((window as any).QRCode) {
+        new (window as any).QRCode(qrRef.current, {
+          text: shareLink,
+          width: 200,
+          height: 200,
+          colorDark: '#076060',
+          colorLight: '#ffffff',
+        })
+      } else {
+        document.head.appendChild(script)
+      }
+    }
+  }, [qrVisible, shareLink])
+
+  const fetchRequests = async () => {
+    setLoading(true)
+    let q = supabase.from('appointment_requests').select('*').order('created_at', { ascending: false })
+    if (filter !== 'All') q = q.eq('status', filter)
+    const { data } = await q
+    setRequests(data || [])
+    setLoading(false)
+  }
+
+  const updateStatus = async (id: string, status: string) => {
+    await supabase.from('appointment_requests').update({ status }).eq('id', id)
+    fetchRequests()
+  }
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(id)
+    setTimeout(() => setCopied(''), 2500)
+  }
+
+  const loadEmailJS = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).emailjs) {
+        const ejs = (window as any).emailjs
+        ejs.init('Ea5qbri-eVFF-RKFI')
+        resolve(ejs)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js'
+      script.onload = () => {
+        const ejs = (window as any).emailjs
+        ejs.init('Ea5qbri-eVFF-RKFI')
+        resolve(ejs)
+      }
+      script.onerror = () => reject(new Error('Failed to load EmailJS'))
+      document.head.appendChild(script)
+    })
+  }
+
+  const sendViaEmailJS = async () => {
+    if (!clientEmail) { alert('Please enter a client email address first.'); return }
+    setSending(true)
+    try {
+      const ejs = await loadEmailJS()
+      const params = {
+        to_email: clientEmail,
+        to_name: clientName ? clientName.trim().replace(/\b\w/g, c => c.toUpperCase()) : 'Valued Client',
+        from_name: 'FHJ Dream Destinations',
+        reply_to: 'info@fhjdreamdestinations.com',
+        booking_link: shareLink,
+        subject: 'Your Personalized Booking Link — FHJ Dream Destinations',
+        message: `Hi ${clientName ? clientName.trim().replace(/\b\w/g, c => c.toUpperCase()) : 'there'},\n\nHere is your personalized booking link:\n\n${shareLink}\n\nClick the link to select your preferred date and time. We look forward to crafting your perfect journey!\n\nWarm regards,\nFHJ Dream Destinations\ninfo@fhjdreamdestinations.com`,
+      }
+      const result = await ejs.send('service_5eyyayc', 'template_0ai8is3', params)
+      console.log('EmailJS success:', result)
+      setSent(true)
+      setTimeout(() => { setSent(false); setSending(false) }, 3000)
+    } catch (err: any) {
+      console.error('EmailJS error:', err)
+      const msg = err?.text || err?.message || JSON.stringify(err) || 'Unknown error'
+      alert('Email failed: ' + msg + '\n\nCheck console for details. You can copy the link manually instead.')
+      setSending(false)
+    }
+  }
+
+  const downloadQR = () => {
+    const canvas = qrRef.current?.querySelector('canvas')
+    if (canvas) {
+      const link = document.createElement('a')
+      link.download = `fhj-booking-${clientName || 'qr'}.png`
+      link.href = canvas.toDataURL()
+      link.click()
+    }
+  }
+
+  const openShareModal = () => {
+    setClientName(''); setClientEmail(''); setClientPhone('')
+    setSendMethod('copy'); setSent(false); setQrVisible(false)
+    setShareModal(true)
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal)', marginBottom: 8, fontWeight: 600 }}>ADMIN</div>
+        <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 40, fontWeight: 300, color: 'var(--text-rich)' }}>
+          Appointment <em style={{ color: 'var(--teal-dark)' }}>Requests</em>
+        </h1>
+      </div>
+
+      {/* Action Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 32 }}>
+        {/* Public Link */}
+        <div style={{ background: 'white', border: '2px solid rgba(196,154,10,0.25)', borderRadius: 8, padding: 24, boxShadow: '0 2px 16px rgba(196,154,10,0.08)' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 10, fontWeight: 700 }}>🌐 PUBLIC BOOKING LINK</div>
+          <div style={{ fontSize: 14, color: 'var(--text-rich)', fontFamily: 'monospace', background: 'var(--ivory)', padding: '10px 14px', borderRadius: 4, border: '1px solid rgba(196,154,10,0.2)', marginBottom: 12, wordBreak: 'break-all' }}>
+            {baseUrl}/book-appointment
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 14 }}>Anyone with this link can book a consultation.</p>
+          <button className="btn-teal btn-sm" style={{ borderRadius: 4 }}
+            onClick={() => copyToClipboard(`${baseUrl}/book-appointment`, 'public')}>
+            {copied === 'public' ? '✓ Copied!' : '📋 Copy Public Link'}
+          </button>
+        </div>
+
+        {/* Send to Client */}
+        <div style={{ background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', borderRadius: 8, padding: 24, boxShadow: '0 4px 24px rgba(14,143,143,0.25)' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'rgba(255,255,255,0.8)', marginBottom: 10, fontWeight: 700 }}>✦ SEND TO A CLIENT</div>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', lineHeight: 1.65, marginBottom: 18 }}>
+            Generate a personalized booking link with QR code — send via email, text, or share directly.
+          </p>
+          <button className="btn-gold" style={{ borderRadius: 4, padding: '11px 28px', fontSize: 11 }}
+            onClick={openShareModal}>
+            ✦ Create Client Link
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24, alignItems: 'center' }}>
+        {['All', 'Pending', 'Confirmed', 'Cancelled'].map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={filter === f ? 'btn-teal btn-sm' : 'btn-ghost btn-sm'}
+            style={{ borderRadius: 4 }}>{f}</button>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 15, color: 'var(--muted)' }}>
+          {requests.length} request{requests.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Table */}
+      <div style={{ background: 'white', borderRadius: 8, border: '1px solid rgba(196,154,10,0.2)', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
+        {loading ? (
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)', fontFamily: 'Cormorant Garamond, serif', fontSize: 20, fontStyle: 'italic' }}>Loading...</div>
+        ) : requests.length === 0 ? (
+          <div style={{ padding: 64, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+            <p style={{ color: 'var(--muted)', fontFamily: 'Cormorant Garamond, serif', fontSize: 20, fontStyle: 'italic' }}>No {filter !== 'All' ? filter.toLowerCase() + ' ' : ''}appointment requests yet</p>
+          </div>
+        ) : (
+          <table className="lux-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Date & Time</th>
+                <th>Type</th>
+                <th>Contact</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map(r => (
+                <tr key={r.id}>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{r.name}</div>
+                    {r.notes && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2, maxWidth: 180 }}>{r.notes.slice(0, 50)}{r.notes.length > 50 ? '…' : ''}</div>}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                    <div style={{ color: 'var(--teal-dark)', fontSize: 14, marginTop: 2 }}>{r.time}</div>
+                  </td>
+                  <td><span className="badge badge-teal">{r.type}</span></td>
+                  <td>
+                    <div style={{ fontSize: 14 }}>{r.email}</div>
+                    {r.phone && <div style={{ fontSize: 14, color: 'var(--muted)' }}>{r.phone}</div>}
+                  </td>
+                  <td>
+                    <span className={`badge ${r.status === 'Confirmed' ? 'badge-success' : r.status === 'Cancelled' ? 'badge-danger' : 'badge-gold'}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {r.status !== 'Confirmed' && (
+                        <button onClick={() => updateStatus(r.id, 'Confirmed')}
+                          style={{ background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
+                          Confirm
+                        </button>
+                      )}
+                      {r.status !== 'Cancelled' && (
+                        <button onClick={() => updateStatus(r.id, 'Cancelled')}
+                          style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', color: 'var(--danger)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* SHARE MODAL */}
+      {shareModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setShareModal(false) }}>
+          <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+            {/* Modal Header */}
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(196,154,10,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal)', marginBottom: 4, fontWeight: 700 }}>SEND BOOKING LINK</div>
+                <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', fontWeight: 300 }}>Create Client Link</h3>
+              </div>
+              <button onClick={() => setShareModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)', padding: '4px 8px' }}>✕</button>
+            </div>
+
+            <div style={{ padding: 28 }}>
+              {/* Client Name */}
+              <div style={{ marginBottom: 20 }}>
+                <label className="lux-label">Client Name (personalizes the link)</label>
+                <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Sarah Johnson"
+                  value={clientName} onChange={e => setClientName(e.target.value)} />
+              </div>
+
+              {/* Generated Link Preview */}
+              <div style={{ background: 'var(--ivory)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 6, fontWeight: 700 }}>YOUR BOOKING LINK</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text-rich)', wordBreak: 'break-all', lineHeight: 1.5 }}>{shareLink}</div>
+              </div>
+
+              {/* Send Method Tabs */}
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 12, fontWeight: 700 }}>SEND VIA</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 24 }}>
+                {[
+                  { key: 'copy', icon: '📋', label: 'Copy' },
+                  { key: 'email', icon: '✉️', label: 'Email' },
+                  { key: 'sms', icon: '💬', label: 'Text/SMS' },
+                  { key: 'qr', icon: '⬛', label: 'QR Code' },
+                ].map(m => (
+                  <button key={m.key} onClick={() => { setSendMethod(m.key as any); if (m.key === 'qr') setQrVisible(true) }}
+                    style={{ padding: '12px 8px', borderRadius: 6, border: `2px solid ${sendMethod === m.key ? 'var(--teal)' : 'rgba(14,143,143,0.2)'}`, background: sendMethod === m.key ? 'rgba(14,143,143,0.08)' : 'white', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{m.icon}</div>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, color: sendMethod === m.key ? 'var(--teal-dark)' : 'var(--muted)', fontWeight: 700 }}>{m.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Copy */}
+              {sendMethod === 'copy' && (
+                <div style={{ textAlign: 'center' }}>
+                  <button className="btn-teal" style={{ borderRadius: 4, padding: '13px 48px', fontSize: 12 }}
+                    onClick={() => copyToClipboard(shareLink, 'modal')}>
+                    {copied === 'modal' ? '✓ Copied to Clipboard!' : '📋 Copy Link'}
+                  </button>
+                  <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 12 }}>Paste into any message, email, or text</p>
+                </div>
+              )}
+
+              {/* Email */}
+              {sendMethod === 'email' && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label className="lux-label">Client Email Address</label>
+                    <input className="luxury-input" style={{ borderRadius: 4 }} type="email" placeholder="client@email.com"
+                      value={clientEmail} onChange={e => setClientEmail(e.target.value)} />
+                  </div>
+                  {sent ? (
+                    <div style={{ padding: '14px', background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2 }}>
+                      ✓ EMAIL SENT SUCCESSFULLY
+                    </div>
+                  ) : (
+                    <button className="btn-teal" style={{ borderRadius: 4, padding: '13px 48px', fontSize: 13, opacity: sending || !clientEmail ? 0.6 : 1 }}
+                      onClick={sendViaEmailJS} disabled={sending || !clientEmail}>
+                      {sending ? 'Sending...' : '✉️ Send Booking Link'}
+                    </button>
+                  )}
+                  <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 10, lineHeight: 1.6 }}>
+                    Email will be sent from info@fhjdreamdestinations.com
+                  </p>
+                </div>
+              )}
+
+              {/* SMS */}
+              {sendMethod === 'sms' && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label className="lux-label">Client Phone Number</label>
+                    <input className="luxury-input" style={{ borderRadius: 4 }} type="tel" placeholder="+1 (555) 000-0000"
+                      value={clientPhone} onChange={e => setClientPhone(e.target.value)} />
+                  </div>
+                  <a href={`sms:${clientPhone}?body=${encodeURIComponent(`Hi ${clientName || 'there'}! Here's your personal booking link to schedule a consultation with FHJ Dream Destinations: ${shareLink}`)}`}
+                    className="btn-teal" style={{ borderRadius: 4, padding: '13px 48px', fontSize: 13, display: 'inline-block', opacity: clientPhone ? 1 : 0.5, pointerEvents: clientPhone ? 'auto' : 'none' }}>
+                    💬 Open in Messages
+                  </a>
+                  <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 10 }}>Opens your default SMS app with the link pre-filled.</p>
+                </div>
+              )}
+
+              {/* QR Code */}
+              {sendMethod === 'qr' && (
+                <div style={{ textAlign: 'center' }}>
+                  <div ref={qrRef} style={{ display: 'inline-block', padding: 16, background: 'white', border: '2px solid rgba(14,143,143,0.2)', borderRadius: 8, marginBottom: 16 }} />
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                    <button className="btn-teal" style={{ borderRadius: 4, padding: '11px 28px', fontSize: 11 }} onClick={downloadQR}>
+                      ⬇️ Download QR
+                    </button>
+                    <button className="btn-ghost" style={{ borderRadius: 4, padding: '11px 28px', fontSize: 11 }}
+                      onClick={() => copyToClipboard(shareLink, 'qr')}>
+                      {copied === 'qr' ? '✓ Copied!' : '📋 Copy Link'}
+                    </button>
+                  </div>
+                  <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 12 }}>Client scans the QR code to open booking page directly</p>
+                </div>
+              )}
+
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
