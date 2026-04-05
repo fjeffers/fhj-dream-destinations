@@ -22,6 +22,22 @@ export default async function AboutPage() {
   return (
     <div style={{ background: 'var(--ivory)' }}>
       <Navigation />
+      <style>{`
+        @media (max-width: 768px) {
+          .about-hero-content { padding: 0 20px !important; }
+          .about-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 24px !important; }
+          .about-stats-section { padding: 40px 20px !important; }
+          .about-mission-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .about-section-pad { padding: 60px 20px !important; }
+          .about-values-grid { grid-template-columns: 1fr !important; }
+          .about-values-section { padding: 60px 20px !important; }
+          .about-cta { padding: 60px 20px !important; }
+          .about-cta-btns { flex-direction: column !important; align-items: stretch !important; }
+        }
+        @media (max-width: 480px) {
+          .about-stats-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+      `}</style>
 
       {/* ── HERO ── */}
       <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #FDFAF3 0%, #EDF7F7 55%, #FDFAF3 100%)', position: 'relative', overflow: 'hidden', paddingTop: 120 }}>
@@ -33,7 +49,7 @@ export default async function AboutPage() {
           <div key={c} style={{ position: 'absolute', top: c.startsWith('t') ? 100 : 'auto', bottom: c.startsWith('b') ? 28 : 'auto', left: c.endsWith('l') ? 28 : 'auto', right: c.endsWith('r') ? 28 : 'auto', width: 28, height: 28, borderTop: c.startsWith('t') ? '2px solid rgba(14,143,143,0.3)' : 'none', borderBottom: c.startsWith('b') ? '2px solid rgba(14,143,143,0.3)' : 'none', borderLeft: c.endsWith('l') ? '2px solid rgba(14,143,143,0.3)' : 'none', borderRight: c.endsWith('r') ? '2px solid rgba(14,143,143,0.3)' : 'none' }} />
         ))}
 
-        <div style={{ textAlign: 'center', maxWidth: 800, padding: '0 40px', zIndex: 1 }}>
+        <div className="about-hero-content" style={{ textAlign: 'center', maxWidth: 800, padding: '0 40px', zIndex: 1 }}>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 6, color: 'var(--teal)', marginBottom: 16, fontWeight: 600 }}>
             {hero.tagline || 'EST. 2018'}
           </div>
@@ -52,8 +68,8 @@ export default async function AboutPage() {
 
       {/* ── STATS ── */}
       {stats.length > 0 && (
-        <div style={{ background: 'var(--teal-dark)', padding: '56px 60px' }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 40 }}>
+        <div className="about-stats-section" style={{ background: 'var(--teal-dark)', padding: '56px 60px' }}>
+          <div className="about-stats-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 40 }}>
             {stats.map((stat: any, i: number) => (
               <div key={i} style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 52, fontWeight: 300, color: 'var(--gold-light)', lineHeight: 1 }}>{stat.number}</div>
@@ -66,8 +82,8 @@ export default async function AboutPage() {
       )}
 
       {/* ── MISSION ── */}
-      <section style={{ padding: '100px 60px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+      <section className="about-section-pad" style={{ padding: '100px 60px', maxWidth: 1100, margin: '0 auto' }}>
+        <div className="about-mission-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 4, color: 'var(--teal)', marginBottom: 20, fontWeight: 600 }}>OUR MISSION</div>
             <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(32px,4vw,52px)', fontWeight: 300, color: 'var(--text-rich)', lineHeight: 1.1, marginBottom: 28 }}>
@@ -104,7 +120,7 @@ export default async function AboutPage() {
 
       {/* ── VALUES ── */}
       {values.length > 0 && (
-        <section style={{ padding: '80px 60px', background: 'var(--ivory-dark)', borderTop: '1px solid rgba(196,154,10,0.12)' }}>
+        <section className="about-values-section" style={{ padding: '80px 60px', background: 'var(--ivory-dark)', borderTop: '1px solid rgba(196,154,10,0.12)' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: 56 }}>
               <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 5, color: 'var(--teal)', marginBottom: 14, fontWeight: 600 }}>WHAT WE STAND FOR</div>
@@ -112,7 +128,7 @@ export default async function AboutPage() {
                 Our Core <em style={{ color: 'var(--teal-dark)' }}>Values</em>
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(values.length, 3)}, 1fr)`, gap: 24 }}>
+            <div className="about-values-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(values.length, 3)}, 1fr)`, gap: 24 }}>
               {values.map((v: any, i: number) => (
                 <div key={i} style={{ background: 'white', borderRadius: 8, padding: '36px 28px', border: '1px solid rgba(196,154,10,0.18)', boxShadow: '0 2px 16px rgba(196,154,10,0.06)', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--teal-dark), var(--gold))' }} />
@@ -159,7 +175,7 @@ export default async function AboutPage() {
       )}
 
       {/* ── CTA ── */}
-      <div style={{ background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', padding: '90px 60px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div className="about-cta" style={{ background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', padding: '90px 60px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -60, right: -60, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -40, left: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(196,154,10,0.1)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto' }}>
@@ -170,7 +186,7 @@ export default async function AboutPage() {
           <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 17, lineHeight: 1.75, marginBottom: 44 }}>
             Every extraordinary journey begins with a conversation. Schedule your complimentary consultation today.
           </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="about-cta-btns" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/book-appointment" className="btn-gold" style={{ borderRadius: 4, padding: '15px 48px', fontSize: 12 }}>
               Schedule Consultation
             </Link>
