@@ -2,12 +2,25 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+const APPT_TYPES = ['Consultation', 'Trip Planning', 'Intake', 'Follow-Up', 'VIP Meeting']
+const APPT_STATUSES = ['Pending', 'Confirmed', 'Cancelled']
+
 export default function AdminAppointmentsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [filter, setFilter] = useState('All')
   const [loading, setLoading] = useState(true)
   const [baseUrl, setBaseUrl] = useState('')
   const [copied, setCopied] = useState('')
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false)
+  const [editRecord, setEditRecord] = useState<any>(null)
+  const [editForm, setEditForm] = useState<any>({})
+  const [saving, setSaving] = useState(false)
+
+  // View modal state
+  const [viewModal, setViewModal] = useState(false)
+  const [viewRecord, setViewRecord] = useState<any>(null)
 
   // Share modal state
   const [shareModal, setShareModal] = useState(false)
@@ -81,6 +94,43 @@ export default function AdminAppointmentsPage() {
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('appointment_requests').update({ status }).eq('id', id)
     fetchRequests()
+  }
+
+  const openEdit = (r: any) => {
+    setEditRecord(r)
+    setEditForm({ date: r.date, time: r.time, type: r.type, status: r.status, notes: r.notes || '' })
+    setEditModal(true)
+  }
+
+  const saveEdit = async () => {
+    if (!editRecord) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('appointment_requests').update(editForm).eq('id', editRecord.id)
+      if (error) throw error
+      setEditModal(false)
+      setEditRecord(null)
+      fetchRequests()
+    } catch (err: any) {
+      alert('Failed to save changes: ' + (err?.message || 'Unknown error'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deleteRequest = async (id: string) => {
+    if (!window.confirm('Permanently delete this appointment request? This cannot be undone.')) return
+    try {
+      const { error } = await supabase.from('appointment_requests').delete().eq('id', id)
+      if (error) throw error
+      fetchRequests()
+    } catch (err: any) {
+      alert('Failed to delete appointment: ' + (err?.message || 'Unknown error'))
+    }
+  }
+
+  const cancelWithConfirm = (id: string) => {
+    if (window.confirm('Cancel this appointment?')) updateStatus(id, 'Cancelled')
   }
 
   const copyToClipboard = (text: string, id: string) => {
@@ -252,11 +302,23 @@ export default function AdminAppointmentsPage() {
                         </button>
                       )}
                       {r.status !== 'Cancelled' && (
-                        <button onClick={() => updateStatus(r.id, 'Cancelled')}
+                        <button onClick={() => cancelWithConfirm(r.id)}
                           style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', color: 'var(--danger)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
                           Cancel
                         </button>
                       )}
+                      <button onClick={() => openEdit(r)}
+                        style={{ background: 'rgba(14,143,143,0.1)', border: '1px solid rgba(14,143,143,0.3)', color: 'var(--teal-dark)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13 }}>
+                        ✏️ Edit
+                      </button>
+                      <button onClick={() => { setViewRecord(r); setViewModal(true) }}
+                        style={{ background: 'rgba(196,154,10,0.1)', border: '1px solid rgba(196,154,10,0.3)', color: 'var(--gold-dark)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13 }}>
+                        👁 View
+                      </button>
+                      <button onClick={() => deleteRequest(r.id)}
+                        style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', color: 'var(--danger)', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', fontSize: 13 }}>
+                        🗑
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -265,6 +327,126 @@ export default function AdminAppointmentsPage() {
           </table>
         )}
       </div>
+
+      {/* EDIT MODAL */}
+      {editModal && editRecord && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setEditModal(false) }}>
+          <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+            {/* Header */}
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(196,154,10,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal)', marginBottom: 4, fontWeight: 700 }}>EDIT APPOINTMENT</div>
+                <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', fontWeight: 300 }}>{editRecord.name}</h3>
+              </div>
+              <button onClick={() => setEditModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)', padding: '4px 8px' }}>✕</button>
+            </div>
+
+            <div style={{ padding: 28 }}>
+              {/* Read-only client info */}
+              <div style={{ background: 'var(--ivory)', border: '1px solid rgba(196,154,10,0.2)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 8, fontWeight: 700 }}>CLIENT INFO</div>
+                <div style={{ fontSize: 14, color: 'var(--text-rich)', marginBottom: 2 }}>{editRecord.name}</div>
+                <div style={{ fontSize: 14, color: 'var(--muted)' }}>{editRecord.email}</div>
+                {editRecord.phone && <div style={{ fontSize: 14, color: 'var(--muted)' }}>{editRecord.phone}</div>}
+              </div>
+
+              {/* Date */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="lux-label">Date</label>
+                <input className="luxury-input" style={{ borderRadius: 4 }} type="date"
+                  value={editForm.date || ''} onChange={e => setEditForm({ ...editForm, date: e.target.value })} />
+              </div>
+
+              {/* Time */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="lux-label">Time</label>
+                <input className="luxury-input" style={{ borderRadius: 4 }} type="text" placeholder="e.g. 10:00 AM"
+                  value={editForm.time || ''} onChange={e => setEditForm({ ...editForm, time: e.target.value })} />
+              </div>
+
+              {/* Type */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="lux-label">Appointment Type</label>
+                <select className="luxury-input" style={{ borderRadius: 4 }}
+                  value={editForm.type || ''} onChange={e => setEditForm({ ...editForm, type: e.target.value })}>
+                  {APPT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="lux-label">Status</label>
+                <select className="luxury-input" style={{ borderRadius: 4 }}
+                  value={editForm.status || ''} onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                  {APPT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div style={{ marginBottom: 24 }}>
+                <label className="lux-label">Notes</label>
+                <textarea className="luxury-input" style={{ borderRadius: 4, minHeight: 90, resize: 'vertical' }}
+                  value={editForm.notes || ''} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
+              </div>
+
+              {/* Footer buttons */}
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn-ghost" style={{ borderRadius: 4, padding: '11px 24px', fontSize: 12 }}
+                  onClick={() => setEditModal(false)}>Cancel</button>
+                <button className="btn-teal" style={{ borderRadius: 4, padding: '11px 28px', fontSize: 12, opacity: saving ? 0.6 : 1 }}
+                  onClick={saveEdit} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW MODAL */}
+      {viewModal && viewRecord && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setViewModal(false) }}>
+          <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+            {/* Header */}
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(196,154,10,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal)', marginBottom: 4, fontWeight: 700 }}>APPOINTMENT DETAILS</div>
+                <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', fontWeight: 300 }}>{viewRecord.name}</h3>
+              </div>
+              <button onClick={() => setViewModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)', padding: '4px 8px' }}>✕</button>
+            </div>
+
+            <div style={{ padding: 28 }}>
+              {[
+                { label: 'ID / Token', value: viewRecord.id },
+                { label: 'Client Name', value: viewRecord.name },
+                { label: 'Email', value: viewRecord.email },
+                { label: 'Phone', value: viewRecord.phone || '—' },
+                { label: 'Date', value: viewRecord.date ? new Date(viewRecord.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—' },
+                { label: 'Time', value: viewRecord.time || '—' },
+                { label: 'Type', value: viewRecord.type || '—' },
+                { label: 'Status', value: viewRecord.status },
+                { label: 'Notes', value: viewRecord.notes || '—' },
+                { label: 'Created At', value: viewRecord.created_at ? new Date(viewRecord.created_at).toLocaleString() : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid rgba(196,154,10,0.1)' }}>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 4, fontWeight: 700 }}>{label.toUpperCase()}</div>
+                  <div style={{ fontSize: 15, color: 'var(--text-rich)', lineHeight: 1.6, wordBreak: 'break-word' }}>{value}</div>
+                </div>
+              ))}
+
+              <div style={{ textAlign: 'right', marginTop: 8 }}>
+                <button className="btn-ghost" style={{ borderRadius: 4, padding: '11px 28px', fontSize: 12 }}
+                  onClick={() => setViewModal(false)}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SHARE MODAL */}
       {shareModal && (
