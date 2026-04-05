@@ -265,3 +265,22 @@ select.luxury-input option { background: white; color: var(--text); }
   font-weight: 600;
 }
 .nav-link:hover, .nav-link.active { color: var(--teal-dark); }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .footer-inner { padding: 48px 20px 32px !important; }
+  .footer-bottom { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+  .about-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 24px !important; }
+  .about-stats-section { padding: 40px 20px !important; }
+  .about-mission-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+  .about-section-pad { padding: 60px 20px !important; }
+  .about-hero-content { padding: 0 20px !important; }
+  .about-values-grid { grid-template-columns: 1fr !important; }
+  .about-values-section { padding: 60px 20px !important; }
+  .about-cta { padding: 60px 20px !important; }
+  .about-cta-btns { flex-direction: column !important; align-items: stretch !important; }
+}
+@media (max-width: 480px) {
+  .about-stats-grid { grid-template-columns: 1fr 1fr !important; }
+}

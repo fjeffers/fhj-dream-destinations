@@ -127,12 +127,17 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
           .testimonial-card { padding: 32px 24px !important; }
           .stat-number { font-size: 38px !important; }
           .stat-row { padding: 20px 0 !important; }
+          .hero-paragraph { padding: 0 12px !important; }
+          .testimonial-dots { margin-top: 280px !important; }
         }
 
         @media (max-width: 480px) {
           .dest-grid { grid-template-columns: 1fr !important; }
           .hero-stats { flex-direction: column !important; gap: 16px !important; }
           .trust-bar-item { width: 45% !important; }
+          .slide-btn-primary, .slide-btn-ghost { width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+          .hero-cta-wrap { flex-direction: column !important; align-items: stretch !important; padding: 0 16px !important; }
+          .testimonial-dots { margin-top: 360px !important; }
         }
       `}</style>
 
@@ -171,11 +176,11 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
               </h1>
             </div>
 
-            <p style={{ fontSize: 16, color: 'rgba(253,246,236,0.78)', lineHeight: 1.8, maxWidth: 520, margin: '24px auto 36px', fontWeight: 300, opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.38s both' : 'none' }}>
+            <p className="hero-paragraph" style={{ fontSize: 16, color: 'rgba(253,246,236,0.78)', lineHeight: 1.8, maxWidth: 520, margin: '24px auto 36px', fontWeight: 300, opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.38s both' : 'none' }}>
               A real team personally dedicated to crafting the vacation you've always imagined — from first call to final goodbye.
             </p>
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.48s both' : 'none' }}>
+            <div className="hero-cta-wrap" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.48s both' : 'none' }}>
               <Link href="/book-appointment" className="slide-btn-primary" style={{ background: C.gold, color: C.text, padding: '15px 36px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, fontWeight: 800, textDecoration: 'none', display: 'inline-block', boxShadow: `0 10px 36px rgba(196,154,69,0.38)`, transition: 'all 0.3s' }}>PLAN MY VACATION</Link>
               <Link href="/about" className="slide-btn-ghost" style={{ background: 'rgba(253,246,236,0.12)', color: '#FDF6EC', border: '1.5px solid rgba(232,200,122,0.45)', padding: '15px 32px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, textDecoration: 'none', display: 'inline-block', transition: 'all 0.3s' }}>{hero.cta_secondary}</Link>
             </div>
@@ -395,7 +400,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 340 }}>
+          <div className="testimonial-dots" style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 340 }}>
             {testimonials.map((_, i) => (
               <button key={i} onClick={() => setActiveT(i)} style={{ width: activeT === i ? 28 : 8, height: 8, borderRadius: 4, background: activeT === i ? C.teal : `rgba(58,125,125,0.25)`, border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
             ))}

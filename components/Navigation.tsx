@@ -45,6 +45,7 @@ export default function Navigation() {
           .nav-cta { display: none !important; }
           .nav-hamburger { display: flex !important; }
           .nav-logo-tagline { display: none !important; }
+          nav { padding: 12px 16px !important; }
         }
         @media (min-width: 769px) {
           .nav-hamburger { display: none !important; }

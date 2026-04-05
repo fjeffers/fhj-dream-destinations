@@ -115,8 +115,25 @@ export default function BookAppointmentPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ivory)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .appt-header { padding: 16px 16px !important; }
+          .appt-header-title { display: none !important; }
+          .appt-step-label { display: none !important; }
+          .appt-steps { gap: 4px !important; }
+          .appt-step-connector { width: 40px !important; }
+          .appt-card { padding: 20px 16px !important; }
+          .appt-time-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .appt-form-grid { grid-template-columns: 1fr !important; }
+          .appt-summary { flex-direction: column !important; gap: 12px !important; }
+          .appt-summary-divider { display: none !important; }
+        }
+        @media (max-width: 480px) {
+          .appt-time-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ background: 'white', borderBottom: '2px solid rgba(196,154,10,0.2)', padding: '20px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="appt-header" style={{ background: 'white', borderBottom: '2px solid rgba(196,154,10,0.2)', padding: '20px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid var(--gold)', background: 'white', padding: 4, boxShadow: '0 2px 12px rgba(196,154,10,0.2)', flexShrink: 0 }}>
             <img src="/logo.png" alt="FHJ" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
@@ -126,7 +143,7 @@ export default function BookAppointmentPage() {
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 4, color: 'var(--teal-dark)', fontWeight: 600 }}>DESTINATIONS</div>
           </div>
         </Link>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal-dark)', fontWeight: 600 }}>SCHEDULE A CONSULTATION</div>
+        <span className="appt-header-title" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal-dark)', fontWeight: 600 }}>SCHEDULE A CONSULTATION</span>
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 24px' }}>
@@ -141,16 +158,16 @@ export default function BookAppointmentPage() {
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 48 }}>
+        <div className="appt-steps" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 48 }}>
           {['Select Date', 'Choose Time', 'Your Details'].map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: step > i + 1 ? 'var(--teal)' : step === i + 1 ? 'var(--teal-dark)' : 'white', border: step <= i + 1 ? (step === i + 1 ? 'none' : '2px solid rgba(14,143,143,0.3)') : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: step >= i + 1 ? 'white' : 'var(--muted)', fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, transition: 'all 0.3s' }}>
                   {step > i + 1 ? '✓' : i + 1}
                 </div>
-                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: step === i + 1 ? 'var(--teal-dark)' : 'var(--muted)', fontWeight: 600 }}>{s}</span>
+                <span className="appt-step-label" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: step === i + 1 ? 'var(--teal-dark)' : 'var(--muted)', fontWeight: 600 }}>{s}</span>
               </div>
-              {i < 2 && <div style={{ width: 80, height: 2, background: step > i + 1 ? 'var(--teal)' : 'rgba(14,143,143,0.2)', margin: '0 8px', marginBottom: 24, transition: 'background 0.3s' }} />}
+              {i < 2 && <div className="appt-step-connector" style={{ width: 80, height: 2, background: step > i + 1 ? 'var(--teal)' : 'rgba(14,143,143,0.2)', margin: '0 8px', marginBottom: 24, transition: 'background 0.3s' }} />}
             </div>
           ))}
         </div>
@@ -159,7 +176,7 @@ export default function BookAppointmentPage() {
 
         {/* Step 1: Calendar */}
         {step === 1 && (
-          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <button className="btn-ghost" style={{ borderRadius: 4, padding: '8px 18px', fontSize: 11 }} onClick={() => setCalMonth(new Date(year, month - 1, 1))}>← Prev</button>
               <span style={{ fontFamily: 'Cinzel, serif', fontSize: 15, letterSpacing: 2, color: 'var(--text-rich)', fontWeight: 700 }}>{MONTHS[month]} {year}</span>
@@ -198,12 +215,12 @@ export default function BookAppointmentPage() {
 
         {/* Step 2: Time Slots */}
         {step === 2 && selectedDate && (
-          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: 'var(--text-rich)', marginBottom: 6 }}>
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
             <p style={{ color: 'var(--muted)', fontSize: 16, marginBottom: 28 }}>Select a 30-minute time slot</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            <div className="appt-time-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
               {getSlotsForDate(selectedDate).map(slot => (
                 <button key={slot} onClick={() => setSelectedTime(slot)}
                   style={{ padding: '12px 8px', borderRadius: 6, border: `2px solid ${selectedTime === slot ? 'var(--teal)' : 'rgba(14,143,143,0.2)'}`, background: selectedTime === slot ? 'rgba(14,143,143,0.1)' : 'white', color: selectedTime === slot ? 'var(--teal-dark)' : 'var(--text)', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', fontWeight: selectedTime === slot ? 700 : 400, transition: 'all 0.2s' }}>
@@ -225,13 +242,13 @@ export default function BookAppointmentPage() {
 
         {/* Step 3: Details */}
         {step === 3 && (
-          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
-            <div style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 8, padding: '16px 20px', marginBottom: 32, display: 'flex', gap: 24 }}>
+          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+            <div className="appt-summary" style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 8, padding: '16px 20px', marginBottom: 32, display: 'flex', gap: 24 }}>
               <div><div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 4 }}>DATE</div><div style={{ fontSize: 16, color: 'var(--text-rich)', fontWeight: 600 }}>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div></div>
-              <div style={{ width: 1, background: 'rgba(14,143,143,0.2)' }} />
+              <div className="appt-summary-divider" style={{ width: 1, background: 'rgba(14,143,143,0.2)' }} />
               <div><div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 4 }}>TIME</div><div style={{ fontSize: 16, color: 'var(--text-rich)', fontWeight: 600 }}>{selectedTime}</div></div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+            <div className="appt-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
               {[['Full Name *', 'name', 'text'], ['Email *', 'email', 'email'], ['Phone', 'phone', 'tel']].map(([label, field, type]) => (
                 <div key={field} style={{ marginBottom: 20 }}>
                   <label className="lux-label">{label}</label>

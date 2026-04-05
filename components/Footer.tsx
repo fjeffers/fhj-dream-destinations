@@ -31,8 +31,8 @@ export default function Footer() {
     <footer style={{ background: '#F9F7F2', borderTop: '1px solid rgba(196,154,69,0.2)' }}>
       <div style={{ height: 3, background: 'linear-gradient(90deg, #3A7D7D, #C49A45, #3A7D7D)' }} />
 
-      <div style={{ padding: '72px 60px 40px', maxWidth: 1400, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 60, marginBottom: 56 }}>
+      <div className="footer-inner" style={{ padding: '72px 60px 40px', maxWidth: 1400, margin: '0 auto' }}>
+        <div className="footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 60, marginBottom: 56 }}>
 
           {/* Brand */}
           <div>
@@ -73,7 +73,7 @@ export default function Footer() {
 
         {/* Bottom */}
         <div style={{ height: 1, background: 'rgba(196,154,69,0.2)', marginBottom: 28 }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div className="footer-bottom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <span style={{ fontSize: 12, color: 'rgba(46,35,24,0.5)' }}>© 2026 FHJ Dream Destinations. All rights reserved.</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
             <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: '#B08D57' }}>LUXURY · CRAFTED · PERSONAL</span>
