@@ -105,10 +105,14 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         .slide-btn-primary:hover { background: ${C.goldDark} !important; transform:translateY(-2px); box-shadow: 0 16px 40px rgba(160,120,48,0.45) !important; }
         .slide-btn-ghost:hover { background: rgba(255,255,255,0.22) !important; }
 
+        @media (max-width: 900px) {
+          .hero-logo-wrap { margin-top: 80px !important; margin-bottom: 16px !important; }
+        }
+
         @media (max-width: 768px) {
           .hero-logo { width: 100px !important; height: 100px !important; }
           .hero-logo-wrap { display: none !important; }
-          .hero-stats { gap: 24px !important; margin-top: 32px !important; }
+          .hero-stats { gap: 24px !important; margin-top: 24px !important; padding-top: 20px !important; }
           .trust-bar-inner { flex-wrap: wrap !important; gap: 20px !important; padding: 24px 20px !important; }
           .trust-bar-item { width: 40% !important; }
           .welcome-split { grid-template-columns: 1fr !important; }
@@ -152,8 +156,8 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         ))}
 
         <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
-          <div style={{ maxWidth: 780, width: '100%' }}>
-            <div className="hero-logo-wrap" style={{ opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease forwards' : 'none', marginBottom: 24, marginTop: 120 }}>
+          <div style={{ maxWidth: 780, width: '100%', paddingBottom: 60 }}>
+            <div className="hero-logo-wrap" style={{ opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease forwards' : 'none', marginBottom: 24, marginTop: 80 }}>
               <img className="hero-logo" src="/logo.png" alt="FHJ Dream Destinations"
                 style={{ width: 140, height: 140, objectFit: 'contain', filter: 'drop-shadow(0 4px 24px rgba(196,154,69,0.5))' }} />
             </div>

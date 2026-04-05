@@ -409,8 +409,11 @@ export default function BookPage() {
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         .fade-in { animation: fadeIn 0.4s ease; }
         input:focus, select:focus, textarea:focus { border-color: ${C.teal} !important; box-shadow: 0 0 0 3px rgba(58,125,125,0.1); }
+        @media (max-width: 768px) {
+          .book-page-top { padding-top: 72px !important; }
+        }
       `}</style>
-      <div style={{ minHeight: '100vh', padding: '100px 20px 80px', background: C.cream }}>
+      <div className="book-page-top" style={{ minHeight: '100vh', padding: '100px 20px 80px', background: C.cream }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
           {/* Header */}
