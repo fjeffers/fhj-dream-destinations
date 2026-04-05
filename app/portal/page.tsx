@@ -78,7 +78,7 @@ export default async function PortalDashboard() {
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted)' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>📅</div>
               <p style={{ fontSize: 13, marginBottom: 16 }}>No upcoming appointments</p>
-              <Link href="/book" className="btn-ghost btn-sm">Schedule Now</Link>
+              <Link href="/book-appointment" className="btn-ghost btn-sm">Schedule Now</Link>
             </div>
           )}
         </div>
