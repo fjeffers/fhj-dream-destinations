@@ -132,7 +132,7 @@ export default function BookAppointmentPage() {
             Schedule Your <em style={{ color: 'var(--teal-dark)' }}>Consultation</em>
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 17, marginTop: 16, lineHeight: 1.7 }}>
-            Select a date and time that works for you. We'll confirm your appointment within 2 hours.
+            Select a date and time that works for you. We'll confirm your appointment within 2 to 4 hours.
           </p>
         </div>
 
