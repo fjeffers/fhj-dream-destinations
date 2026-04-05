@@ -15,6 +15,26 @@ export default function IntakeManager({ initialRequests }: { initialRequests: In
     const { data } = await supabase.from('intake_requests').update({ status }).eq('id', id).select().single()
     if (data) setRequests(p => p.map(r => r.id === id ? data : r))
     if (viewing?.id === id) setViewing(data)
+
+    // When approved, invite client via API to create profile
+    if (status === 'Approved' && data) {
+      try {
+        await fetch('/api/invite-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: `${data.first_name} ${data.last_name}`,
+            email: data.email,
+            phone: data.phone || '',
+            tier: 'Silver',
+            notes: `Intake approved. Destination: ${data.destination || '—'}`
+          })
+        })
+      } catch (err) {
+        console.error('Failed to invite client:', err)
+      }
+    }
+
     setProcessing(null)
   }
 
@@ -43,7 +63,17 @@ export default function IntakeManager({ initialRequests }: { initialRequests: In
       <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr 420px' : '1fr', gap: 20 }}>
         <div className="luxury-card" style={{ overflow: 'hidden' }}>
           <table className="lux-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Destination</th><th>Budget</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Destination</th>
+                <th>Budget</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {filtered.map(r => (
                 <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => setViewing(r)}>
@@ -56,14 +86,27 @@ export default function IntakeManager({ initialRequests }: { initialRequests: In
                   <td onClick={e => e.stopPropagation()}>
                     {r.status === 'Pending' && (
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-gold btn-sm" disabled={processing === r.id} onClick={() => updateStatus(r.id, 'Approved')} style={{ opacity: processing === r.id ? 0.7 : 1 }}>Approve</button>
-                        <button className="btn-danger" disabled={processing === r.id} onClick={() => updateStatus(r.id, 'Rejected')}>Reject</button>
+                        <button className="btn-gold btn-sm" disabled={processing === r.id}
+                          onClick={() => updateStatus(r.id, 'Approved')}
+                          style={{ opacity: processing === r.id ? 0.7 : 1 }}>
+                          Approve
+                        </button>
+                        <button className="btn-danger" disabled={processing === r.id}
+                          onClick={() => updateStatus(r.id, 'Rejected')}>
+                          Reject
+                        </button>
                       </div>
                     )}
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No {filter === 'all' ? '' : filter.toLowerCase()} requests</td></tr>}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>
+                    No {filter === 'all' ? '' : filter.toLowerCase()} requests
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -114,10 +157,14 @@ export default function IntakeManager({ initialRequests }: { initialRequests: In
 
             {viewing.status === 'Pending' && (
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                <button className="btn-gold" style={{ flex: 1 }} disabled={processing === viewing.id} onClick={() => updateStatus(viewing.id, 'Approved')}>
+                <button className="btn-gold" style={{ flex: 1 }} disabled={processing === viewing.id}
+                  onClick={() => updateStatus(viewing.id, 'Approved')}>
                   {processing === viewing.id ? '...' : 'Approve Client'}
                 </button>
-                <button className="btn-ghost" disabled={processing === viewing.id} onClick={() => updateStatus(viewing.id, 'Rejected')}>Reject</button>
+                <button className="btn-ghost" disabled={processing === viewing.id}
+                  onClick={() => updateStatus(viewing.id, 'Rejected')}>
+                  Reject
+                </button>
               </div>
             )}
           </div>
@@ -126,4 +173,3 @@ export default function IntakeManager({ initialRequests }: { initialRequests: In
     </div>
   )
 }
-
