@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { notifyAppointmentBooked, sendClientConfirmation } from '@/lib/sendEmail'
 
 const TYPES = ['Consultation', 'Trip Planning', 'Intake', 'Follow-Up', 'VIP Meeting']
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -75,6 +76,19 @@ export default function BookAppointmentPage() {
       ...form, date: dateStr, time: selectedTime, status: 'Pending'
     }).select().single()
     if (err) { setError(err.message); setLoading(false); return }
+
+    await notifyAppointmentBooked({
+      name: form.name, email: form.email, phone: form.phone,
+      date: dateStr, time: selectedTime, type: form.type, notes: form.notes
+    })
+
+    await sendClientConfirmation({
+      to_email: form.email,
+      to_name: form.name,
+      subject: 'Appointment Request — FHJ Dream Destinations',
+      message: `Hi ${form.name},\n\nThank you for requesting an appointment!\n\nDate: ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\nTime: ${selectedTime}\nType: ${form.type}\n\nWe will confirm within 2 hours.\n\nWarm regards,\nFHJ Dream Destinations\ninfo@fhjdreamdestinations.com`
+    })
+
     setConfirmId(data.token || data.id)
     setSubmitted(true); setLoading(false)
   }
@@ -98,7 +112,6 @@ export default function BookAppointmentPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ivory)' }}>
-      {/* Header */}
       <div style={{ background: 'white', borderBottom: '2px solid rgba(196,154,10,0.2)', padding: '20px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid var(--gold)', background: 'white', padding: 4, boxShadow: '0 2px 12px rgba(196,154,10,0.2)', flexShrink: 0 }}>
@@ -123,7 +136,6 @@ export default function BookAppointmentPage() {
           </p>
         </div>
 
-        {/* Steps */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 48 }}>
           {['Select Date', 'Choose Time', 'Your Details'].map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
@@ -140,7 +152,6 @@ export default function BookAppointmentPage() {
 
         {error && <div style={{ padding: '14px 18px', background: 'rgba(192,57,43,0.08)', border: '2px solid rgba(192,57,43,0.3)', color: 'var(--danger)', fontSize: 15, marginBottom: 24, borderRadius: 6 }}>{error}</div>}
 
-        {/* Step 1: Calendar */}
         {step === 1 && (
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
@@ -179,7 +190,6 @@ export default function BookAppointmentPage() {
           </div>
         )}
 
-        {/* Step 2: Time Slots */}
         {step === 2 && selectedDate && (
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: 'var(--text-rich)', marginBottom: 6 }}>
@@ -206,7 +216,6 @@ export default function BookAppointmentPage() {
           </div>
         )}
 
-        {/* Step 3: Details */}
         {step === 3 && (
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <div style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 8, padding: '16px 20px', marginBottom: 32, display: 'flex', gap: 24 }}>
