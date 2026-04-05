@@ -27,7 +27,7 @@ export default function AdminShell({ children, profile }: { children: React.Reac
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push('/login?type=admin')
     router.refresh()
   }
 
