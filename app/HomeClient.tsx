@@ -107,7 +107,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
 
         @media (max-width: 768px) {
           .hero-logo { width: 100px !important; height: 100px !important; }
-          .hero-logo-wrap { margin-top: 80px !important; margin-bottom: 16px !important; }
+          .hero-logo-wrap { display: none !important; }
           .hero-stats { gap: 24px !important; margin-top: 32px !important; }
           .trust-bar-inner { flex-wrap: wrap !important; gap: 20px !important; padding: 24px 20px !important; }
           .trust-bar-item { width: 40% !important; }
