@@ -9,14 +9,45 @@ const supabaseAdmin = createClient(
 export async function POST(req: Request) {
   try {
     const { full_name, email, tier = 'Silver', phone = '', notes = '' } = await req.json()
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name, role: 'client', tier, phone, notes }
+
+    const tempPassword = 'Welcome@FHJ1!'
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name, role: 'client', tier, phone, notes }
     })
+
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
     await supabaseAdmin.from('profiles').upsert({
-      id: data.user.id, email, full_name, role: 'client',
-      tier, phone, notes, approved: true,
+      id: data.user.id,
+      email,
+      full_name,
+      role: 'client',
+      tier,
+      phone,
+      notes,
+      approved: true,
     }, { onConflict: 'id' })
+
+    await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: 'service_oqmckmr',
+        template_id: 'template_0ai8is3',
+        user_id: 'Ea5qbri-eVFF-RKFI',
+        template_params: {
+          to_email: email,
+          to_name: full_name,
+          temp_password: tempPassword,
+          login_url: 'https://fhjdreamdestinations.com/login?type=client',
+        }
+      })
+    })
+
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
