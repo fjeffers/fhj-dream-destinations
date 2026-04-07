@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        service_id: 'service_oqmckmr',
+        service_id: 'service_5eyyayc',
         template_id: 'template_0ai8is3',
         user_id: 'Ea5qbri-eVFF-RKFI',
         template_params: {
