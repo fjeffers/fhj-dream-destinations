@@ -11,19 +11,37 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
   const [form, setForm] = useState<any>({})
   const [filter, setFilter] = useState('all')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const supabase = createClient()
 
   const openAdd = () => { setEditing(null); setForm({ status: 'Pending', group_size: 1 }); setModal(true) }
   const openEdit = (b: any) => { setEditing(b); setForm({ ...b }); setModal(true) }
 
   const save = async () => {
+    if (!form.client_name?.trim()) { setSaveError('Client name is required.'); return }
+    if (!form.package_name?.trim()) { setSaveError('Package name is required.'); return }
     setSaving(true)
-    const payload = { client_name: form.client_name, package_name: form.package_name, travel_date: form.travel_date || null, return_date: form.return_date || null, destination: form.destination, group_size: parseInt(form.group_size || 1), budget: form.budget, accommodation: form.accommodation, value: form.value ? parseFloat(form.value) : null, status: form.status, notes: form.notes }
+    setSaveError('')
+    const payload = {
+      client_name: form.client_name,
+      package_name: form.package_name,
+      travel_date: form.travel_date || null,
+      return_date: form.return_date || null,
+      destination: form.destination || null,
+      group_size: parseInt(form.group_size || 1),
+      budget: form.budget || null,
+      accommodation: form.accommodation || null,
+      value: form.value ? parseFloat(form.value) : null,
+      status: form.status || 'Pending',
+      notes: form.notes || null,
+    }
     if (editing) {
-      const { data } = await supabase.from('bookings').update(payload).eq('id', editing.id).select('*, profiles(full_name, email, tier)').single()
+      const { data, error } = await supabase.from('bookings').update(payload).eq('id', editing.id).select('*, profiles(full_name, email, tier)').single()
+      if (error) { setSaveError(`Failed to update booking: ${error.message}`); setSaving(false); return }
       if (data) setBookings(p => p.map(b => b.id === editing.id ? data : b))
     } else {
-      const { data } = await supabase.from('bookings').insert(payload).select('*, profiles(full_name, email, tier)').single()
+      const { data, error } = await supabase.from('bookings').insert(payload).select('*, profiles(full_name, email, tier)').single()
+      if (error) { setSaveError(`Failed to create booking: ${error.message}`); setSaving(false); return }
       if (data) setBookings(p => [data, ...p])
     }
     setSaving(false)
@@ -31,13 +49,15 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this booking?')) return
-    await supabase.from('bookings').delete().eq('id', id)
+    if (!confirm('Delete this booking? This cannot be undone.')) return
+    const { error } = await supabase.from('bookings').delete().eq('id', id)
+    if (error) { alert(`Failed to delete booking: ${error.message}`); return }
     setBookings(p => p.filter(b => b.id !== id))
   }
 
   const updateStatus = async (id: string, status: string) => {
-    const { data } = await supabase.from('bookings').update({ status }).eq('id', id).select('*, profiles(full_name, email, tier)').single()
+    const { data, error } = await supabase.from('bookings').update({ status }).eq('id', id).select('*, profiles(full_name, email, tier)').single()
+    if (error) { alert(`Failed to update status: ${error.message}`); return }
     if (data) setBookings(p => p.map(b => b.id === id ? data : b))
   }
 
@@ -114,9 +134,14 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
           <div style={{ background: 'var(--panel)', border: '1px solid var(--border-bright)', width: 'min(620px,95vw)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: 'var(--gold)' }}>{editing ? 'EDIT BOOKING' : 'ADD BOOKING'}</span>
-              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18 }}>×</button>
+              <button onClick={() => { setModal(false); setSaveError('') }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18 }}>×</button>
             </div>
             <div style={{ padding: 24, display: 'grid', gap: 14 }}>
+              {saveError && (
+                <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1.5px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, fontSize: 14, lineHeight: 1.5 }}>
+                  ⚠ {saveError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
                 <div><label className="lux-label">Client Name *</label><input className="luxury-input" value={form.client_name || ''} onChange={e => setForm((p: any) => ({ ...p, client_name: e.target.value }))} /></div>
                 <div><label className="lux-label">Package Name *</label><input className="luxury-input" value={form.package_name || ''} onChange={e => setForm((p: any) => ({ ...p, package_name: e.target.value }))} /></div>
@@ -143,3 +168,4 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
     </div>
   )
 }
+
