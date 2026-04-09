@@ -376,6 +376,8 @@ ALTER TABLE site_content          ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION is_admin_role()
 RETURNS BOOLEAN
 LANGUAGE sql STABLE
+SECURITY DEFINER                 -- bypass RLS to prevent circular dependency
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM profiles
@@ -390,9 +392,14 @@ DROP POLICY IF EXISTS "Users update own profile"   ON profiles;
 DROP POLICY IF EXISTS "Admins read all profiles"   ON profiles;
 DROP POLICY IF EXISTS "Admins update all profiles" ON profiles;
 
+-- Each user can read their own row; admins can read all (handled by separate policy)
 CREATE POLICY "Users read own profile"
   ON profiles FOR SELECT
-  USING (auth.uid() = id OR is_admin_role());
+  USING (auth.uid() = id);
+
+CREATE POLICY "Admins read all profiles"
+  ON profiles FOR SELECT
+  USING (is_admin_role());
 
 CREATE POLICY "Users update own profile"
   ON profiles FOR UPDATE
