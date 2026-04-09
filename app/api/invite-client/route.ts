@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
   try {
@@ -32,20 +35,26 @@ export async function POST(req: Request) {
       approved: true,
     }, { onConflict: 'id' })
 
-    await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: 'service_5eyyayc',
-        template_id: 'template_ylutkpo',
-        user_id: 'Ea5qbri-eVFF-RKFI',
-        template_params: {
-          to_email: email,
-          to_name: full_name,
-          temp_password: tempPassword,
-          login_url: 'https://fhjdreamdestinations.com/login?type=client',
-        }
-      })
+    await resend.emails.send({
+      from: 'FHJ Dream Destinations <onboarding@resend.dev>',
+      to: email,
+      subject: `Welcome to FHJ Dream Destinations, ${full_name}!`,
+      html: `
+        <div style="font-family: system-ui, sans-serif; font-size: 16px; background-color: #fff8f1">
+          <div style="max-width: 600px; margin: auto; padding: 16px">
+            <h2 style="color: #2c3e50;">Welcome to FHJ Dream Destinations</h2>
+            <p>Hi <strong>${full_name}</strong>,</p>
+            <p>Your account has been successfully created. Use the details below to log in:</p>
+            <div style="background-color: #f0f4ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p><strong>Login URL:</strong> <a href="https://fhjdreamdestinations.com/login?type=client">Click here to log in</a></p>
+              <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+            </div>
+            <p>Please change your password after your first login.</p>
+            <p>If you have any questions, reach us at <a href="mailto:info@fhjdreamdestinations.com">info@fhjdreamdestinations.com</a>.</p>
+            <p>Best regards,<br />The FHJ Dream Destinations Team</p>
+          </div>
+        </div>
+      `
     })
 
     return NextResponse.json({ success: true })
