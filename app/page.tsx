@@ -6,19 +6,16 @@ import HomeClient from './HomeClient'
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Only fetch content needed by the home page (no deals — dealt with on /book)
-  const [heroRes, footerRes] = await Promise.all([
-    supabase.from('site_content').select('content').eq('section', 'hero').single(),
-    supabase.from('site_content').select('content').eq('section', 'footer').single(),
-  ])
+  const { data: heroData } = await supabase
+    .from('site_content')
+    .select('content')
+    .eq('section', 'hero')
+    .single()
 
   return (
     <>
       <Navigation />
-      <HomeClient
-        heroContent={heroRes.data?.content || {}}
-        footerContent={footerRes.data?.content || {}}
-      />
+      <HomeClient heroContent={heroData?.content || {}} />
       <Footer />
     </>
   )
