@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/types'
@@ -11,6 +11,7 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
   const [form, setForm] = useState<any>({})
   const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', tier: 'Silver', phone: '', notes: '' })
   const [inviting, setInviting] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [inviteSent, setInviteSent] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [search, setSearch] = useState('')
@@ -78,15 +79,19 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
   const openEdit = (c: Profile) => { setEditing(c); setForm({ ...c }); setModal(true) }
 
   const save = async () => {
+    if (!form.full_name?.trim()) { setSaveError('Full name is required.'); return }
+    setSaveError('')
     if (editing) {
-      const { data } = await supabase.from('profiles').update(form).eq('id', editing.id).select().single()
+      const { data, error } = await supabase.from('profiles').update(form).eq('id', editing.id).select().single()
+      if (error) { setSaveError(`Failed to save: ${error.message}`); return }
       if (data) setClients(p => p.map(c => c.id === editing.id ? data : c))
     }
     setModal(false)
   }
 
   const toggleApproval = async (c: Profile) => {
-    const { data } = await supabase.from('profiles').update({ approved: !c.approved }).eq('id', c.id).select().single()
+    const { data, error } = await supabase.from('profiles').update({ approved: !c.approved }).eq('id', c.id).select().single()
+    if (error) { alert(`Failed to update client: ${error.message}`); return }
     if (data) setClients(p => p.map(x => x.id === c.id ? data : x))
   }
 
@@ -323,9 +328,14 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
               <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', fontWeight: 300 }}>
                 {editing ? 'Edit Client' : 'Add Client'}
               </h3>
-              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
+              <button onClick={() => { setModal(false); setSaveError('') }} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
             </div>
             <div style={{ padding: 28 }}>
+              {saveError && (
+                <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1.5px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, marginBottom: 20, fontSize: 14, lineHeight: 1.5 }}>
+                  ⚠ {saveError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                 {F('Full Name', 'full_name')}
                 {F('Email', 'email', 'email')}
