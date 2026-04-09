@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     }, { onConflict: 'id' })
 
     await resend.emails.send({
-      from: 'FHJ Dream Destinations <onboarding@resend.dev>',
+      from: 'FHJ Dream Destinations <info@fhjdreamdestinations.com>',
       to: email,
       subject: `Welcome to FHJ Dream Destinations, ${full_name}!`,
       html: `
