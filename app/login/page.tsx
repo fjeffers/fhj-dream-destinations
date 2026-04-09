@@ -1,11 +1,10 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 function LoginContent() {
-
   const router = useRouter()
   const params = useSearchParams()
   const type = params.get('type') || 'client'
@@ -17,18 +16,6 @@ function LoginContent() {
   const [loading, setLoading] = useState(false)
 
   const supabase = createClient()
-
-  // Handle password reset token in URL hash
-  useEffect(() => {
-    const hash = window.location.hash
-    if (hash && hash.includes('access_token')) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) {
-          router.replace(isAdmin ? '/admin' : '/portal')
-        }
-      })
-    }
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,6 +50,13 @@ function LoginContent() {
       return
     }
 
+    if (!isAdmin && profile.role !== 'client') {
+      await supabase.auth.signOut()
+      setError('Please use the admin login.')
+      setLoading(false)
+      return
+    }
+
     if (!isAdmin && !profile.approved) {
       await supabase.auth.signOut()
       setError('Your account is pending approval. We will contact you shortly.')
@@ -70,9 +64,7 @@ function LoginContent() {
       return
     }
 
-    setTimeout(() => {
-      window.location.href = isAdmin ? '/admin' : '/portal'
-    }, 500)
+    window.location.replace(isAdmin ? '/admin' : '/portal')
   }
 
   return (
@@ -136,7 +128,6 @@ function LoginContent() {
       </div>
     </div>
   )
-
 }
 
 export default function LoginPage() {
