@@ -6,8 +6,21 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function sendEmail(type: string, data: Record<string, any>, origin: string) {
+  try {
+    await fetch(`${origin}/api/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data }),
+    })
+  } catch (e) {
+    console.warn('Email send failed (non-critical):', e)
+  }
+}
+
 export async function POST(req: Request) {
   try {
+    const origin = new URL(req.url).origin
     const { event_id, full_name, email, phone, party_size = 1, dietary_needs, message } = await req.json()
 
     if (!event_id || !full_name?.trim() || !email?.trim()) {
@@ -21,7 +34,7 @@ export async function POST(req: Request) {
     // 1. Verify event exists, is active, and has capacity
     const { data: event, error: eventError } = await supabaseAdmin
       .from('events')
-      .select('id, title, capacity, active')
+      .select('id, title, capacity, active, date, location')
       .eq('id', event_id)
       .eq('active', true)
       .single()
@@ -30,7 +43,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This event is not available.' }, { status: 404 })
     }
 
-    // 2. Check capacity (sum of party sizes already RSVPd)
+    // 2. Check capacity
     const { data: existingRsvps } = await supabaseAdmin
       .from('event_rsvps')
       .select('party_size')
@@ -47,7 +60,7 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // 3. Check if already RSVPd with this email
+    // 3. Check if already RSVPd
     const { data: existingRsvp } = await supabaseAdmin
       .from('event_rsvps')
       .select('id')
@@ -56,20 +69,16 @@ export async function POST(req: Request) {
       .single()
 
     if (existingRsvp) {
-      return NextResponse.json({ error: 'This email has already RSVP\'d for this event.' }, { status: 400 })
+      return NextResponse.json({ error: "This email has already RSVP'd for this event." }, { status: 400 })
     }
 
     // 4. Upsert profile — create client account if they don't have one
-    //    Use email as the key. If they already exist, keep their existing data.
     let profileId: string | null = null
-
-    // First check if a Supabase auth user with this email exists
     const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers()
     const existingUser = existingAuthUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase().trim())
 
     if (existingUser) {
       profileId = existingUser.id
-      // Make sure profile row exists and is approved
       await supabaseAdmin.from('profiles').upsert({
         id: existingUser.id,
         email: email.toLowerCase().trim(),
@@ -79,8 +88,6 @@ export async function POST(req: Request) {
         approved: true,
       }, { onConflict: 'id', ignoreDuplicates: true })
     } else {
-      // Create a new Supabase auth user with a temp password
-      // They'll receive an invite if desired, or can reset password to gain portal access
       const tempPassword = `FHJ_${Math.random().toString(36).slice(2, 10).toUpperCase()}!`
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: email.toLowerCase().trim(),
@@ -88,11 +95,7 @@ export async function POST(req: Request) {
         email_confirm: true,
         user_metadata: { full_name, phone, role: 'client', source: 'rsvp' }
       })
-
-      if (createError) {
-        // If user already exists in auth but not caught above, just proceed without a profile
-        console.error('Create user error (non-fatal):', createError.message)
-      } else if (newUser?.user) {
+      if (!createError && newUser?.user) {
         profileId = newUser.user.id
         await supabaseAdmin.from('profiles').upsert({
           id: newUser.user.id,
@@ -126,6 +129,24 @@ export async function POST(req: Request) {
       console.error('RSVP insert error:', rsvpError)
       return NextResponse.json({ error: 'Could not save your RSVP. Please try again.' }, { status: 500 })
     }
+
+    // 6. Send emails (non-blocking)
+    const emailData = {
+      name: full_name,
+      email: email.toLowerCase().trim(),
+      phone,
+      party_size,
+      dietary_needs,
+      message,
+      event_title: event.title,
+      event_date: event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : null,
+      event_location: event.location,
+    }
+
+    // Guest confirmation
+    sendEmail('rsvp-confirmation-guest', emailData, origin)
+    // Admin notification
+    sendEmail('rsvp-notification-admin', emailData, origin)
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
