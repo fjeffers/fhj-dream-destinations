@@ -11,6 +11,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
   const [form, setForm] = useState<any>({})
   const [rsvpView, setRsvpView] = useState<any>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const supabase = createClient()
 
@@ -30,26 +31,29 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
   const openEdit = (ev: any) => { setEditing(ev); setForm({ ...ev }); setModal(true) }
 
   const save = async () => {
-    if (!form.title) return
+    if (!form.title) { setSaveError('Event title is required.'); return }
     setSaving(true)
+    setSaveError('')
     const payload = {
       title: form.title,
-      description: form.description,
-      date: form.date,
-      time: form.time,
-      location: form.location,
+      description: form.description || null,
+      date: form.date || null,
+      time: form.time || null,
+      location: form.location || null,
       capacity: parseInt(form.capacity) || 50,
       active: form.active !== false,
       occasion: form.occasion || null,
       hosted_by: form.hosted_by || null,
     }
     if (editing) {
-      const { data } = await supabase.from('events').update(payload).eq('id', editing.id)
+      const { data, error } = await supabase.from('events').update(payload).eq('id', editing.id)
         .select('*, event_rsvps(id, party_size, name, email, phone, dietary_needs, message, source, status, created_at, client_id)').single()
+      if (error) { setSaveError(`Failed to update event: ${error.message}`); setSaving(false); return }
       if (data) setEvents(p => p.map(e => e.id === editing.id ? data : e))
     } else {
-      const { data } = await supabase.from('events').insert(payload)
+      const { data, error } = await supabase.from('events').insert(payload)
         .select('*, event_rsvps(id, party_size, name, email, phone, dietary_needs, message, source, status, created_at, client_id)').single()
+      if (error) { setSaveError(`Failed to create event: ${error.message}`); setSaving(false); return }
       if (data) setEvents(p => [data, ...p])
     }
     setSaving(false)
@@ -57,13 +61,15 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
   }
 
   const deleteEvent = async (id: string) => {
-    if (!confirm('Delete this event and all its RSVPs?')) return
-    await supabase.from('events').delete().eq('id', id)
+    if (!confirm('Delete this event and all its RSVPs? This cannot be undone.')) return
+    const { error } = await supabase.from('events').delete().eq('id', id)
+    if (error) { alert(`Failed to delete event: ${error.message}`); return }
     setEvents(p => p.filter(e => e.id !== id))
   }
 
   const updateRsvpStatus = async (eventId: string, rsvpId: string, status: string) => {
-    await supabase.from('event_rsvps').update({ status }).eq('id', rsvpId)
+    const { error } = await supabase.from('event_rsvps').update({ status }).eq('id', rsvpId)
+    if (error) { alert(`Failed to update status: ${error.message}`); return }
     setEvents(p => p.map(ev => ev.id === eventId
       ? { ...ev, event_rsvps: ev.event_rsvps.map((r: any) => r.id === rsvpId ? { ...r, status } : r) }
       : ev
@@ -363,3 +369,4 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
     </div>
   )
 }
+
