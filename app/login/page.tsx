@@ -70,7 +70,9 @@ function LoginContent() {
       return
     }
 
-    window.location.href = isAdmin ? '/admin' : '/portal'
+    setTimeout(() => {
+      window.location.href = isAdmin ? '/admin' : '/portal'
+    }, 500)
   }
 
   return (
