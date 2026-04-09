@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const ADMIN_ROLES = ['admin', 'manager', 'employee']
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -32,6 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Check role and redirect accordingly
+  // FIX: manager and employee roles also belong in /admin, not /portal
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
     const { data: profile } = await supabase
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role === 'admin') {
+    if (profile?.role && ADMIN_ROLES.includes(profile.role)) {
       return NextResponse.redirect(`${origin}/admin`)
     }
     return NextResponse.redirect(`${origin}/portal`)
