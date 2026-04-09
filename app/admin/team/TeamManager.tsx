@@ -13,6 +13,7 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ full_name: '', email: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
+  const [forcing, setForcing] = useState<string | null>(null)
   const [saved, setSaved] = useState('')
   const [warning, setWarning] = useState('')
   const [error, setError] = useState('')
@@ -29,23 +30,48 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
       })
       const result = await res.json()
       if (!res.ok) throw new Error(result.error || 'Failed to invite')
-
       setModal(false)
       setForm({ full_name: '', email: '', role: 'employee' })
-
-      // Reload team list
       const { data } = await supabase.from('profiles').select('*').in('role', ['admin', 'manager', 'employee'])
       setTeam(data || [])
-
-      if (result.emailWarning) {
-        setWarning(result.emailWarning)
-      } else {
-        setSaved(`✓ Invite sent to ${form.email}! They'll receive an email with login details.`)
-      }
-    } catch (e: any) {
-      setError(e.message)
-    }
+      if (result.emailWarning) setWarning(result.emailWarning)
+      else setSaved(`✓ Invite sent to ${form.email}! They'll be prompted to set their own password on first login.`)
+    } catch (e: any) { setError(e.message) }
     setSaving(false)
+  }
+
+  const forcePasswordChange = async (userId: string, name: string) => {
+    if (!confirm(`Force ${name} to change their password on next login?`)) return
+    setForcing(userId)
+    try {
+      const res = await fetch('/api/force-password-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed')
+      setSaved(`✓ ${name} will be prompted to change their password on next login.`)
+    } catch (e: any) { setWarning(e.message) }
+    setForcing(null)
+  }
+
+  const forceAllPasswordChange = async () => {
+    const nonAdmins = team.filter(m => m.role !== 'admin')
+    if (nonAdmins.length === 0) { setSaved('No managers or employees to update.'); return }
+    if (!confirm(`Force all ${nonAdmins.length} manager(s) and employee(s) to change their password on next login?`)) return
+    setForcing('all')
+    try {
+      const res = await fetch('/api/force-password-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'all' })
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed')
+      setSaved(`✓ ${result.message}`)
+    } catch (e: any) { setWarning(e.message) }
+    setForcing(null)
   }
 
   const updateRole = async (id: string, role: string) => {
@@ -57,7 +83,8 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'var(--teal)', marginBottom: 8, fontWeight: 600 }}>ADMIN</div>
           <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 40, fontWeight: 300, color: 'var(--text-rich)' }}>
@@ -65,21 +92,34 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 15, marginTop: 6 }}>Manage admin team members and their access levels.</p>
         </div>
-        <button className="btn-teal" onClick={() => { setModal(true); setError(''); setWarning('') }} style={{ borderRadius: 4, padding: '12px 28px' }}>
-          + Invite Team Member
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignSelf: 'flex-end', flexWrap: 'wrap' }}>
+          {team.some(m => m.role !== 'admin') && (
+            <button
+              className="btn-ghost"
+              style={{ borderRadius: 4, padding: '11px 20px', fontSize: 11, opacity: forcing === 'all' ? 0.6 : 1 }}
+              onClick={forceAllPasswordChange}
+              disabled={forcing === 'all'}
+              title="Forces all managers and employees to set a new password on their next login">
+              {forcing === 'all' ? 'Updating...' : '🔒 Force All to Reset Password'}
+            </button>
+          )}
+          <button className="btn-teal" onClick={() => { setModal(true); setError(''); setWarning('') }} style={{ borderRadius: 4, padding: '12px 28px' }}>
+            + Invite Team Member
+          </button>
+        </div>
       </div>
 
+      {/* Feedback banners */}
       {saved && (
-        <div style={{ padding: '14px 18px', background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>
-          {saved}
+        <div style={{ padding: '14px 18px', background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, marginBottom: 20, fontSize: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{saved}</span>
+          <button onClick={() => setSaved('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
-
-      {/* Email warning — user created but email not sent */}
       {warning && (
-        <div style={{ padding: '14px 18px', background: 'rgba(196,154,10,0.08)', border: '2px solid rgba(196,154,10,0.35)', color: 'var(--gold-dark)', borderRadius: 4, marginBottom: 20, fontSize: 14, lineHeight: 1.6 }}>
-          ⚠ {warning}
+        <div style={{ padding: '14px 18px', background: 'rgba(196,154,10,0.08)', border: '2px solid rgba(196,154,10,0.35)', color: 'var(--gold-dark)', borderRadius: 4, marginBottom: 20, fontSize: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠ {warning}</span>
+          <button onClick={() => setWarning('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold-dark)', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
@@ -111,11 +151,13 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
                 <th>Role</th>
                 <th>Joined</th>
                 <th>Change Role</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {team.map(m => {
                 const roleInfo = getRoleInfo(m.role)
+                const isForcing = forcing === m.id
                 return (
                   <tr key={m.id}>
                     <td>
@@ -128,12 +170,25 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
                     </td>
                     <td style={{ fontSize: 14 }}>{m.email}</td>
                     <td><span className={`badge ${roleInfo.color}`}>{roleInfo.label}</span></td>
-                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>{new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>
+                      {m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </td>
                     <td>
                       <select value={m.role} onChange={e => updateRole(m.id, e.target.value)}
                         style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1.5px solid var(--border)', borderRadius: 4, padding: '6px 10px', background: 'white', color: 'var(--teal-dark)', cursor: 'pointer', outline: 'none' }}>
                         {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
+                    </td>
+                    <td>
+                      {m.role !== 'admin' && (
+                        <button
+                          onClick={() => forcePasswordChange(m.id, m.full_name || m.email)}
+                          disabled={isForcing}
+                          style={{ background: isForcing ? 'rgba(196,154,10,0.06)' : 'rgba(196,154,10,0.08)', border: '1.5px solid rgba(196,154,10,0.3)', color: 'var(--gold-dark)', borderRadius: 4, padding: '6px 12px', cursor: isForcing ? 'not-allowed' : 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600, whiteSpace: 'nowrap', opacity: isForcing ? 0.6 : 1 }}
+                          title="Forces this person to set a new password on their next login">
+                          {isForcing ? '...' : '🔒 Force Reset'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )
@@ -178,7 +233,7 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
               </div>
               <div style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
                 <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-                  📧 They'll receive an email with their login URL and a temporary password (<code>Welcome@FHJ1!</code>). Ask them to change it after first login.
+                  📧 They'll receive their login details by email and will be <strong>required to set their own password</strong> on first sign-in.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
