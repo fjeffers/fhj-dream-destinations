@@ -8,6 +8,7 @@ function LoginContent() {
   const router = useRouter()
   const params = useSearchParams()
   const type = params.get('type') || 'client'
+  const reason = params.get('reason')
   const isAdmin = type === 'admin'
 
   const [email, setEmail] = useState('')
@@ -80,6 +81,13 @@ function LoginContent() {
           </div>
         </div>
 
+        {/* Session expired banner */}
+        {reason === 'timeout' && (
+          <div style={{ padding: '14px 18px', background: 'rgba(196,154,10,0.08)', border: '2px solid rgba(196,154,10,0.35)', color: 'var(--gold-dark)', fontSize: 14, marginBottom: 20, borderRadius: 3, lineHeight: 1.5, textAlign: 'center' }}>
+            ⏱ Your session expired due to inactivity. Please sign in again.
+          </div>
+        )}
+
         <div className="luxury-card" style={{ padding: 44, borderRadius: 4 }}>
           <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 32, marginBottom: 8, textAlign: 'center', color: 'var(--text-rich)', fontWeight: 400 }}>
             {isAdmin ? 'Admin Login' : 'Welcome Back'}
@@ -123,6 +131,11 @@ function LoginContent() {
         <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 24, flexWrap: 'wrap' }}>
           <Link href="/" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', border: '1.5px solid rgba(14,143,143,0.35)', borderRadius: 4, background: 'white' }}>
             ← Back to Home
+          </Link>
+          {/* Toggle between staff and client login */}
+          <Link href={isAdmin ? '/login?type=client' : '/login?type=admin'}
+            style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: 'rgba(196,154,10,0.6)', textDecoration: 'none', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
+            {isAdmin ? 'Client Login' : 'Staff Login'}
           </Link>
         </div>
       </div>
