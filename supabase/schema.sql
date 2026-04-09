@@ -262,21 +262,31 @@ CREATE TABLE IF NOT EXISTS site_content (
 
 
 -- ============================================================
+-- SECTION 2b: ENSURE UNIQUE INDEXES EXIST
+-- (Safe to run even if tables already exist without constraints)
+-- ============================================================
+CREATE UNIQUE INDEX IF NOT EXISTS idx_availability_day_of_week
+  ON availability_settings(day_of_week);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_site_content_section
+  ON site_content(section);
+
+-- ============================================================
 -- SECTION 3: DEFAULT DATA
 -- ============================================================
 
 -- Default availability: Monday–Friday 9AM–5PM
-INSERT INTO availability_settings (day_of_week, start_time, end_time, active) VALUES
-  (1, '09:00', '17:00', TRUE),  -- Monday
-  (2, '09:00', '17:00', TRUE),  -- Tuesday
-  (3, '09:00', '17:00', TRUE),  -- Wednesday
-  (4, '09:00', '17:00', TRUE),  -- Thursday
-  (5, '09:00', '17:00', TRUE)   -- Friday
-ON CONFLICT (day_of_week) DO NOTHING;
+-- Using WHERE NOT EXISTS to avoid ON CONFLICT issues if constraint doesn't exist yet
+INSERT INTO availability_settings (day_of_week, start_time, end_time, active)
+  SELECT d, '09:00'::TIME, '17:00'::TIME, TRUE
+  FROM unnest(ARRAY[1,2,3,4,5]) AS d
+  WHERE NOT EXISTS (
+    SELECT 1 FROM availability_settings WHERE day_of_week = d
+  );
 
 -- Default footer content (matches hardcoded defaults in Footer.tsx)
-INSERT INTO site_content (section, content) VALUES
-  ('footer', '{
+INSERT INTO site_content (section, content)
+  SELECT 'footer', '{
     "email": "info@fhjdreamdestinations.com",
     "phone": "484-541-3573",
     "location": "Tri-State Area",
@@ -285,8 +295,8 @@ INSERT INTO site_content (section, content) VALUES
     "facebook": "",
     "instagram": "",
     "tiktok": ""
-  }')
-ON CONFLICT (section) DO NOTHING;
+  }'::JSONB
+  WHERE NOT EXISTS (SELECT 1 FROM site_content WHERE section = 'footer');
 
 
 -- ============================================================
@@ -560,3 +570,4 @@ GRANT INSERT ON event_rsvps, appointment_requests, intake_requests TO anon;
 -- DONE ✓
 -- All 12 tables created with indexes, RLS, and triggers.
 -- ============================================================
+
