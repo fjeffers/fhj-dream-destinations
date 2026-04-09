@@ -70,7 +70,7 @@ function LoginContent() {
       return
     }
 
-    router.replace(isAdmin ? '/admin' : '/portal')
+    window.location.href = isAdmin ? '/admin' : '/portal'
   }
 
   return (
