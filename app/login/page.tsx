@@ -65,6 +65,14 @@ function LoginContent() {
       return
     }
 
+    // ── First-login password change check ──────────────────────────────
+    // If must_change_password is set in user metadata, redirect to set-password
+    // before granting access to the dashboard.
+    if (data.user.user_metadata?.must_change_password === true) {
+      router.push('/set-password')
+      return
+    }
+
     window.location.replace(isAdmin ? '/admin' : '/portal')
   }
 
@@ -132,7 +140,6 @@ function LoginContent() {
           <Link href="/" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', border: '1.5px solid rgba(14,143,143,0.35)', borderRadius: 4, background: 'white' }}>
             ← Back to Home
           </Link>
-          {/* Toggle between staff and client login */}
           <Link href={isAdmin ? '/login?type=client' : '/login?type=admin'}
             style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: 'rgba(196,154,10,0.6)', textDecoration: 'none', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
             {isAdmin ? 'Client Login' : 'Staff Login'}
