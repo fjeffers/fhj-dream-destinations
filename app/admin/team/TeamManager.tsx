@@ -14,12 +14,13 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
   const [form, setForm] = useState({ full_name: '', email: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState('')
+  const [warning, setWarning] = useState('')
   const [error, setError] = useState('')
   const supabase = createClient()
 
   const invite = async () => {
     if (!form.email || !form.full_name) { setError('Name and email are required'); return }
-    setSaving(true); setError('')
+    setSaving(true); setError(''); setSaved(''); setWarning('')
     try {
       const res = await fetch('/api/invite-team', {
         method: 'POST',
@@ -28,12 +29,19 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
       })
       const result = await res.json()
       if (!res.ok) throw new Error(result.error || 'Failed to invite')
-      setSaved(`Invite sent to ${form.email}!`)
+
       setModal(false)
       setForm({ full_name: '', email: '', role: 'employee' })
-      // Reload team
+
+      // Reload team list
       const { data } = await supabase.from('profiles').select('*').in('role', ['admin', 'manager', 'employee'])
       setTeam(data || [])
+
+      if (result.emailWarning) {
+        setWarning(result.emailWarning)
+      } else {
+        setSaved(`✓ Invite sent to ${form.email}! They'll receive an email with login details.`)
+      }
     } catch (e: any) {
       setError(e.message)
     }
@@ -57,12 +65,23 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 15, marginTop: 6 }}>Manage admin team members and their access levels.</p>
         </div>
-        <button className="btn-teal" onClick={() => { setModal(true); setError('') }} style={{ borderRadius: 4, padding: '12px 28px' }}>
+        <button className="btn-teal" onClick={() => { setModal(true); setError(''); setWarning('') }} style={{ borderRadius: 4, padding: '12px 28px' }}>
           + Invite Team Member
         </button>
       </div>
 
-      {saved && <div style={{ padding: '12px 16px', background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, marginBottom: 20, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2 }}>✓ {saved}</div>}
+      {saved && (
+        <div style={{ padding: '14px 18px', background: 'rgba(26,122,74,0.1)', border: '1px solid rgba(26,122,74,0.3)', color: 'var(--success)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>
+          {saved}
+        </div>
+      )}
+
+      {/* Email warning — user created but email not sent */}
+      {warning && (
+        <div style={{ padding: '14px 18px', background: 'rgba(196,154,10,0.08)', border: '2px solid rgba(196,154,10,0.35)', color: 'var(--gold-dark)', borderRadius: 4, marginBottom: 20, fontSize: 14, lineHeight: 1.6 }}>
+          ⚠ {warning}
+        </div>
+      )}
 
       {/* Role Legend */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
@@ -91,7 +110,7 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Joined</th>
-                <th>Actions</th>
+                <th>Change Role</th>
               </tr>
             </thead>
             <tbody>
@@ -139,12 +158,12 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
             <div style={{ padding: 28 }}>
               {error && <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>{error}</div>}
               <div style={{ marginBottom: 20 }}>
-                <label className="lux-label">Full Name</label>
+                <label className="lux-label">Full Name *</label>
                 <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Sarah Johnson"
                   value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} />
               </div>
               <div style={{ marginBottom: 20 }}>
-                <label className="lux-label">Email Address</label>
+                <label className="lux-label">Email Address *</label>
                 <input className="luxury-input" style={{ borderRadius: 4 }} type="email" placeholder="team@fhjdream.com"
                   value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
               </div>
@@ -159,7 +178,7 @@ export default function TeamManager({ initialTeam }: { initialTeam: any[] }) {
               </div>
               <div style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
                 <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-                  📧 An invite email will be sent. They'll set their own password when they accept.
+                  📧 They'll receive an email with their login URL and a temporary password (<code>Welcome@FHJ1!</code>). Ask them to change it after first login.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
