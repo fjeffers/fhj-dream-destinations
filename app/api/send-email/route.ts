@@ -14,17 +14,14 @@ function wrap(preheader: string, body: string) {
 <title>FHJ Dream Destinations</title></head>
 <body style="margin:0;padding:0;background:#F9F7F2;font-family:Georgia,serif;">
 <div style="max-width:580px;margin:32px auto;background:white;border:1px solid rgba(196,154,10,0.2);overflow:hidden;">
-  <!-- Header -->
   <div style="background:linear-gradient(135deg,#076060,#3A7D7D);padding:32px 40px;text-align:center;">
     <div style="font-family:Georgia,serif;font-size:36px;color:#E8C87A;font-style:italic;line-height:1;margin-bottom:4px;">FHJ</div>
     <div style="font-size:9px;letter-spacing:6px;color:rgba(255,255,255,0.8);font-family:Arial,sans-serif;font-weight:600;">DREAM DESTINATIONS</div>
     <div style="height:1px;background:rgba(232,200,122,0.35);margin:16px auto 0;max-width:120px;"></div>
   </div>
-  <!-- Body -->
   <div style="padding:40px;">
     <span style="display:none;max-height:0;overflow:hidden;">${preheader}</span>
     ${body}
-    <!-- Footer -->
     <div style="margin-top:40px;padding-top:24px;border-top:1px solid rgba(196,154,10,0.15);text-align:center;">
       <div style="font-family:Arial,sans-serif;font-size:11px;color:rgba(46,35,24,0.45);letter-spacing:3px;margin-bottom:8px;">CURATED JOURNEYS · CRAFTED WITH INTENTION</div>
       <div style="font-family:Arial,sans-serif;font-size:12px;color:rgba(46,35,24,0.5);">
@@ -37,11 +34,14 @@ function wrap(preheader: string, body: string) {
 </body></html>`
 }
 
-// ── Email templates ───────────────────────────────────────────
+function row(label: string, value: string) {
+  return `<tr><td style="padding:6px 0;color:#8A7A6A;font-size:12px;letter-spacing:1px;font-family:Arial,sans-serif;width:130px;vertical-align:top;">${label.toUpperCase()}</td><td style="padding:6px 0 6px 12px;color:#2E2318;font-size:14px;vertical-align:top;">${value}</td></tr>`
+}
+
 function templates(type: string, d: any) {
   switch (type) {
 
-    // ── Admin: New appointment request ───────────────
+    // ── Admin: New appointment request ───────────────────────
     case 'appointment-request-admin':
       return {
         to: ADMIN,
@@ -64,7 +64,7 @@ function templates(type: string, d: any) {
         `)
       }
 
-    // ── Client: Appointment confirmation ─────────────
+    // ── Client: Appointment received ─────────────────────────
     case 'appointment-request-client':
       return {
         to: d.email,
@@ -86,7 +86,86 @@ function templates(type: string, d: any) {
         `)
       }
 
-    // ── Admin: New intake form ────────────────────────
+    // ── Client: Appointment CONFIRMED ────────────────────────
+    case 'appointment-confirmed':
+      return {
+        to: d.email,
+        subject: `✅ Appointment Confirmed — ${d.date} at ${d.time}`,
+        html: wrap(`Your appointment is confirmed for ${d.date} at ${d.time}!`, `
+          <div style="text-align:center;margin-bottom:32px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1A7A4A,#27AE60);display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">✓</div>
+            <h2 style="font-family:Georgia,serif;font-size:28px;font-weight:400;color:#2E2318;margin:0 0 8px;">You're Confirmed, ${d.name.split(' ')[0]}!</h2>
+            <p style="font-family:Arial,sans-serif;font-size:15px;color:#5a4a3a;line-height:1.7;max-width:420px;margin:0 auto;">Your appointment with FHJ Dream Destinations has been <strong style="color:#1A7A4A;">confirmed</strong>. We look forward to speaking with you!</p>
+          </div>
+          <div style="background:linear-gradient(135deg,#F9F7F2,#F0EAD8);border:1px solid rgba(196,154,10,0.25);border-left:4px solid #C49A45;padding:24px;margin-bottom:28px;">
+            <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:3px;color:#8B6A00;font-weight:600;margin-bottom:14px;">APPOINTMENT DETAILS</div>
+            <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;">
+              ${row('Date', `<strong>${d.date}</strong>`)}
+              ${row('Time', `<strong>${d.time}</strong>`)}
+              ${row('Type', d.type)}
+              ${d.notes ? row('Notes', d.notes) : ''}
+            </table>
+          </div>
+          <div style="background:rgba(14,143,143,0.06);border:1px solid rgba(14,143,143,0.2);border-radius:4px;padding:16px 20px;margin-bottom:28px;">
+            <p style="font-family:Arial,sans-serif;font-size:13px;color:#5a4a3a;margin:0;line-height:1.7;">
+              📞 Need to reschedule? Call us at <a href="tel:4845413573" style="color:#3A7D7D;font-weight:600;">484-541-3573</a> or reply to this email and we'll be happy to help.
+            </p>
+          </div>
+          <p style="font-family:Georgia,serif;font-size:16px;color:#5a4a3a;font-style:italic;margin:0;">See you soon,<br><strong style="font-style:normal;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;color:#3A7D7D;">FHJ DREAM DESTINATIONS</strong></p>
+        `)
+      }
+
+    // ── Client: Appointment CANCELLED ────────────────────────
+    case 'appointment-cancelled':
+      return {
+        to: d.email,
+        subject: `Your Appointment Has Been Cancelled — FHJ Dream Destinations`,
+        html: wrap(`Your appointment scheduled for ${d.date} at ${d.time} has been cancelled`, `
+          <h2 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#2E2318;margin:0 0 6px;">Appointment Cancelled</h2>
+          <p style="font-family:Arial,sans-serif;font-size:15px;color:#5a4a3a;line-height:1.7;margin:0 0 24px;">Hi ${d.name.split(' ')[0]}, your appointment scheduled for <strong>${d.date} at ${d.time}</strong> has been cancelled.</p>
+          <div style="background:#F9F7F2;border:1px solid rgba(196,154,10,0.2);border-left:4px solid var(--danger,#C0392B);padding:20px 24px;margin-bottom:28px;">
+            <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;">
+              ${row('Date', d.date)}
+              ${row('Time', d.time)}
+              ${row('Type', d.type)}
+              ${d.notes ? row('Note', d.notes) : ''}
+            </table>
+          </div>
+          <p style="font-family:Arial,sans-serif;font-size:15px;color:#5a4a3a;line-height:1.7;margin:0 0 24px;">We'd love to find a time that works better for you. Please reach out to reschedule at your convenience.</p>
+          <a href="${SITE}/book-appointment" style="display:inline-block;background:linear-gradient(135deg,#076060,#3A7D7D);color:white;padding:14px 36px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-decoration:none;border-radius:4px;font-weight:600;margin-bottom:28px;">BOOK A NEW APPOINTMENT →</a>
+          <p style="font-family:Arial,sans-serif;font-size:14px;color:#8A7A6A;line-height:1.7;">Questions? Call us at <a href="tel:4845413573" style="color:#3A7D7D;">484-541-3573</a> or email <a href="mailto:${ADMIN}" style="color:#3A7D7D;">${ADMIN}</a>.</p>
+          <p style="font-family:Georgia,serif;font-size:15px;color:#5a4a3a;font-style:italic;margin:24px 0 0;">Warm regards,<br><strong style="font-style:normal;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;color:#3A7D7D;">FHJ DREAM DESTINATIONS</strong></p>
+        `)
+      }
+
+    // ── Client: Appointment UPDATED (date/time/details changed) ──
+    case 'appointment-updated':
+      return {
+        to: d.email,
+        subject: `📅 Appointment Updated — ${d.date} at ${d.time}`,
+        html: wrap(`Your appointment details have been updated`, `
+          <h2 style="font-family:Georgia,serif;font-size:26px;font-weight:400;color:#2E2318;margin:0 0 6px;">Your Appointment Has Been Updated</h2>
+          <p style="font-family:Arial,sans-serif;font-size:15px;color:#5a4a3a;line-height:1.7;margin:0 0 24px;">Hi ${d.name.split(' ')[0]}, we've updated the details for your upcoming appointment. Here's everything you need to know:</p>
+          <div style="background:linear-gradient(135deg,#F9F7F2,#F0EAD8);border:1px solid rgba(196,154,10,0.25);border-left:4px solid #C49A45;padding:24px;margin-bottom:28px;">
+            <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:3px;color:#8B6A00;font-weight:600;margin-bottom:14px;">UPDATED DETAILS</div>
+            <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;">
+              ${row('Date', `<strong>${d.date}</strong>`)}
+              ${row('Time', `<strong>${d.time}</strong>`)}
+              ${row('Type', d.type)}
+              ${row('Status', `<span style="color:${d.status === 'Confirmed' ? '#1A7A4A' : d.status === 'Cancelled' ? '#C0392B' : '#C49A45'};font-weight:600;">${d.status}</span>`)}
+              ${d.notes ? row('Notes', d.notes) : ''}
+            </table>
+          </div>
+          <div style="background:rgba(14,143,143,0.06);border:1px solid rgba(14,143,143,0.2);border-radius:4px;padding:16px 20px;margin-bottom:28px;">
+            <p style="font-family:Arial,sans-serif;font-size:13px;color:#5a4a3a;margin:0;line-height:1.7;">
+              Need to make changes? Call us at <a href="tel:4845413573" style="color:#3A7D7D;font-weight:600;">484-541-3573</a> or reply to this email.
+            </p>
+          </div>
+          <p style="font-family:Georgia,serif;font-size:15px;color:#5a4a3a;font-style:italic;margin:0;">Talk soon,<br><strong style="font-style:normal;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;color:#3A7D7D;">FHJ DREAM DESTINATIONS</strong></p>
+        `)
+      }
+
+    // ── Admin: New intake form ────────────────────────────────
     case 'intake-submitted-admin':
       return {
         to: ADMIN,
@@ -111,7 +190,7 @@ function templates(type: string, d: any) {
         `)
       }
 
-    // ── Client: Intake confirmation ───────────────────
+    // ── Client: Intake confirmation ───────────────────────────
     case 'intake-submitted-client':
       return {
         to: d.email,
@@ -128,7 +207,7 @@ function templates(type: string, d: any) {
         `)
       }
 
-    // ── Guest: RSVP confirmation ──────────────────────
+    // ── Guest: RSVP confirmation ──────────────────────────────
     case 'rsvp-confirmation-guest':
       return {
         to: d.email,
@@ -151,7 +230,7 @@ function templates(type: string, d: any) {
         `)
       }
 
-    // ── Admin: New RSVP notification ──────────────────
+    // ── Admin: New RSVP notification ──────────────────────────
     case 'rsvp-notification-admin':
       return {
         to: ADMIN,
@@ -179,12 +258,6 @@ function templates(type: string, d: any) {
   }
 }
 
-// ── Helper: table row ─────────────────────────────────────────
-function row(label: string, value: string) {
-  return `<tr><td style="padding:6px 0;color:#8A7A6A;font-size:12px;letter-spacing:1px;font-family:Arial,sans-serif;width:130px;vertical-align:top;">${label.toUpperCase()}</td><td style="padding:6px 0 6px 12px;color:#2E2318;font-size:14px;vertical-align:top;">${value}</td></tr>`
-}
-
-// ── Route handler ─────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
     if (!process.env.RESEND_API_KEY) {
