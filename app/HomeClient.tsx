@@ -45,12 +45,6 @@ const testimonials = [
   { quote: "Traveling with 3 kids seemed daunting but FHJ made it seamless and magical. Our children still talk about Kyoto every single day!", name: 'The Chen Family', trip: 'Kyoto & Bali', initials: 'CF' },
 ]
 
-const team = [
-  { initials: 'FJ', name: 'Frederick Jeffers', role: 'Founder & Lead Travel Architect', specialty: 'Caribbean · Africa · Europe' },
-  { initials: 'LT', name: 'Luxury Specialists', role: 'Senior Travel Consultants', specialty: 'Asia · Pacific · Americas' },
-  { initials: 'CD', name: 'Concierge Team', role: 'On-Ground Support', specialty: 'Available 24/7 Worldwide' },
-]
-
 const C = {
   cream:    '#FDF6EC',
   sand:     '#F5ECD7',
@@ -71,7 +65,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
     headline2: heroContent.headline2 || 'perfect vacation together',
     subtext: heroContent.subtext || "A free 30-minute consultation is all it takes. We'll listen, dream together, and craft something extraordinary just for you.",
     cta_primary: heroContent.cta_primary || 'BOOK FREE CONSULTATION',
-    cta_secondary: heroContent.cta_secondary || 'MEET THE TEAM',
+    cta_secondary: heroContent.cta_secondary || 'OUR STORY',
   }
   const [slide, setSlide] = useState(0)
   const [activeT, setActiveT] = useState(0)
@@ -96,7 +90,6 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         .dest-card:hover .dest-btn { opacity:1 !important; transform:translateY(0) !important; }
         .deal-card { transition: all 0.4s cubic-bezier(0.16,1,0.3,1); }
         .deal-card:hover { transform: translateY(-10px) !important; box-shadow: 0 32px 64px rgba(196,154,69,0.18) !important; }
-        .team-card:hover { transform: translateY(-6px) !important; box-shadow: 0 20px 48px rgba(196,154,69,0.15) !important; }
         .why-card:hover { background: linear-gradient(135deg,${C.teal},#2d6666) !important; }
         .why-card:hover .why-icon { background: rgba(255,255,255,0.15) !important; }
         .why-card:hover .why-title { color:white !important; }
@@ -108,7 +101,6 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         @media (max-width: 900px) {
           .hero-logo-wrap { margin-top: 80px !important; margin-bottom: 16px !important; }
         }
-
         @media (max-width: 768px) {
           .hero-logo { width: 100px !important; height: 100px !important; }
           .hero-logo-wrap { display: none !important; }
@@ -121,7 +113,6 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
           .dest-grid { grid-template-columns: 1fr 1fr !important; }
           .dest-card-wrap { height: 200px !important; }
           .section-pad { padding: 60px 20px !important; }
-          .team-grid { grid-template-columns: 1fr !important; }
           .why-grid { grid-template-columns: 1fr !important; }
           .deals-grid { grid-template-columns: 1fr !important; }
           .cta-section { height: auto !important; min-height: 480px !important; }
@@ -134,7 +125,6 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
           .hero-paragraph { padding: 0 12px !important; }
           .testimonial-dots { margin-top: 280px !important; }
         }
-
         @media (max-width: 480px) {
           .dest-grid { grid-template-columns: 1fr !important; }
           .hero-stats { flex-direction: column !important; gap: 16px !important; }
@@ -145,7 +135,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         }
       `}</style>
 
-      {/* HERO */}
+      {/* ── HERO ── */}
       <section style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
         {slides.map((s, i) => (
           <div key={i} style={{
@@ -207,7 +197,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </section>
 
-      {/* TRUST BAR */}
+      {/* ── TRUST BAR ── */}
       <section style={{ background: C.sand, borderBottom: `1px solid rgba(196,154,69,0.2)`, position: 'relative', zIndex: 20 }}>
         <div className="trust-bar-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 60px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           {[
@@ -225,7 +215,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </section>
 
-      {/* TICKER */}
+      {/* ── TICKER ── */}
       <div style={{ background: C.teal, padding: '13px 0', overflow: 'hidden' }}>
         <div className="ticker-inner">
           {[...Array(2)].map((_, j) => (
@@ -238,7 +228,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </div>
 
-      {/* WELCOME SPLIT */}
+      {/* ── WELCOME SPLIT ── */}
       <section className="welcome-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
         <div className="welcome-left" style={{ background: C.sand, padding: '96px 72px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 5, color: C.teal, marginBottom: 20, fontWeight: 700 }}>WELCOME TO FHJ</div>
@@ -274,19 +264,20 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </section>
 
-      {/* DESTINATIONS + DEALS */}
+      {/* ── DESTINATIONS + DEALS ── */}
       <section className="section-pad" style={{ padding: '100px 60px', background: C.cream }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 52 }}>
             <div>
               <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 5, color: C.teal, marginBottom: 14, fontWeight: 700 }}>WHERE WILL YOU GO?</div>
               <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(30px,4vw,60px)', fontWeight: 300, color: C.text, lineHeight: 1 }}>
-                Destinations & <em style={{ color: C.teal }}>Featured Deals</em>
+                Destinations & <em style={{ color: C.teal }}>Deals</em>
               </h2>
             </div>
             <Link href="/book" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: C.teal, textDecoration: 'none', fontWeight: 700, borderBottom: `1px solid rgba(58,125,125,0.3)`, paddingBottom: 2, whiteSpace: 'nowrap' }}>VIEW ALL →</Link>
           </div>
 
+          {/* Destination photo grid */}
           <div className="dest-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
             {destinations.map((dest, i) => (
               <div key={dest.name} className="dest-card dest-card-wrap" style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', height: i === 0 || i === 3 ? 300 : 240, boxShadow: `0 6px 28px rgba(196,154,69,0.12)`, border: `1px solid rgba(196,154,69,0.15)` }}>
@@ -303,14 +294,9 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
             ))}
           </div>
 
+          {/* Deals grid — shown when deals exist */}
           {featured.length > 0 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '56px 0 48px' }}>
-                <div style={{ flex: 1, height: 1, background: `rgba(196,154,69,0.2)` }} />
-                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 4, color: C.teal, fontWeight: 700, whiteSpace: 'nowrap' }}>✦ FEATURED EXPERIENCES ✦</div>
-                <div style={{ flex: 1, height: 1, background: `rgba(196,154,69,0.2)` }} />
-              </div>
-
+            <div style={{ marginTop: 64 }}>
               <div className="deals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
                 {featured.map(deal => (
                   <div key={deal.id} className="deal-card" style={{ background: C.sand, borderRadius: 12, overflow: 'hidden', border: `1px solid rgba(196,154,69,0.2)`, boxShadow: `0 6px 28px rgba(196,154,69,0.1)` }}>
@@ -342,42 +328,12 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
               <div style={{ textAlign: 'center', marginTop: 48 }}>
                 <Link href="/book" style={{ display: 'inline-block', padding: '14px 44px', border: `2px solid ${C.teal}`, color: C.teal, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, textDecoration: 'none', borderRadius: 6, fontWeight: 700 }}>REQUEST CUSTOM ITINERARY</Link>
               </div>
-            </>
+            </div>
           )}
         </div>
       </section>
 
-      {/* MEET THE TEAM */}
-      <section className="section-pad" style={{ padding: '100px 60px', background: C.tealLight }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 60 }}>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 5, color: C.teal, marginBottom: 14, fontWeight: 700 }}>YOUR PERSONAL TRAVEL TEAM</div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(32px,4vw,58px)', fontWeight: 300, color: C.text, lineHeight: 1.1, marginBottom: 14 }}>
-              Real people. Real <em style={{ color: C.teal }}>passion.</em>
-            </h2>
-            <p style={{ color: C.muted, fontSize: 17, maxWidth: 520, margin: '0 auto', lineHeight: 1.75 }}>
-              When you work with FHJ, you're not getting a ticket number. You're getting a dedicated human being who genuinely cares about your vacation.
-            </p>
-          </div>
-          <div className="team-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {team.map((m, i) => (
-              <div key={i} className="team-card" style={{ background: C.cream, borderRadius: 12, padding: '44px 32px', textAlign: 'center', border: `1px solid rgba(196,154,69,0.2)`, boxShadow: `0 4px 20px rgba(196,154,69,0.08)`, transition: 'all 0.35s', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${C.teal}, ${C.gold})` }} />
-                <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg, ${C.teal}, #2d6666)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontFamily: 'Cinzel, serif', fontSize: 22, color: '#FDF6EC', fontWeight: 700, boxShadow: `0 8px 24px rgba(58,125,125,0.3)` }}>{m.initials}</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: C.text, marginBottom: 6, fontWeight: 400 }}>{m.name}</div>
-                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: C.teal, marginBottom: 8, fontWeight: 700 }}>{m.role.toUpperCase()}</div>
-                <div style={{ height: 1, background: `rgba(196,154,69,0.2)`, margin: '14px 0' }} />
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 17, color: C.muted, fontStyle: 'italic' }}>{m.specialty}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 48 }}>
-            <Link href="/about" style={{ display: 'inline-block', padding: '14px 44px', background: C.teal, color: '#FDF6EC', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, textDecoration: 'none', borderRadius: 6, fontWeight: 700 }}>READ OUR FULL STORY</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* TESTIMONIALS */}
+      {/* ── TESTIMONIALS ── */}
       <section className="section-pad" style={{ padding: '100px 60px', background: C.sand }}>
         <div style={{ maxWidth: 880, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 5, color: C.teal, marginBottom: 14, fontWeight: 700 }}>TRAVELER STORIES</div>
@@ -412,7 +368,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </section>
 
-      {/* WHY FHJ */}
+      {/* ── WHY FHJ ── */}
       <section className="section-pad" style={{ padding: '100px 60px', background: C.cream }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
@@ -440,7 +396,7 @@ export default function HomeClient({ deals, heroContent = {}, footerContent = {}
         </div>
       </section>
 
-      {/* CTA */}
+      {/* ── CTA ── */}
       <section className="cta-section" style={{ position: 'relative', height: 540, overflow: 'hidden' }}>
         <img src="https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1800&q=80" alt="Luxury Travel" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(74,55,40,0.78) 0%, rgba(74,55,40,0.5) 60%, rgba(74,55,40,0.2) 100%)' }} />
