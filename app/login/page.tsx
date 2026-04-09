@@ -22,7 +22,6 @@ function LoginContent() {
   useEffect(() => {
     const hash = window.location.hash
     if (hash && hash.includes('access_token')) {
-      // User came from password reset email - let Supabase handle it
       supabase.auth.getSession().then(({ data }) => {
         if (data.session) {
           router.replace(isAdmin ? '/admin' : '/portal')
@@ -57,7 +56,7 @@ function LoginContent() {
       return
     }
 
-    if (isAdmin && profile.role !== 'admin') {
+    if (isAdmin && !['admin', 'manager', 'employee'].includes(profile.role)) {
       await supabase.auth.signOut()
       setError('Access denied. Admin credentials required.')
       setLoading(false)
@@ -71,7 +70,6 @@ function LoginContent() {
       return
     }
 
-    // Use replace instead of push to avoid back-button loops
     router.replace(isAdmin ? '/admin' : '/portal')
   }
 
