@@ -1,6 +1,8 @@
-﻿import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminShell from './AdminShell'
+
+const ADMIN_ROLES = ['admin', 'manager', 'employee']
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -16,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || !ADMIN_ROLES.includes(profile.role)) {
     redirect('/login?type=admin')
   }
 
