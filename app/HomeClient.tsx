@@ -10,45 +10,13 @@ const slides = [
 ]
 
 const fallbackDestinations = [
-  { name: 'Maldives', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80', tag: 'Beach & Villas' },
-  { name: 'Serengeti', img: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80', tag: 'Safari' },
-  { name: 'Amalfi Coast', img: 'https://images.unsplash.com/photo-1599640842225-85d111c60e6b?auto=format&fit=crop&w=700&q=80', tag: 'Europe' },
-  { name: 'Bora Bora', img: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80', tag: 'Overwater Bungalows' },
-  { name: 'Santorini', img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80', tag: 'Europe' },
-  { name: 'Venice', img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80', tag: 'Romance' },
+  { name: 'Maldives', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80', tag: 'Beach & Villas', price: '', description: '', includes: '' },
+  { name: 'Serengeti', img: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80', tag: 'Safari', price: '', description: '', includes: '' },
+  { name: 'Amalfi Coast', img: 'https://images.unsplash.com/photo-1599640842225-85d111c60e6b?auto=format&fit=crop&w=700&q=80', tag: 'Europe', price: '', description: '', includes: '' },
+  { name: 'Bora Bora', img: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80', tag: 'Overwater Bungalows', price: '', description: '', includes: '' },
+  { name: 'Santorini', img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80', tag: 'Europe', price: '', description: '', includes: '' },
+  { name: 'Venice', img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80', tag: 'Romance', price: '', description: '', includes: '' },
 ]
-
-// Map destination keywords to Unsplash images
-const destinationImages: Record<string, string> = {
-  maldives: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80',
-  serengeti: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
-  safari: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
-  tanzania: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
-  amalfi: 'https://images.unsplash.com/photo-1599640842225-85d111c60e6b?auto=format&fit=crop&w=700&q=80',
-  italy: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80',
-  bora: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80',
-  polynesia: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80',
-  santorini: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80',
-  greece: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80',
-  venice: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80',
-  caribbean: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=700&q=80',
-  cruise: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=700&q=80',
-  paris: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=700&q=80',
-  france: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=700&q=80',
-  bali: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=700&q=80',
-  dubai: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=700&q=80',
-  iceland: 'https://images.unsplash.com/photo-1517823249524-65de05ebe0db?auto=format&fit=crop&w=700&q=80',
-  kyoto: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=700&q=80',
-  japan: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=700&q=80',
-}
-
-function getImageForDeal(deal: any): string {
-  const search = `${deal.destination || ''} ${deal.title || ''} ${deal.category || ''}`.toLowerCase()
-  for (const [key, url] of Object.entries(destinationImages)) {
-    if (search.includes(key)) return url
-  }
-  return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80'
-}
 
 const testimonials = [
   { quote: 'Frederick turned our anniversary into the most magical week of our lives. Every detail was absolutely perfect — the private villa, the surprise sunset dinner. We cried leaving!', name: 'Sarah & James M.', trip: 'Maldives', initials: 'SJ' },
@@ -74,9 +42,13 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
   const destinations = deals.length > 0
     ? deals.slice(0, 6).map((deal: any) => ({
         name: deal.title,
-        img: getImageForDeal(deal),
+        img: deal.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80',
         tag: deal.category || deal.destination || '',
-        price: deal.price,
+        price: deal.price || '',
+        description: deal.description || '',
+        includes: deal.includes || '',
+        duration: deal.duration || '',
+        destination: deal.destination || '',
         featured: deal.featured,
       }))
     : fallbackDestinations
@@ -84,6 +56,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
   const [slide, setSlide] = useState(0)
   const [activeT, setActiveT] = useState(0)
   const [loaded, setLoaded] = useState(false)
+  const [selectedDeal, setSelectedDeal] = useState<any>(null)
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 80)
@@ -97,6 +70,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
         .dest-card img { transition: transform 0.6s ease; }
         .dest-card:hover img { transform: scale(1.06); }
         .dest-card:hover .dest-btn { opacity:1 !important; transform:translateY(0) !important; }
@@ -105,40 +79,98 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
         .why-card:hover .why-title { color:white !important; }
         .why-card:hover .why-body { color:rgba(255,255,255,0.82) !important; }
         .ticker-inner { display:flex; width:max-content; animation:ticker 30s linear infinite; }
-        .slide-btn-primary:hover { background: ${C.goldDark} !important; transform:translateY(-2px); box-shadow: 0 16px 40px rgba(160,120,48,0.45) !important; }
+        .slide-btn-primary:hover { background: ${C.goldDark} !important; transform:translateY(-2px); }
         .slide-btn-ghost:hover { background: rgba(255,255,255,0.22) !important; }
-        @media (max-width: 900px) { .hero-logo-wrap { margin-top: 80px !important; margin-bottom: 16px !important; } }
         @media (max-width: 768px) {
           .hero-logo-wrap { display: none !important; }
-          .hero-stats { gap: 24px !important; margin-top: 24px !important; padding-top: 20px !important; }
-          .trust-bar-inner { flex-wrap: wrap !important; gap: 20px !important; padding: 24px 20px !important; }
-          .trust-bar-item { width: 40% !important; }
           .welcome-split { grid-template-columns: 1fr !important; }
           .welcome-left { padding: 60px 24px !important; }
           .welcome-right { padding: 40px 24px !important; }
           .dest-grid { grid-template-columns: 1fr 1fr !important; }
-          .dest-card-wrap { height: 200px !important; }
           .section-pad { padding: 60px 20px !important; }
           .why-grid { grid-template-columns: 1fr !important; }
-          .cta-section { height: auto !important; min-height: 480px !important; }
-          .cta-content { padding: 60px 24px !important; align-items: center !important; text-align: center !important; }
-          .cta-btns { justify-content: center !important; }
-          .section-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
-          .testimonial-card { padding: 32px 24px !important; }
-          .stat-number { font-size: 38px !important; }
-          .stat-row { padding: 20px 0 !important; }
-          .hero-paragraph { padding: 0 12px !important; }
-          .testimonial-dots { margin-top: 280px !important; }
+          .cta-content { padding: 60px 24px !important; }
+          .deal-modal-inner { flex-direction: column !important; }
+          .deal-modal-img { height: 240px !important; width: 100% !important; }
         }
         @media (max-width: 480px) {
           .dest-grid { grid-template-columns: 1fr !important; }
-          .hero-stats { flex-direction: column !important; gap: 16px !important; }
-          .trust-bar-item { width: 45% !important; }
-          .slide-btn-primary, .slide-btn-ghost { width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
           .hero-cta-wrap { flex-direction: column !important; align-items: stretch !important; padding: 0 16px !important; }
-          .testimonial-dots { margin-top: 360px !important; }
         }
       `}</style>
+
+      {/* ── DEAL DETAIL MODAL ── */}
+      {selectedDeal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setSelectedDeal(null) }}>
+          <div style={{ background: C.cream, borderRadius: 16, width: 'min(780px, 95vw)', maxHeight: '90vh', overflowY: 'auto', animation: 'modalIn 0.3s ease', boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
+            {/* Image */}
+            <div style={{ position: 'relative', height: 300, overflow: 'hidden', borderRadius: '16px 16px 0 0' }}>
+              <img src={selectedDeal.img} alt={selectedDeal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(46,35,24,0.7) 0%, transparent 60%)' }} />
+              <button onClick={() => setSelectedDeal(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+              {selectedDeal.featured && (
+                <div style={{ position: 'absolute', top: 16, left: 16, background: C.gold, color: C.text, padding: '4px 12px', borderRadius: 4, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, fontWeight: 700 }}>FEATURED</div>
+              )}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, padding: '20px 28px' }}>
+                {selectedDeal.tag && <div style={{ display: 'inline-block', background: C.gold, borderRadius: 3, padding: '3px 10px', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 8 }}>{selectedDeal.tag.toUpperCase()}</div>}
+                <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 36, color: '#FDF6EC', fontWeight: 300, margin: 0 }}>{selectedDeal.name}</h2>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '32px 36px' }}>
+              {/* Quick info */}
+              <div style={{ display: 'flex', gap: 24, marginBottom: 28, flexWrap: 'wrap' }}>
+                {selectedDeal.price && (
+                  <div style={{ textAlign: 'center', padding: '12px 20px', background: C.sand, borderRadius: 8, border: `1px solid rgba(196,154,69,0.2)` }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>PRICE</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, color: C.gold, fontWeight: 400 }}>{selectedDeal.price}</div>
+                  </div>
+                )}
+                {selectedDeal.duration && (
+                  <div style={{ textAlign: 'center', padding: '12px 20px', background: C.sand, borderRadius: 8, border: `1px solid rgba(196,154,69,0.2)` }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>DURATION</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, color: C.text, fontWeight: 400 }}>{selectedDeal.duration}</div>
+                  </div>
+                )}
+                {selectedDeal.destination && (
+                  <div style={{ textAlign: 'center', padding: '12px 20px', background: C.sand, borderRadius: 8, border: `1px solid rgba(196,154,69,0.2)` }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>DESTINATION</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, color: C.text, fontWeight: 400 }}>{selectedDeal.destination}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedDeal.description && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, color: C.teal, marginBottom: 10, fontWeight: 700 }}>ABOUT THIS TRIP</div>
+                  <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: C.text, lineHeight: 1.8, margin: 0 }}>{selectedDeal.description}</p>
+                </div>
+              )}
+
+              {/* What's included */}
+              {selectedDeal.includes && (
+                <div style={{ marginBottom: 32, padding: '20px 24px', background: C.sand, borderRadius: 10, border: `1px solid rgba(196,154,69,0.2)` }}>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, color: C.teal, marginBottom: 12, fontWeight: 700 }}>WHAT'S INCLUDED</div>
+                  <p style={{ fontSize: 16, color: C.muted, lineHeight: 1.9, margin: 0, whiteSpace: 'pre-line' }}>{selectedDeal.includes}</p>
+                </div>
+              )}
+
+              {/* CTA */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link href="/book-appointment" style={{ background: C.gold, color: C.text, padding: '14px 36px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, fontWeight: 800, textDecoration: 'none', display: 'inline-block', boxShadow: `0 8px 28px rgba(196,154,69,0.35)` }}>
+                  BOOK THIS TRIP
+                </Link>
+                <button onClick={() => setSelectedDeal(null)} style={{ background: 'transparent', color: C.teal, border: `2px solid ${C.teal}`, padding: '14px 28px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, fontWeight: 700, cursor: 'pointer' }}>
+                  CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <section style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
@@ -146,7 +178,6 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
           <div key={i} style={{ position: 'absolute', inset: 0, opacity: slide === i ? 1 : 0, transition: 'opacity 2s ease', zIndex: slide === i ? 1 : 0 }}>
             <img src={s.url} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(46,35,24,0.72) 0%, rgba(46,35,24,0.38) 55%, rgba(46,35,24,0.1) 100%)' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(196,154,69,0.18) 0%, transparent 50%)' }} />
           </div>
         ))}
         <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
@@ -160,18 +191,18 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
               <div style={{ width: 36, height: 1.5, background: C.goldLight, borderRadius: 2 }} />
             </div>
             <div style={{ opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.25s both' : 'none' }}>
-              <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 300, fontSize: 'clamp(42px, 8vw, 96px)', lineHeight: 0.97, color: '#FDF6EC', margin: 0, textShadow: '0 2px 24px rgba(46,35,24,0.3)' }}>
+              <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 300, fontSize: 'clamp(42px, 8vw, 96px)', lineHeight: 0.97, color: '#FDF6EC', margin: 0 }}>
                 {slides[slide].title}<br /><em style={{ color: C.goldLight }}>{slides[slide].sub}</em>
               </h1>
             </div>
-            <p className="hero-paragraph" style={{ fontSize: 16, color: 'rgba(253,246,236,0.78)', lineHeight: 1.8, maxWidth: 520, margin: '24px auto 36px', fontWeight: 300, opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.38s both' : 'none' }}>
+            <p style={{ fontSize: 16, color: 'rgba(253,246,236,0.78)', lineHeight: 1.8, maxWidth: 520, margin: '24px auto 36px', fontWeight: 300, opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.38s both' : 'none' }}>
               A real team personally dedicated to crafting the vacation you've always imagined — from first call to final goodbye.
             </p>
             <div className="hero-cta-wrap" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.48s both' : 'none' }}>
               <Link href="/book-appointment" className="slide-btn-primary" style={{ background: C.gold, color: C.text, padding: '15px 36px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, fontWeight: 800, textDecoration: 'none', display: 'inline-block', boxShadow: `0 10px 36px rgba(196,154,69,0.38)`, transition: 'all 0.3s' }}>PLAN MY VACATION</Link>
               <Link href="/about" className="slide-btn-ghost" style={{ background: 'rgba(253,246,236,0.12)', color: '#FDF6EC', border: '1.5px solid rgba(232,200,122,0.45)', padding: '15px 32px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, textDecoration: 'none', display: 'inline-block', transition: 'all 0.3s' }}>{hero.cta_secondary}</Link>
             </div>
-            <div className="hero-stats" style={{ display: 'flex', gap: 48, marginTop: 48, paddingTop: 32, borderTop: '1px solid rgba(232,200,122,0.25)', justifyContent: 'center', opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.58s both' : 'none' }}>
+            <div style={{ display: 'flex', gap: 48, marginTop: 48, paddingTop: 32, borderTop: '1px solid rgba(232,200,122,0.25)', justifyContent: 'center', opacity: loaded ? 1 : 0, animation: loaded ? 'fadeUp 0.9s ease 0.58s both' : 'none' }}>
               {[['250+','Trips Crafted'],['48','Countries'],['98%','Return Rate']].map(([n, l]) => (
                 <div key={l} style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 36, color: C.goldLight, lineHeight: 1 }}>{n}</div>
@@ -181,7 +212,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
             </div>
           </div>
         </div>
-        <div style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: 10 }}>
           {slides.map((_, i) => (
             <button key={i} onClick={() => setSlide(i)} style={{ width: slide === i ? 30 : 8, height: 8, borderRadius: 4, background: slide === i ? C.gold : 'rgba(232,200,122,0.4)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
           ))}
@@ -189,10 +220,10 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
       </section>
 
       {/* ── TRUST BAR ── */}
-      <section style={{ background: C.sand, borderBottom: `1px solid rgba(196,154,69,0.2)`, position: 'relative', zIndex: 20 }}>
-        <div className="trust-bar-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 60px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <section style={{ background: C.sand, borderBottom: `1px solid rgba(196,154,69,0.2)` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 60px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           {[{ icon: '⭐', label: '99% Satisfaction' },{ icon: '🌍', label: '48+ Countries' },{ icon: '🦁', label: 'Expert Safari Guides' },{ icon: '🚢', label: 'Luxury Cruise Lines' },{ icon: '📞', label: '24/7 Personal Support' }].map((item, i) => (
-            <div className="trust-bar-item" key={i} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div key={i} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 26 }}>{item.icon}</span>
               <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, color: C.brown, fontWeight: 700 }}>{item.label.toUpperCase()}</div>
             </div>
@@ -231,8 +262,8 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
             { n: '98%', l: 'Clients return', s: "because once isn't enough" },
             { n: '5★', l: 'Rated across the board', s: 'by the travelers who matter most' },
           ].map(({ n, l, s }, i) => (
-            <div className="stat-row" key={l} style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '28px 0', borderBottom: i < 3 ? `1px solid rgba(196,154,69,0.15)` : 'none' }}>
-              <div className="stat-number" style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 52, color: C.gold, lineHeight: 1, fontWeight: 300, minWidth: 80 }}>{n}</div>
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '28px 0', borderBottom: i < 3 ? `1px solid rgba(196,154,69,0.15)` : 'none' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 52, color: C.gold, lineHeight: 1, fontWeight: 300, minWidth: 80 }}>{n}</div>
               <div>
                 <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 4 }}>{l.toUpperCase()}</div>
                 <div style={{ fontSize: 16, color: C.muted, fontStyle: 'italic', fontFamily: 'Cormorant Garamond, serif' }}>{s}</div>
@@ -245,7 +276,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
       {/* ── DESTINATIONS ── */}
       <section className="section-pad" style={{ padding: '100px 60px', background: C.cream }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 52 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 52, flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 5, color: C.teal, marginBottom: 14, fontWeight: 700 }}>WHERE WILL YOU GO?</div>
               <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(30px,4vw,60px)', fontWeight: 300, color: C.text, lineHeight: 1 }}>Dream <em style={{ color: C.teal }}>Destinations</em></h2>
@@ -254,14 +285,15 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
           </div>
           <div className="dest-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {destinations.map((dest: any, i: number) => (
-              <div key={dest.name} className="dest-card dest-card-wrap" style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', height: i === 0 || i === 3 ? 300 : 240, boxShadow: `0 6px 28px rgba(196,154,69,0.12)`, border: `1px solid rgba(196,154,69,0.15)` }}>
+              <div key={dest.name + i} className="dest-card" style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', height: i === 0 || i === 3 ? 300 : 240, boxShadow: `0 6px 28px rgba(196,154,69,0.12)`, border: `1px solid rgba(196,154,69,0.15)` }}
+                onClick={() => setSelectedDeal(dest)}>
                 <img src={dest.img} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(46,35,24,0.72) 0%, rgba(46,35,24,0.05) 55%, transparent 100%)' }} />
                 <div className="dest-btn" style={{ position: 'absolute', inset: 0, background: 'rgba(196,154,69,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'all 0.35s ease', transform: 'translateY(8px)' }}>
-                  <Link href="/book-appointment" onClick={e => e.stopPropagation()} style={{ background: C.gold, color: C.text, padding: '11px 30px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, fontWeight: 800, textDecoration: 'none', boxShadow: '0 6px 20px rgba(196,154,69,0.4)' }}>PLAN THIS TRIP</Link>
+                  <span style={{ background: C.gold, color: C.text, padding: '11px 30px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, fontWeight: 800, boxShadow: '0 6px 20px rgba(196,154,69,0.4)' }}>VIEW DETAILS</span>
                 </div>
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 16px' }}>
-                  <div style={{ display: 'inline-block', background: C.gold, borderRadius: 3, padding: '3px 8px', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 4 }}>{(dest.tag || '').toUpperCase()}</div>
+                  {dest.tag && <div style={{ display: 'inline-block', background: C.gold, borderRadius: 3, padding: '3px 8px', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 4 }}>{dest.tag.toUpperCase()}</div>}
                   {dest.price && <div style={{ fontSize: 13, color: C.goldLight, fontFamily: 'Cormorant Garamond, serif', marginBottom: 2 }}>{dest.price}</div>}
                   <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, color: '#FDF6EC', fontWeight: 700 }}>{dest.name.toUpperCase()}</div>
                 </div>
@@ -282,7 +314,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
           <div style={{ position: 'relative', minHeight: 320 }}>
             {testimonials.map((t, i) => (
               <div key={i} style={{ position: 'absolute', inset: 0, opacity: activeT === i ? 1 : 0, transition: 'opacity 0.9s ease', pointerEvents: activeT === i ? 'auto' : 'none' }}>
-                <div className="testimonial-card" style={{ background: C.cream, borderRadius: 16, padding: '48px 56px', border: `1px solid rgba(196,154,69,0.2)`, boxShadow: `0 8px 40px rgba(196,154,69,0.1)` }}>
+                <div style={{ background: C.cream, borderRadius: 16, padding: '48px 56px', border: `1px solid rgba(196,154,69,0.2)`, boxShadow: `0 8px 40px rgba(196,154,69,0.1)` }}>
                   <div style={{ fontSize: 56, color: `rgba(196,154,69,0.35)`, fontFamily: 'Georgia', lineHeight: 1, marginBottom: 4 }}>"</div>
                   <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 19, color: C.text, lineHeight: 1.8, fontStyle: 'italic', marginBottom: 32 }}>{t.quote}</p>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -297,7 +329,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
               </div>
             ))}
           </div>
-          <div className="testimonial-dots" style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 340 }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 340 }}>
             {testimonials.map((_, i) => (
               <button key={i} onClick={() => setActiveT(i)} style={{ width: activeT === i ? 28 : 8, height: 8, borderRadius: 4, background: activeT === i ? C.teal : `rgba(58,125,125,0.25)`, border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
             ))}
@@ -319,7 +351,7 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
               { icon: '📞', title: '24/7 Real Support', body: "Flight delayed at midnight? We're awake. Something needs adjusting abroad? We're on it immediately. Your peace of mind is our job." },
               { icon: '💫', title: 'Magic in the Details', body: "Champagne on arrival, a table at that impossible restaurant, a private sunset cruise — the touches that transform a trip into a masterpiece." },
             ].map((item, i) => (
-              <div key={i} className="why-card" style={{ background: C.sand, borderRadius: 12, padding: '32px 28px', display: 'flex', gap: 20, alignItems: 'flex-start', border: `1px solid rgba(196,154,69,0.18)`, boxShadow: `0 4px 20px rgba(196,154,69,0.07)`, transition: 'all 0.4s', cursor: 'default' }}>
+              <div key={i} className="why-card" style={{ background: C.sand, borderRadius: 12, padding: '32px 28px', display: 'flex', gap: 20, alignItems: 'flex-start', border: `1px solid rgba(196,154,69,0.18)`, transition: 'all 0.4s', cursor: 'default' }}>
                 <div className="why-icon" style={{ fontSize: 32, flexShrink: 0, width: 60, height: 60, borderRadius: 12, background: `rgba(58,125,125,0.1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.4s' }}>{item.icon}</div>
                 <div>
                   <div className="why-title" style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 10, transition: 'color 0.4s' }}>{item.title.toUpperCase()}</div>
@@ -332,19 +364,18 @@ export default function HomeClient({ heroContent = {}, deals = [] }: { heroConte
       </section>
 
       {/* ── CTA ── */}
-      <section className="cta-section" style={{ position: 'relative', height: 540, overflow: 'hidden' }}>
+      <section style={{ position: 'relative', height: 540, overflow: 'hidden' }}>
         <img src="https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1800&q=80" alt="Luxury Travel" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(74,55,40,0.78) 0%, rgba(74,55,40,0.5) 60%, rgba(74,55,40,0.2) 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(196,154,69,0.2) 0%, transparent 60%)' }} />
-        <div className="cta-content" style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '0 8%' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '0 8%' }}>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 8, color: C.goldLight, marginBottom: 24, fontWeight: 600 }}>✦ YOUR TEAM IS READY ✦</div>
           <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px,5.5vw,76px)', color: '#FDF6EC', fontWeight: 300, lineHeight: 1.05, marginBottom: 20, maxWidth: 640 }}>
             {hero.headline1}<br /><em style={{ color: C.goldLight }}>{hero.headline2}</em>
           </h2>
           <p style={{ color: 'rgba(253,246,236,0.75)', fontSize: 17, lineHeight: 1.8, marginBottom: 40, maxWidth: 480 }}>{hero.subtext}</p>
-          <div className="cta-btns" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <Link href="/book-appointment" className="slide-btn-primary" style={{ background: C.gold, color: C.text, padding: '16px 44px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, fontWeight: 800, textDecoration: 'none', display: 'inline-block', boxShadow: `0 10px 36px rgba(196,154,69,0.4)`, transition: 'all 0.3s' }}>{hero.cta_primary}</Link>
-            <Link href="/about" className="slide-btn-ghost" style={{ background: 'rgba(253,246,236,0.12)', color: '#FDF6EC', border: '1.5px solid rgba(232,200,122,0.4)', padding: '16px 36px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, textDecoration: 'none', display: 'inline-block', transition: 'all 0.3s' }}>{hero.cta_secondary}</Link>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <Link href="/book-appointment" style={{ background: C.gold, color: C.text, padding: '16px 44px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 3, fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}>{hero.cta_primary}</Link>
+            <Link href="/about" style={{ background: 'rgba(253,246,236,0.12)', color: '#FDF6EC', border: '1.5px solid rgba(232,200,122,0.4)', padding: '16px 36px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, textDecoration: 'none', display: 'inline-block' }}>{hero.cta_secondary}</Link>
           </div>
         </div>
       </section>
