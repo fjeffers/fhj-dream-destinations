@@ -93,6 +93,25 @@ export default function AdminAppointmentsPage() {
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('appointment_requests').update({ status }).eq('id', id)
+
+    // Email client on status change (non-blocking)
+    const appt = requests.find(r => r.id === id)
+    if (appt?.email) {
+      const emailType =
+        status === 'Confirmed' ? 'appointment-confirmed' :
+        status === 'Cancelled' ? 'appointment-cancelled' : null
+      if (emailType) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: emailType,
+            data: { name: appt.client_name, email: appt.email, date: appt.date, time: appt.time, type: appt.type, notes: appt.notes || '' },
+          }),
+        }).catch((e: any) => console.warn('Email failed:', e))
+      }
+    }
+
     fetchRequests()
   }
 
@@ -108,6 +127,29 @@ export default function AdminAppointmentsPage() {
     try {
       const { error } = await supabase.from('appointment_requests').update(editForm).eq('id', editRecord.id)
       if (error) throw error
+
+      // Email client when admin edits appointment (non-blocking)
+      if (editRecord.email) {
+        const statusChanged  = editForm.status !== editRecord.status
+        const detailsChanged = editForm.date !== editRecord.date || editForm.time !== editRecord.time
+        const emailType =
+          (statusChanged && editForm.status === 'Confirmed') ? 'appointment-confirmed' :
+          (statusChanged && editForm.status === 'Cancelled') ? 'appointment-cancelled' :
+          (detailsChanged || statusChanged)                  ? 'appointment-updated'   : null
+        if (emailType) {
+          fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: emailType,
+              data: { name: editRecord.client_name, email: editRecord.email,
+                      date: editForm.date, time: editForm.time, type: editForm.type,
+                      status: editForm.status, notes: editForm.notes },
+            }),
+          }).catch((e: any) => console.warn('Email failed:', e))
+        }
+      }
+
       setEditModal(false)
       setEditRecord(null)
       fetchRequests()
@@ -570,3 +612,4 @@ export default function AdminAppointmentsPage() {
     </div>
   )
 }
+
