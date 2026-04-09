@@ -1,14 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function PortalDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user!.id).single()
-  const { data: bookings } = await supabase.from('bookings').select('*').eq('client_id', user!.id).order('created_at', { ascending: false }).limit(3)
-  const { data: appointments } = await supabase.from('appointments').select('*').eq('client_id', user!.id).gte('date', new Date().toISOString().split('T')[0]).order('date').limit(3)
-  const { data: events } = await supabase.from('events').select('*').eq('active', true).order('date').limit(2)
 
+  // Guard: portal layout should catch this, but double-check
+  if (!user) redirect('/login?type=client')
+
+  const [profileRes, bookingsRes, appointmentsRes, eventsRes] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('bookings').select('*').eq('client_id', user.id).order('created_at', { ascending: false }).limit(3),
+    supabase.from('appointments').select('*').eq('client_id', user.id).gte('date', new Date().toISOString().split('T')[0]).order('date').limit(3),
+    supabase.from('events').select('*').eq('active', true).order('date').limit(2),
+  ])
+
+  const profile = profileRes.data
+  const bookings = bookingsRes.data || []
+  const appointments = appointmentsRes.data || []
+  const events = eventsRes.data || []
   const firstName = profile?.full_name?.split(' ')[0] || 'Valued Client'
 
   return (
@@ -21,12 +32,11 @@ export default async function PortalDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Membership', value: profile?.tier || 'Silver', sub: 'Current Tier' },
           { label: 'Total Trips', value: profile?.trips_count || 0, sub: 'Journeys Taken' },
           { label: 'Total Spent', value: `$${(profile?.total_spent || 0).toLocaleString()}`, sub: 'Lifetime Value' },
-          { label: 'Your Advisor', value: 'Sophia Laurent', sub: 'Senior Architect' },
         ].map(stat => (
           <div key={stat.label} className="luxury-card" style={{ padding: 22 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', marginBottom: 8 }}>{stat.label}</div>
@@ -37,13 +47,13 @@ export default async function PortalDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Upcoming Bookings */}
+        {/* Upcoming Trips */}
         <div className="luxury-card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--gold)' }}>UPCOMING TRIPS</div>
             <Link href="/portal/trips" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', textDecoration: 'none' }}>View All →</Link>
           </div>
-          {bookings && bookings.length > 0 ? bookings.map(b => (
+          {bookings.length > 0 ? bookings.map((b: any) => (
             <div key={b.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{b.package_name}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -64,8 +74,9 @@ export default async function PortalDashboard() {
         <div className="luxury-card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--gold)' }}>UPCOMING APPOINTMENTS</div>
+            <Link href="/book-appointment" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', textDecoration: 'none' }}>Book One →</Link>
           </div>
-          {appointments && appointments.length > 0 ? appointments.map(a => (
+          {appointments.length > 0 ? appointments.map((a: any) => (
             <div key={a.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{a.type}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -85,20 +96,20 @@ export default async function PortalDashboard() {
       </div>
 
       {/* Exclusive Events Preview */}
-      {events && events.length > 0 && (
+      {events.length > 0 && (
         <div className="luxury-card" style={{ padding: 24, marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--gold)' }}>EXCLUSIVE EVENTS FOR YOU</div>
             <Link href="/portal/events" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', textDecoration: 'none' }}>View All →</Link>
           </div>
-          {events.map(ev => (
+          {events.map((ev: any) => (
             <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
               <div style={{ width: 44, height: 44, background: 'rgba(201,168,76,0.1)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)', flexShrink: 0, fontSize: 18 }}>★</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 2 }}>{ev.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{ev.date} · {ev.location}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{ev.date}{ev.location ? ` · ${ev.location}` : ''}</div>
               </div>
-              <Link href="/portal/events" className="btn-ghost btn-sm">RSVP</Link>
+              <Link href="/portal/events" className="btn-ghost btn-sm">View</Link>
             </div>
           ))}
         </div>
