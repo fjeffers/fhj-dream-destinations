@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -31,12 +31,19 @@ export default function AdminShell({ children, profile }: { children: React.Reac
     router.refresh()
   }
 
+  // FIX: dispatch on window with bubbles:true so event reaches window listeners in useInactivityLogout
+  // BUG WAS: document.dispatchEvent(new MouseEvent('click')) — MouseEvent defaults bubbles:false
+  // so the event never propagated from document → window, meaning the timer was never reset.
+  const resetInactivityTimer = () => {
+    window.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {showWarning && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: 'rgba(192,57,43,0.95)', color: 'white', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
           <span>⚠ ADMIN SESSION EXPIRING IN {countdown}s DUE TO INACTIVITY</span>
-          <button onClick={() => document.dispatchEvent(new MouseEvent('click'))} style={{ background: 'white', color: 'rgba(192,57,43,0.9)', border: 'none', padding: '6px 16px', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', borderRadius: 2, fontWeight: 700 }}>STAY LOGGED IN</button>
+          <button onClick={resetInactivityTimer} style={{ background: 'white', color: 'rgba(192,57,43,0.9)', border: 'none', padding: '6px 16px', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', borderRadius: 2, fontWeight: 700 }}>STAY LOGGED IN</button>
         </div>
       )}
       <div style={{ width: 230, background: 'white', borderRight: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, bottom: 0, left: 0 }}>
