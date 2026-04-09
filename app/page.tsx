@@ -12,10 +12,17 @@ export default async function HomePage() {
     .eq('section', 'hero')
     .single()
 
+  const { data: deals } = await supabase
+    .from('deals')
+    .select('*')
+    .eq('active', true)
+    .order('featured', { ascending: false })
+    .limit(6)
+
   return (
     <>
       <Navigation />
-      <HomeClient heroContent={heroData?.content || {}} />
+      <HomeClient heroContent={heroData?.content || {}} deals={deals || []} />
       <Footer />
     </>
   )
