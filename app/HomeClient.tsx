@@ -9,7 +9,7 @@ const slides = [
   { url: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=1800&q=80', eyebrow: 'European Romance', title: 'Moments That', sub: 'Last Forever' },
 ]
 
-const destinations = [
+const fallbackDestinations = [
   { name: 'Maldives', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80', tag: 'Beach & Villas' },
   { name: 'Serengeti', img: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80', tag: 'Safari' },
   { name: 'Amalfi Coast', img: 'https://images.unsplash.com/photo-1599640842225-85d111c60e6b?auto=format&fit=crop&w=700&q=80', tag: 'Europe' },
@@ -17,6 +17,38 @@ const destinations = [
   { name: 'Santorini', img: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80', tag: 'Europe' },
   { name: 'Venice', img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80', tag: 'Romance' },
 ]
+
+// Map destination keywords to Unsplash images
+const destinationImages: Record<string, string> = {
+  maldives: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80',
+  serengeti: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
+  safari: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
+  tanzania: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=700&q=80',
+  amalfi: 'https://images.unsplash.com/photo-1599640842225-85d111c60e6b?auto=format&fit=crop&w=700&q=80',
+  italy: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80',
+  bora: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80',
+  polynesia: 'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=700&q=80',
+  santorini: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80',
+  greece: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=700&q=80',
+  venice: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=700&q=80',
+  caribbean: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=700&q=80',
+  cruise: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=700&q=80',
+  paris: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=700&q=80',
+  france: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=700&q=80',
+  bali: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=700&q=80',
+  dubai: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=700&q=80',
+  iceland: 'https://images.unsplash.com/photo-1517823249524-65de05ebe0db?auto=format&fit=crop&w=700&q=80',
+  kyoto: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=700&q=80',
+  japan: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=700&q=80',
+}
+
+function getImageForDeal(deal: any): string {
+  const search = `${deal.destination || ''} ${deal.title || ''} ${deal.category || ''}`.toLowerCase()
+  for (const [key, url] of Object.entries(destinationImages)) {
+    if (search.includes(key)) return url
+  }
+  return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80'
+}
 
 const testimonials = [
   { quote: 'Frederick turned our anniversary into the most magical week of our lives. Every detail was absolutely perfect — the private villa, the surprise sunset dinner. We cried leaving!', name: 'Sarah & James M.', trip: 'Maldives', initials: 'SJ' },
@@ -30,7 +62,7 @@ const C = {
   brown: '#4A3728', muted: '#8A7A6A', text: '#2E2318',
 }
 
-export default function HomeClient({ heroContent = {} }: { heroContent?: any }) {
+export default function HomeClient({ heroContent = {}, deals = [] }: { heroContent?: any, deals?: any[] }) {
   const hero = {
     headline1: heroContent.headline1 || "Let's plan your",
     headline2: heroContent.headline2 || 'perfect vacation together',
@@ -38,6 +70,17 @@ export default function HomeClient({ heroContent = {} }: { heroContent?: any }) 
     cta_primary: heroContent.cta_primary || 'BOOK FREE CONSULTATION',
     cta_secondary: heroContent.cta_secondary || 'OUR STORY',
   }
+
+  const destinations = deals.length > 0
+    ? deals.slice(0, 6).map((deal: any) => ({
+        name: deal.title,
+        img: getImageForDeal(deal),
+        tag: deal.category || deal.destination || '',
+        price: deal.price,
+        featured: deal.featured,
+      }))
+    : fallbackDestinations
+
   const [slide, setSlide] = useState(0)
   const [activeT, setActiveT] = useState(0)
   const [loaded, setLoaded] = useState(false)
@@ -210,7 +253,7 @@ export default function HomeClient({ heroContent = {} }: { heroContent?: any }) 
             <Link href="/book" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: C.teal, textDecoration: 'none', fontWeight: 700, borderBottom: `1px solid rgba(58,125,125,0.3)`, paddingBottom: 2, whiteSpace: 'nowrap' }}>START PLANNING →</Link>
           </div>
           <div className="dest-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {destinations.map((dest, i) => (
+            {destinations.map((dest: any, i: number) => (
               <div key={dest.name} className="dest-card dest-card-wrap" style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', height: i === 0 || i === 3 ? 300 : 240, boxShadow: `0 6px 28px rgba(196,154,69,0.12)`, border: `1px solid rgba(196,154,69,0.15)` }}>
                 <img src={dest.img} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(46,35,24,0.72) 0%, rgba(46,35,24,0.05) 55%, transparent 100%)' }} />
@@ -218,7 +261,8 @@ export default function HomeClient({ heroContent = {} }: { heroContent?: any }) 
                   <Link href="/book-appointment" onClick={e => e.stopPropagation()} style={{ background: C.gold, color: C.text, padding: '11px 30px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, fontWeight: 800, textDecoration: 'none', boxShadow: '0 6px 20px rgba(196,154,69,0.4)' }}>PLAN THIS TRIP</Link>
                 </div>
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 16px' }}>
-                  <div style={{ display: 'inline-block', background: C.gold, borderRadius: 3, padding: '3px 8px', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 4 }}>{dest.tag.toUpperCase()}</div>
+                  <div style={{ display: 'inline-block', background: C.gold, borderRadius: 3, padding: '3px 8px', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.text, fontWeight: 700, marginBottom: 4 }}>{(dest.tag || '').toUpperCase()}</div>
+                  {dest.price && <div style={{ fontSize: 13, color: C.goldLight, fontFamily: 'Cormorant Garamond, serif', marginBottom: 2 }}>{dest.price}</div>}
                   <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2, color: '#FDF6EC', fontWeight: 700 }}>{dest.name.toUpperCase()}</div>
                 </div>
               </div>
