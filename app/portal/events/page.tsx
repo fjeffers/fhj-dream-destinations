@@ -13,11 +13,11 @@ export default async function EventsPage() {
     .eq('active', true)
     .order('date')
 
-  // Safely extract this user's RSVPs
+  // FIX: attach event_id from parent when flattening so we can match RSVPs to events
   const myRsvps = (events || [])
-    .flatMap(e => e.event_rsvps || [])
+    .flatMap(e => (e.event_rsvps || []).map((r: any) => ({ ...r, event_id: e.id })))
     .filter((r: any) => r.client_id === user.id)
-    .map((r: any) => r.event_id)
+    .map((r: any) => r.event_id as string)
 
   return (
     <EventsClient
