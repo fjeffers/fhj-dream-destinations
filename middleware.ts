@@ -9,9 +9,13 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -21,16 +25,23 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Refresh session - this is critical
   const { data: { user } } = await supabase.auth.getUser()
 
   // Protect /portal routes
   if (request.nextUrl.pathname.startsWith('/portal') && !user) {
-    return NextResponse.redirect(new URL('/login?type=client', request.url))
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('type', 'client')
+    return NextResponse.redirect(url)
   }
 
   // Protect /admin routes
   if (request.nextUrl.pathname.startsWith('/admin') && !user) {
-    return NextResponse.redirect(new URL('/login?type=admin', request.url))
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('type', 'admin')
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
