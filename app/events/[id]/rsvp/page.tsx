@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import RsvpForm from './RsvpForm'
 
-export default async function EventRsvpPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+export default async function EventRsvpPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
 
   const { data: event } = await supabase
     .from('events')
