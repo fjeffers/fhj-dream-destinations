@@ -4,11 +4,12 @@ import RsvpForm from './RsvpForm'
 
 export default async function EventRsvpPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const supabase = await createClient()
 
   const { data: event } = await supabase
     .from('events')
     .select('*, event_rsvps(id, party_size)')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('active', true)
     .single()
 
@@ -97,7 +98,6 @@ export default async function EventRsvpPage({ params }: { params: Promise<{ id: 
           <RsvpForm event={{ id: event.id, title: event.title, capacity: event.capacity, spotsLeft }} />
         )}
 
-        {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 48, paddingTop: 32, borderTop: '1px solid rgba(196,154,10,0.15)' }}>
           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 16, color: 'rgba(44,32,16,0.5)', fontStyle: 'italic' }}>Curated by FHJ Dream Destinations</div>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 4, color: 'rgba(14,143,143,0.5)', marginTop: 6 }}>info@fhjdreamdestinations.com</div>
