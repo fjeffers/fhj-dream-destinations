@@ -25,16 +25,19 @@ export default function PortalShell({ children, profile }: { children: React.Rea
     router.refresh()
   }
 
+  // FIX: dispatch on window with bubbles:true so event reaches window listeners in useInactivityLogout
+  const resetInactivityTimer = () => {
+    window.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Inactivity Warning */}
       {showWarning && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: 'rgba(192,57,43,0.95)', color: 'white', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
           <span>⚠ SESSION EXPIRING IN {countdown}s DUE TO INACTIVITY</span>
-          <button onClick={() => document.dispatchEvent(new MouseEvent('click'))} style={{ background: 'white', color: 'rgba(192,57,43,0.9)', border: 'none', padding: '6px 16px', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', borderRadius: 2, fontWeight: 700 }}>STAY LOGGED IN</button>
+          <button onClick={resetInactivityTimer} style={{ background: 'white', color: 'rgba(192,57,43,0.9)', border: 'none', padding: '6px 16px', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', borderRadius: 2, fontWeight: 700 }}>STAY LOGGED IN</button>
         </div>
       )}
-      {/* Sidebar */}
       <div style={{ width: 220, background: 'white', borderRight: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, bottom: 0, left: 0 }}>
         <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: 'var(--gold)', fontStyle: 'italic' }}>FHJ</div>
@@ -60,7 +63,6 @@ export default function PortalShell({ children, profile }: { children: React.Rea
           </button>
         </div>
       </div>
-      {/* Content */}
       <div style={{ flex: 1, marginLeft: 220, padding: 36, overflowY: 'scroll', minHeight: '100vh', background: 'var(--ivory)' }}>
         {children}
       </div>
