@@ -1,10 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function TripsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: bookings } = await supabase.from('bookings').select('*').eq('client_id', user!.id).order('created_at', { ascending: false })
+  if (!user) redirect('/login?type=client')
+
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('client_id', user.id)
+    .order('created_at', { ascending: false })
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease' }}>
@@ -16,7 +23,7 @@ export default async function TripsPage() {
       </div>
       {bookings && bookings.length > 0 ? (
         <div style={{ display: 'grid', gap: 16 }}>
-          {bookings.map(b => (
+          {bookings.map((b: any) => (
             <div key={b.id} className="luxury-card" style={{ padding: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div style={{ fontSize: 44, flexShrink: 0 }}>✈️</div>
@@ -34,29 +41,15 @@ export default async function TripsPage() {
                   {b.notes && <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>{b.notes}</p>}
                 </div>
               </div>
-              {b.status === 'Confirmed' && (
-                <div style={{ marginTop: 20 }}>
-                  <div style={{ background: 'var(--panel2)', borderRadius: 2, height: 4, overflow: 'hidden' }}>
-                    <div style={{ width: '65%', height: '100%', background: 'linear-gradient(90deg,var(--gold-dark),var(--gold))' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: 'var(--muted)' }}>
-                    <span>Booking Confirmed</span><span>65% Prepared</span>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '80px 40px' }} className="luxury-card">
-          <div style={{ fontSize: 64, marginBottom: 24 }}>✈️</div>
-          <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 32, marginBottom: 16, fontWeight: 300 }}>
-            Your <em style={{ color: 'var(--gold)' }}>Adventure</em> Awaits
-          </h3>
-          <p style={{ color: 'var(--muted)', maxWidth: 400, margin: '0 auto 32px', lineHeight: 1.8 }}>
-            You haven't booked any trips yet. Let our luxury travel architects craft your perfect journey.
-          </p>
-          <Link href="/book" className="btn-gold">Plan My First Journey</Link>
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)' }}>
+          <div style={{ fontSize: 56, marginBottom: 20 }}>✈️</div>
+          <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, marginBottom: 12 }}>No trips yet</h3>
+          <p style={{ fontSize: 15, marginBottom: 28 }}>Your booked journeys will appear here.</p>
+          <Link href="/book" className="btn-gold">Plan Your First Trip</Link>
         </div>
       )}
     </div>
