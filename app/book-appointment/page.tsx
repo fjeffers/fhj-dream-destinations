@@ -38,10 +38,19 @@ export default function BookAppointmentPage() {
   const supabase = useState(() => createClient())[0]
 
   useEffect(() => {
-    supabase.from('availability_settings').select('*').eq('active', true).then(({ data }) => setAvailability(data || []))
+    // Load availability settings — fall back to Mon-Fri if table doesn't exist
+    supabase.from('availability_settings').select('*').eq('active', true).then(({ data, error }) => {
+      if (error || !data || data.length === 0) {
+        // Default: Mon–Fri available (days 1–5)
+        setAvailability([1,2,3,4,5].map(d => ({ day_of_week: d, start_time: '09:00', end_time: '17:00' })))
+      } else {
+        setAvailability(data)
+      }
+    })
+    // Load booked slots from both tables
     supabase.from('appointments').select('date, time').then(({ data }) => setBookedSlots(data || []))
     supabase.from('appointment_requests').select('date, time').eq('status', 'Confirmed').then(({ data }) => {
-      setBookedSlots(p => [...p, ...(data || [])])
+      if (data) setBookedSlots(p => [...p, ...data])
     })
   }, [])
 
