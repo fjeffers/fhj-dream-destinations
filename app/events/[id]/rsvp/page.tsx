@@ -19,6 +19,10 @@ export default async function EventRsvpPage({ params }: { params: Promise<{ id: 
   const spotsLeft = Math.max(0, (event.capacity || 100) - totalAttending)
   const isFull = spotsLeft === 0
 
+  const heroBg = event.background_image_url
+    ? `url('${event.background_image_url}')`
+    : 'linear-gradient(135deg, #076060 0%, #0E8F8F 50%, #076060 100%)'
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #FDFAF3 0%, #EDF7F7 60%, #FDFAF3 100%)' }}>
       {/* Header */}
@@ -36,9 +40,20 @@ export default async function EventRsvpPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Event Hero */}
-      <div style={{ background: 'linear-gradient(135deg, #076060 0%, #0E8F8F 50%, #076060 100%)', padding: '64px 32px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        background: heroBg,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        padding: '64px 32px',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Dark overlay for readability when using image */}
+        {event.background_image_url && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,96,96,0.65)' }} />
+        )}
         <div style={{ position: 'absolute', inset: 24, border: '1px solid rgba(255,255,255,0.12)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 36, border: '1px solid rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
         {[['top','left'],['top','right'],['bottom','left'],['bottom','right']].map(([v,h]) => (
           <div key={v+h} style={{ position: 'absolute', [v]: 24, [h]: 24, width: 28, height: 28,
             borderTop: v==='top' ? '2px solid rgba(196,154,10,0.7)' : 'none',
@@ -56,10 +71,16 @@ export default async function EventRsvpPage({ params }: { params: Promise<{ id: 
           <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px,7vw,72px)', fontWeight: 300, color: 'white', lineHeight: 1.05, marginBottom: 20 }}>
             {event.title}
           </h1>
+          {/* Host info with photo */}
           {event.hosted_by && (
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic', marginBottom: 28 }}>
-              Hosted by {event.hosted_by}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 28 }}>
+              {event.host_image_url && (
+                <img src={event.host_image_url} alt={event.hosted_by} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,154,10,0.7)' }} />
+              )}
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 18, color: 'rgba(255,255,255,0.85)', fontStyle: 'italic' }}>
+                Hosted by {event.hosted_by}
+              </p>
+            </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
             {[
