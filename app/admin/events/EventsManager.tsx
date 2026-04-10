@@ -369,4 +369,3 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
     </div>
   )
 }
-
