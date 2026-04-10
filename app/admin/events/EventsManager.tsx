@@ -15,7 +15,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
   const [copied, setCopied] = useState<string | null>(null)
   const supabase = createClient()
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fhj-dream-destinations.vercel.app'
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fhjdreamdestinations.com'
 
   const copyLink = (eventId: string) => {
     navigator.clipboard.writeText(`${baseUrl}/events/${eventId}/rsvp`)
@@ -44,6 +44,8 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
       active: form.active !== false,
       occasion: form.occasion || null,
       hosted_by: form.hosted_by || null,
+      host_image_url: form.host_image_url || null,
+      background_image_url: form.background_image_url || null,
     }
     if (editing) {
       const { data, error } = await supabase.from('events').update(payload).eq('id', editing.id)
@@ -99,7 +101,6 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
         </button>
       </div>
 
-      {/* How it works banner */}
       <div style={{ background: 'rgba(14,143,143,0.06)', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 6, padding: '16px 22px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 20 }}>💡</span>
         <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6 }}>
@@ -127,26 +128,28 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
 
             return (
               <div key={ev.id} style={{ background: 'white', borderRadius: 8, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 2px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-                {/* Top accent line */}
                 <div style={{ height: 3, background: ev.active ? 'linear-gradient(90deg, var(--teal-dark), var(--gold), var(--teal-light))' : '#ddd' }} />
                 <div style={{ padding: '24px 28px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                        {ev.occasion && <span className="badge badge-gold">{ev.occasion}</span>}
-                        <span className={`badge ${ev.active ? 'badge-success' : 'badge-danger'}`}>{ev.active ? 'Active' : 'Hidden'}</span>
-                      </div>
-                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', marginBottom: 6 }}>{ev.title}</h3>
-                      {ev.hosted_by && (
-                        <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 8 }}>Hosted by {ev.hosted_by}</p>
+                    <div style={{ flex: 1, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                      {ev.host_image_url && (
+                        <img src={ev.host_image_url} alt={ev.hosted_by} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,154,10,0.3)', flexShrink: 0 }} />
                       )}
-                      <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
-                        {ev.date && <span>📅 {new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}{ev.time ? ` at ${ev.time}` : ''}</span>}
-                        {ev.location && <span>📍 {ev.location}</span>}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                          {ev.occasion && <span className="badge badge-gold">{ev.occasion}</span>}
+                          <span className={`badge ${ev.active ? 'badge-success' : 'badge-danger'}`}>{ev.active ? 'Active' : 'Hidden'}</span>
+                        </div>
+                        <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 26, color: 'var(--text-rich)', marginBottom: 6 }}>{ev.title}</h3>
+                        {ev.hosted_by && (
+                          <p style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 8 }}>Hosted by {ev.hosted_by}</p>
+                        )}
+                        <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
+                          {ev.date && <span>📅 {new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}{ev.time ? ` at ${ev.time}` : ''}</span>}
+                          {ev.location && <span>📍 {ev.location}</span>}
+                        </div>
                       </div>
                     </div>
-
-                    {/* RSVP Stats */}
                     <div style={{ textAlign: 'center', minWidth: 100 }}>
                       <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 44, color: 'var(--teal)', lineHeight: 1 }}>{totalGuests}</div>
                       <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', marginTop: 2 }}>GUESTS</div>
@@ -154,7 +157,6 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                     </div>
                   </div>
 
-                  {/* Capacity bar */}
                   <div style={{ margin: '16px 0 20px' }}>
                     <div style={{ height: 5, background: '#F0EAD8', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? 'var(--danger)' : 'linear-gradient(90deg, var(--teal-dark), var(--teal))', transition: 'width 0.5s', borderRadius: 3 }} />
@@ -164,29 +166,18 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                     </div>
                   </div>
 
-                  {/* RSVP Link + Actions */}
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {/* Link display */}
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0, background: '#F9F7F2', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 4, overflow: 'hidden', minWidth: 240 }}>
                       <div style={{ padding: '9px 14px', fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         🔗 {rsvpLink}
                       </div>
-                      <button
-                        onClick={() => copyLink(ev.id)}
-                        style={{ padding: '9px 16px', background: isCopied ? 'var(--success)' : 'var(--teal)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, whiteSpace: 'nowrap', transition: 'background 0.2s', fontWeight: 700 }}>
+                      <button onClick={() => copyLink(ev.id)} style={{ padding: '9px 16px', background: isCopied ? 'var(--success)' : 'var(--teal)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, whiteSpace: 'nowrap', transition: 'background 0.2s', fontWeight: 700 }}>
                         {isCopied ? '✓ COPIED' : 'COPY LINK'}
                       </button>
                     </div>
-
-                    <button className="btn-ghost btn-sm" onClick={() => setRsvpView(ev)} style={{ borderRadius: 4 }}>
-                      👥 View RSVPs ({rsvpCount})
-                    </button>
-                    <button className="btn-ghost btn-sm" onClick={() => openEdit(ev)} style={{ borderRadius: 4 }}>
-                      Edit
-                    </button>
-                    <button className="btn-danger" onClick={() => deleteEvent(ev.id)} style={{ borderRadius: 4 }}>
-                      Delete
-                    </button>
+                    <button className="btn-ghost btn-sm" onClick={() => setRsvpView(ev)} style={{ borderRadius: 4 }}>👥 View RSVPs ({rsvpCount})</button>
+                    <button className="btn-ghost btn-sm" onClick={() => openEdit(ev)} style={{ borderRadius: 4 }}>Edit</button>
+                    <button className="btn-danger" onClick={() => deleteEvent(ev.id)} style={{ borderRadius: 4 }}>Delete</button>
                   </div>
                 </div>
               </div>
@@ -210,8 +201,6 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
               </div>
               <button onClick={() => setRsvpView(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
             </div>
-
-            {/* Copy link row */}
             <div style={{ padding: '14px 28px', background: 'rgba(14,143,143,0.04)', borderBottom: '1px solid rgba(196,154,10,0.1)', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 13, color: 'var(--muted)' }}>Share link:</span>
               <div style={{ flex: 1, fontSize: 12, color: 'var(--teal-dark)', background: '#F9F7F2', padding: '7px 12px', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 3, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -221,7 +210,6 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                 {copied === rsvpView.id ? '✓ Copied' : 'Copy'}
               </button>
             </div>
-
             <div style={{ padding: '20px 28px' }}>
               {!rsvpView.event_rsvps?.length ? (
                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--muted)' }}>
@@ -230,7 +218,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: 14 }}>
-                  {rsvpView.event_rsvps.map((r: any, i: number) => (
+                  {rsvpView.event_rsvps.map((r: any) => (
                     <div key={r.id} style={{ background: r.status === 'cancelled' ? '#FFF5F5' : '#FAFAF7', border: `1.5px solid ${r.status === 'cancelled' ? 'rgba(192,57,43,0.2)' : 'rgba(196,154,10,0.15)'}`, borderRadius: 8, padding: '18px 22px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -240,21 +228,14 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-rich)' }}>{r.name || '—'}</div>
                             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
-                              {r.email}
-                              {r.phone && <span style={{ marginLeft: 12 }}>· {r.phone}</span>}
+                              {r.email}{r.phone && <span style={{ marginLeft: 12 }}>· {r.phone}</span>}
                             </div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'var(--teal-dark)' }}>
-                            👥 {r.party_size || 1} guest{(r.party_size || 1) !== 1 ? 's' : ''}
-                          </span>
-                          {r.source === 'public_link' && (
-                            <span className="badge badge-teal" style={{ fontSize: 8 }}>Via Link</span>
-                          )}
-                          <select
-                            value={r.status || 'confirmed'}
-                            onChange={e => updateRsvpStatus(rsvpView.id, r.id, e.target.value)}
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'var(--teal-dark)' }}>👥 {r.party_size || 1} guest{(r.party_size || 1) !== 1 ? 's' : ''}</span>
+                          {r.source === 'public_link' && <span className="badge badge-teal" style={{ fontSize: 8 }}>Via Link</span>}
+                          <select value={r.status || 'confirmed'} onChange={e => updateRsvpStatus(rsvpView.id, r.id, e.target.value)}
                             style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1.5px solid var(--border)', borderRadius: 4, padding: '5px 8px', background: 'white', color: 'var(--teal-dark)', cursor: 'pointer', outline: 'none' }}>
                             <option value="confirmed">Confirmed</option>
                             <option value="waitlist">Waitlist</option>
@@ -264,18 +245,8 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                       </div>
                       {(r.dietary_needs || r.message) && (
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(196,154,10,0.1)', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                          {r.dietary_needs && (
-                            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'var(--gold-dark)', marginRight: 6 }}>DIETARY:</span>
-                              {r.dietary_needs}
-                            </div>
-                          )}
-                          {r.message && (
-                            <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'var(--gold-dark)', fontStyle: 'normal', marginRight: 6 }}>MESSAGE:</span>
-                              "{r.message}"
-                            </div>
-                          )}
+                          {r.dietary_needs && <div style={{ fontSize: 13, color: 'var(--muted)' }}><span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'var(--gold-dark)', marginRight: 6 }}>DIETARY:</span>{r.dietary_needs}</div>}
+                          {r.message && <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic' }}><span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'var(--gold-dark)', fontStyle: 'normal', marginRight: 6 }}>MESSAGE:</span>"{r.message}"</div>}
                         </div>
                       )}
                       <div style={{ fontSize: 11, color: 'rgba(44,32,16,0.35)', marginTop: 8 }}>
@@ -304,6 +275,11 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
               <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
             </div>
             <div style={{ padding: 28 }}>
+              {saveError && (
+                <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>
+                  ⚠ {saveError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                 {/* Occasion */}
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
@@ -322,6 +298,27 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
                   <label className="lux-label">Hosted By (Primary Client)</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Marcus & Diana Johnson" value={form.hosted_by || ''} onChange={e => setForm((p: any) => ({ ...p, hosted_by: e.target.value }))} />
+                </div>
+                {/* Host Image URL */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Host Photo URL (jpg, png, webp etc.)</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="https://... paste a direct image link" value={form.host_image_url || ''} onChange={e => setForm((p: any) => ({ ...p, host_image_url: e.target.value }))} />
+                  {form.host_image_url && (
+                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <img src={form.host_image_url} alt="Host preview" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,154,10,0.3)' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>Host photo preview</span>
+                    </div>
+                  )}
+                </div>
+                {/* Background Image URL */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Background Image URL (shown on RSVP page)</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="https://... paste a direct image link" value={form.background_image_url || ''} onChange={e => setForm((p: any) => ({ ...p, background_image_url: e.target.value }))} />
+                  {form.background_image_url && (
+                    <div style={{ marginTop: 10, borderRadius: 8, overflow: 'hidden', height: 120 }}>
+                      <img src={form.background_image_url} alt="Background preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                    </div>
+                  )}
                 </div>
                 {/* Date + Time */}
                 <div style={{ marginBottom: 18 }}>
