@@ -3,15 +3,27 @@ import { useState, useEffect } from 'react'
 import { notifyAppointmentBooked, sendClientConfirmation } from '@/lib/sendEmail'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
 const TYPES = ['Consultation', 'Trip Planning', 'Intake', 'Follow-Up', 'VIP Meeting']
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+// Schedule: Mon-Fri 4pm-10:30pm, Sat 8am-10:30pm, Sun 12pm-9pm
+const DAY_SCHEDULE: Record<number, { start: string, end: string }> = {
+  0: { start: '12:00', end: '21:00' },
+  1: { start: '16:00', end: '22:30' },
+  2: { start: '16:00', end: '22:30' },
+  3: { start: '16:00', end: '22:30' },
+  4: { start: '16:00', end: '22:30' },
+  5: { start: '16:00', end: '22:30' },
+  6: { start: '08:00', end: '22:30' },
+}
+
 function generateSlots(start: string, end: string): string[] {
   const slots: string[] = []
   const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number) // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [eh, em] = end.split(':').map(Number)
   let h = sh, m = sm
   while (h < eh || (h === eh && m < em)) {
     const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
@@ -23,56 +35,69 @@ function generateSlots(start: string, end: string): string[] {
   return slots
 }
 
-export default function BookAppointmentPage() {
+function slugToName(slug: string): string {
+  return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+function getFirstName(fullName: string): string {
+  return fullName.split(' ')[0]
+}
+
+export default function PersonalizedBookingPage() {
+  const params = useParams()
+  const slug = params?.slug as string || ''
+  const clientName = slugToName(slug)
+  const firstName = getFirstName(clientName)
+
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [confirmId, setConfirmId] = useState('')
-  const [availability, setAvailability] = useState<any[]>([])
   const [bookedSlots, setBookedSlots] = useState<{date: string, time: string}[]>([])
+  const [blockedDays, setBlockedDays] = useState<string[]>([])
+  const [blockedSlots, setBlockedSlots] = useState<{date: string, time: string}[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState('')
   const [calMonth, setCalMonth] = useState(new Date())
-  const [form, setForm] = useState({ name: '', email: '', phone: '', type: 'Consultation', notes: '' })
+  const [form, setForm] = useState({ name: clientName, email: '', phone: '', type: 'Consultation', notes: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const supabase = useState(() => createClient())[0]
-
-  useEffect(() => {
-    // Load availability settings — fall back to Mon-Fri if table doesn't exist
-    supabase.from('availability_settings').select('*').eq('active', true).then(({ data, error }) => {
-      if (error || !data || data.length === 0) {
-        // Default: Mon–Fri available (days 1–5)
-        setAvailability([1,2,3,4,5].map(d => ({ day_of_week: d, start_time: '09:00', end_time: '17:00' })))
-      } else {
-        setAvailability(data)
-      }
-    })
-    // Load booked slots from both tables
-    supabase.from('appointments').select('date, time').then(({ data }) => setBookedSlots(data || []))
-    supabase.from('appointment_requests').select('date, time').eq('status', 'Confirmed').then(({ data }) => {
-      if (data) setBookedSlots(p => [...p, ...data])
-    })
-  }, [])
+  const supabase = createClient()
 
   const year = calMonth.getFullYear()
   const month = calMonth.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const today = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d })[0]
+  const today = new Date(); today.setHours(0,0,0,0)
+
+  useEffect(() => {
+    supabase.from('appointments').select('date, time').then(({ data }) => setBookedSlots(data || []))
+    supabase.from('appointment_requests').select('date, time').eq('status', 'Confirmed').then(({ data }) => {
+      if (data) setBookedSlots(p => [...p, ...data])
+    })
+    supabase.from('blocked_dates').select('date').then(({ data }) => {
+      if (data) setBlockedDays(data.map((d: any) => d.date))
+    })
+    supabase.from('blocked_slots').select('date, time').then(({ data }) => {
+      if (data) setBlockedSlots(data)
+    })
+  }, [])
 
   const isAvailable = (date: Date) => {
     if (date < today) return false
+    const dateStr = date.toISOString().split('T')[0]
+    if (blockedDays.includes(dateStr)) return false
     const dow = date.getDay()
-    return availability.some(a => a.day_of_week === dow)
+    return !!DAY_SCHEDULE[dow]
   }
 
   const getSlotsForDate = (date: Date) => {
     const dow = date.getDay()
-    const avail = availability.find(a => a.day_of_week === dow)
-    if (!avail) return []
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const sched = DAY_SCHEDULE[dow]
+    if (!sched) return []
+    const dateStr = date.toISOString().split('T')[0]
     const booked = bookedSlots.filter(b => b.date === dateStr).map(b => b.time)
-    return generateSlots(avail.start_time, avail.end_time).filter(s => !booked.includes(s))
+    const blocked = blockedSlots.filter(s => s.date === dateStr).map(s => s.time)
+    return generateSlots(sched.start, sched.end).filter(s => !booked.includes(s) && !blocked.includes(s))
   }
 
   const submit = async () => {
@@ -80,119 +105,107 @@ export default function BookAppointmentPage() {
       setError('Please fill in all required fields'); return
     }
     setLoading(true); setError('')
-    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+    const dateStr = selectedDate.toISOString().split('T')[0]
     const { data, error: err } = await supabase.from('appointment_requests').insert({
       ...form, date: dateStr, time: selectedTime, status: 'Pending'
     }).select().single()
     if (err) { setError(err.message); setLoading(false); return }
-    setConfirmId(data.token || data.id)
-    // Send email notifications (non-blocking)
-    notifyAppointmentBooked({
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      date: dateStr,
-      time: selectedTime,
-      type: form.type,
-      notes: form.notes,
+
+    await notifyAppointmentBooked({
+      name: form.name, email: form.email, phone: form.phone,
+      date: dateStr, time: selectedTime, type: form.type, notes: form.notes
     })
-    sendClientConfirmation({
+    await sendClientConfirmation({
       to_email: form.email,
       to_name: form.name,
-      subject: 'Your Appointment Request — FHJ Dream Destinations',
-      message: `Hi ${form.name},\n\nThank you for requesting an appointment with FHJ Dream Destinations!\n\nYour requested time: ${selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${selectedTime}\nAppointment type: ${form.type}\n\nWe will confirm your appointment within 2 hours.\n\nWarm regards,\nThe FHJ Dream Destinations Team\ninfo@fhjdreamdestinations.com`
+      subject: 'Your Appointment — FHJ Dream Destinations',
+      message: `Hi ${firstName},\n\nThank you for booking with FHJ Dream Destinations!\n\nDate: ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\nTime: ${selectedTime}\nType: ${form.type}\n\nWe will confirm your appointment within 2 hours.\n\nWarm regards,\nFHJ Dream Destinations`
     })
+
+    setConfirmId(data.token || data.id)
     setSubmitted(true); setLoading(false)
   }
 
   if (submitted) return (
-    <div style={{ minHeight: '100vh', background: 'var(--ivory)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ maxWidth: 520, textAlign: 'center', animation: 'fadeUp 0.8s ease' }}>
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', fontSize: 32, color: 'white' }}>✓</div>
-        <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 44, fontWeight: 300, marginBottom: 16, color: 'var(--text-rich)' }}>Request <em style={{ color: 'var(--teal-dark)' }}>Received</em></h2>
-        <p style={{ fontSize: 18, color: 'var(--muted)', lineHeight: 1.8, marginBottom: 24 }}>
-          Your appointment request for <strong>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</strong> at <strong>{selectedTime}</strong> has been submitted. We'll confirm within 2 hours.
+    <div style={{ minHeight: '100vh', background: '#FDFAF3', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ maxWidth: 540, textAlign: 'center' }}>
+        <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'linear-gradient(135deg, #076060, #0E8F8F)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', fontSize: 36, color: 'white' }}>✓</div>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 5, color: '#076060', marginBottom: 16, fontWeight: 700 }}>YOU'RE ALL SET, {firstName.toUpperCase()}!</div>
+        <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 48, fontWeight: 300, marginBottom: 16, color: '#2E2318', lineHeight: 1.1 }}>
+          We can't wait to <em style={{ color: '#076060' }}>meet you!</em>
+        </h2>
+        <div style={{ height: 2, background: 'linear-gradient(90deg, transparent, rgba(196,154,10,0.5), transparent)', margin: '0 auto 24px', maxWidth: 200 }} />
+        <p style={{ fontSize: 18, color: 'rgba(44,35,24,0.65)', lineHeight: 1.8, marginBottom: 28, fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
+          Your appointment request for <strong style={{ fontStyle: 'normal', color: '#2E2318' }}>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</strong> at <strong style={{ fontStyle: 'normal', color: '#2E2318' }}>{selectedTime}</strong> has been received. We'll confirm within 2 hours.
         </p>
         <div style={{ background: 'white', border: '1px solid rgba(196,154,10,0.25)', borderRadius: 8, padding: '16px 24px', marginBottom: 32 }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 6 }}>CONFIRMATION ID</div>
-          <div style={{ fontFamily: 'monospace', fontSize: 15, color: 'var(--text-rich)', wordBreak: 'break-all' }}>{confirmId}</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: '#076060', marginBottom: 6 }}>CONFIRMATION ID</div>
+          <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#2E2318', wordBreak: 'break-all' }}>{confirmId}</div>
         </div>
-        <Link href="/" className="btn-teal" style={{ borderRadius: 4, padding: '14px 44px', display: 'inline-block' }}>Return Home</Link>
+        <Link href="/" style={{ display: 'inline-block', background: '#076060', color: 'white', padding: '14px 44px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, textDecoration: 'none', fontWeight: 700 }}>Return Home</Link>
       </div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--ivory)' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .appt-header { padding: 16px 16px !important; }
-          .appt-header-title { display: none !important; }
-          .appt-step-label { display: none !important; }
-          .appt-steps { gap: 4px !important; }
-          .appt-step-connector { width: 40px !important; }
-          .appt-card { padding: 20px 16px !important; }
-          .appt-time-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .appt-form-grid { grid-template-columns: 1fr !important; }
-          .appt-summary { flex-direction: column !important; gap: 12px !important; }
-          .appt-summary-divider { display: none !important; }
-        }
-        @media (max-width: 480px) {
-          .appt-time-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-      `}</style>
+    <div style={{ minHeight: '100vh', background: '#FDFAF3' }}>
       {/* Header */}
-      <div className="appt-header" style={{ background: 'white', borderBottom: '2px solid rgba(196,154,10,0.2)', padding: '20px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: 'white', borderBottom: '2px solid rgba(196,154,10,0.2)', padding: '20px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid var(--gold)', background: 'white', padding: 4, boxShadow: '0 2px 12px rgba(196,154,10,0.2)', flexShrink: 0 }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #C49A45', background: 'white', padding: 4, boxShadow: '0 2px 12px rgba(196,154,10,0.2)', flexShrink: 0 }}>
             <img src="/logo.png" alt="FHJ" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} />
           </div>
           <div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'var(--gold-dark)', fontWeight: 700, letterSpacing: 2 }}>FHJ DREAM</div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 4, color: 'var(--teal-dark)', fontWeight: 600 }}>DESTINATIONS</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#C49A45', fontWeight: 700, letterSpacing: 2 }}>FHJ DREAM</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: '#076060', fontWeight: 600 }}>DESTINATIONS</div>
           </div>
         </Link>
-        <span className="appt-header-title" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, color: 'var(--teal-dark)', fontWeight: 600 }}>SCHEDULE A CONSULTATION</span>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: '#076060', fontWeight: 600 }}>PRIVATE BOOKING</div>
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 24px' }}>
+        {/* Personalized hero */}
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 6, color: 'var(--teal)', marginBottom: 14, fontWeight: 600 }}>BOOK AN APPOINTMENT</div>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 52, fontWeight: 300, color: 'var(--text-rich)', lineHeight: 1.05 }}>
-            Schedule Your <em style={{ color: 'var(--teal-dark)' }}>Consultation</em>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 48, height: 1, background: 'rgba(196,154,10,0.4)' }} />
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 5, color: '#076060', fontWeight: 700 }}>PRIVATE RESERVATION</span>
+            <div style={{ width: 48, height: 1, background: 'rgba(196,154,10,0.4)' }} />
+          </div>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 'clamp(36px,6vw,64px)', fontWeight: 300, color: '#2E2318', lineHeight: 1.1, marginBottom: 16 }}>
+            Welcome, <em style={{ color: '#076060' }}>{firstName}</em>
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 18, marginTop: 16, lineHeight: 1.7 }}>
-            Select a date and time that works for you. We'll confirm your appointment within 2 hours.
+          <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 20, color: 'rgba(44,35,24,0.6)', lineHeight: 1.7, fontStyle: 'italic', maxWidth: 560, margin: '0 auto' }}>
+            We're delighted to have you. Please select a date and time for your private consultation with FHJ Dream Destinations.
           </p>
         </div>
 
         {/* Steps */}
-        <div className="appt-steps" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 48 }}>
-          {['Select Date', 'Choose Time', 'Your Details'].map((s, i) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 48 }}>
+          {['Select Date', 'Choose Time', 'Confirm'].map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: step > i + 1 ? 'var(--teal)' : step === i + 1 ? 'var(--teal-dark)' : 'white', border: step <= i + 1 ? (step === i + 1 ? 'none' : '2px solid rgba(14,143,143,0.3)') : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: step >= i + 1 ? 'white' : 'var(--muted)', fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, transition: 'all 0.3s' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: step > i + 1 ? '#0E8F8F' : step === i + 1 ? '#076060' : 'white', border: step <= i + 1 ? (step === i + 1 ? 'none' : '2px solid rgba(14,143,143,0.3)') : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: step >= i + 1 ? 'white' : 'rgba(44,35,24,0.4)', fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, transition: 'all 0.3s' }}>
                   {step > i + 1 ? '✓' : i + 1}
                 </div>
-                <span className="appt-step-label" style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: step === i + 1 ? 'var(--teal-dark)' : 'var(--muted)', fontWeight: 600 }}>{s}</span>
+                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: step === i + 1 ? '#076060' : 'rgba(44,35,24,0.4)', fontWeight: 600 }}>{s}</span>
               </div>
-              {i < 2 && <div className="appt-step-connector" style={{ width: 80, height: 2, background: step > i + 1 ? 'var(--teal)' : 'rgba(14,143,143,0.2)', margin: '0 8px', marginBottom: 24, transition: 'background 0.3s' }} />}
+              {i < 2 && <div style={{ width: 80, height: 2, background: step > i + 1 ? '#0E8F8F' : 'rgba(14,143,143,0.2)', margin: '0 8px', marginBottom: 24, transition: 'background 0.3s' }} />}
             </div>
           ))}
         </div>
 
-        {error && <div style={{ padding: '14px 18px', background: 'rgba(192,57,43,0.08)', border: '2px solid rgba(192,57,43,0.3)', color: 'var(--danger)', fontSize: 16, marginBottom: 24, borderRadius: 6 }}>{error}</div>}
+        {error && <div style={{ padding: '14px 18px', background: 'rgba(192,57,43,0.08)', border: '2px solid rgba(192,57,43,0.3)', color: '#C0392B', fontSize: 15, marginBottom: 24, borderRadius: 6 }}>{error}</div>}
 
         {/* Step 1: Calendar */}
         {step === 1 && (
-          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-              <button className="btn-ghost" style={{ borderRadius: 4, padding: '8px 18px', fontSize: 11 }} onClick={() => setCalMonth(new Date(year, month - 1, 1))}>← Prev</button>
-              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 15, letterSpacing: 2, color: 'var(--text-rich)', fontWeight: 700 }}>{MONTHS[month]} {year}</span>
-              <button className="btn-ghost" style={{ borderRadius: 4, padding: '8px 18px', fontSize: 11 }} onClick={() => setCalMonth(new Date(year, month + 1, 1))}>Next →</button>
+              <button onClick={() => setCalMonth(new Date(year, month - 1, 1))} style={{ padding: '8px 18px', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1px solid rgba(196,154,10,0.3)', background: 'transparent', color: '#2E2318', cursor: 'pointer', borderRadius: 4 }}>← Prev</button>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, letterSpacing: 2, color: '#2E2318', fontWeight: 700 }}>{MONTHS[month]} {year}</span>
+              <button onClick={() => setCalMonth(new Date(year, month + 1, 1))} style={{ padding: '8px 18px', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1px solid rgba(196,154,10,0.3)', background: 'transparent', color: '#2E2318', cursor: 'pointer', borderRadius: 4 }}>Next →</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8 }}>
-              {DAYS.map(d => <div key={d} style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', padding: '6px 0', fontWeight: 700 }}>{d}</div>)}
+              {DAYS.map(d => <div key={d} style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: '#076060', padding: '6px 0', fontWeight: 700 }}>{d}</div>)}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
@@ -204,46 +217,44 @@ export default function BookAppointmentPage() {
                 const isPast = date < today
                 return (
                   <div key={d} onClick={() => { if (avail) { setSelectedDate(date); setSelectedTime('') } }}
-                    style={{ aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: avail ? 'pointer' : 'default', background: isSelected ? 'var(--teal-dark)' : avail ? 'rgba(14,143,143,0.06)' : 'transparent', color: isSelected ? 'white' : isPast ? '#ccc' : avail ? 'var(--text-rich)' : '#ccc', fontWeight: isSelected ? 700 : 400, fontSize: 16, border: isSelected ? 'none' : avail ? '1px solid rgba(14,143,143,0.2)' : 'none', transition: 'all 0.2s' }}>
+                    style={{ aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: avail ? 'pointer' : 'default', background: isSelected ? '#076060' : avail ? 'rgba(14,143,143,0.06)' : 'transparent', color: isSelected ? 'white' : isPast ? '#ccc' : avail ? '#2E2318' : '#ccc', fontWeight: isSelected ? 700 : 400, fontSize: 15, border: isSelected ? 'none' : avail ? '1px solid rgba(14,143,143,0.2)' : 'none', transition: 'all 0.2s' }}>
                     {d}
                   </div>
                 )
               })}
             </div>
-            <div style={{ display: 'flex', gap: 20, marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(196,154,10,0.15)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--muted)' }}><div style={{ width: 14, height: 14, borderRadius: 3, background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)' }} /> Available</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--muted)' }}><div style={{ width: 14, height: 14, borderRadius: 3, background: 'var(--teal-dark)' }} /> Selected</div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(196,154,10,0.1)' }}>
-              <button className="btn-teal" style={{ borderRadius: 4, padding: '12px 36px', opacity: selectedDate ? 1 : 0.4, cursor: selectedDate ? 'pointer' : 'default' }} onClick={() => selectedDate && setStep(2)}>
-                Continue → Select Time
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(196,154,10,0.1)' }}>
+              <button onClick={() => selectedDate && setStep(2)}
+                style={{ background: selectedDate ? '#076060' : 'rgba(14,96,96,0.3)', color: 'white', border: 'none', padding: '13px 36px', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, cursor: selectedDate ? 'pointer' : 'default', borderRadius: 6, fontWeight: 700 }}>
+                CONTINUE →
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Time Slots */}
+        {/* Step 2: Time */}
         {step === 2 && selectedDate && (
-          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
-            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: 'var(--text-rich)', marginBottom: 6 }}>
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: '#2E2318', marginBottom: 6 }}>
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
-            <p style={{ color: 'var(--muted)', fontSize: 16, marginBottom: 28 }}>Select a 30-minute time slot</p>
-            <div className="appt-time-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            <p style={{ color: 'rgba(44,35,24,0.55)', fontSize: 15, marginBottom: 28, fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>Select your preferred time, {firstName}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
               {getSlotsForDate(selectedDate).map(slot => (
                 <button key={slot} onClick={() => setSelectedTime(slot)}
-                  style={{ padding: '12px 8px', borderRadius: 6, border: `2px solid ${selectedTime === slot ? 'var(--teal)' : 'rgba(14,143,143,0.2)'}`, background: selectedTime === slot ? 'rgba(14,143,143,0.1)' : 'white', color: selectedTime === slot ? 'var(--teal-dark)' : 'var(--text)', fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 1, cursor: 'pointer', fontWeight: selectedTime === slot ? 700 : 400, transition: 'all 0.2s' }}>
+                  style={{ padding: '12px 8px', borderRadius: 6, border: `2px solid ${selectedTime === slot ? '#076060' : 'rgba(14,143,143,0.2)'}`, background: selectedTime === slot ? 'rgba(7,96,96,0.08)' : 'white', color: selectedTime === slot ? '#076060' : '#2E2318', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, cursor: 'pointer', fontWeight: selectedTime === slot ? 700 : 400, transition: 'all 0.2s' }}>
                   {slot}
                 </button>
               ))}
               {getSlotsForDate(selectedDate).length === 0 && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px 0', color: 'var(--muted)', fontSize: 16 }}>No slots available for this date</div>
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px 0', color: 'rgba(44,35,24,0.5)', fontSize: 16, fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>No slots available — please select another date</div>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32, paddingTop: 20, borderTop: '1px solid rgba(196,154,10,0.1)' }}>
-              <button className="btn-ghost" style={{ borderRadius: 4, padding: '12px 28px' }} onClick={() => setStep(1)}>← Back</button>
-              <button className="btn-teal" style={{ borderRadius: 4, padding: '12px 36px', opacity: selectedTime ? 1 : 0.4, cursor: selectedTime ? 'pointer' : 'default' }} onClick={() => selectedTime && setStep(3)}>
-                Continue → Your Details
+              <button onClick={() => setStep(1)} style={{ padding: '12px 28px', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1px solid rgba(196,154,10,0.3)', background: 'transparent', color: '#2E2318', cursor: 'pointer', borderRadius: 6 }}>← Back</button>
+              <button onClick={() => selectedTime && setStep(3)}
+                style={{ background: selectedTime ? '#076060' : 'rgba(14,96,96,0.3)', color: 'white', border: 'none', padding: '13px 36px', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, cursor: selectedTime ? 'pointer' : 'default', borderRadius: 6, fontWeight: 700 }}>
+                CONTINUE →
               </button>
             </div>
           </div>
@@ -251,34 +262,52 @@ export default function BookAppointmentPage() {
 
         {/* Step 3: Details */}
         {step === 3 && (
-          <div className="appt-card" style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
-            <div className="appt-summary" style={{ background: 'rgba(14,143,143,0.06)', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 8, padding: '16px 20px', marginBottom: 32, display: 'flex', gap: 24 }}>
-              <div><div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 4 }}>DATE</div><div style={{ fontSize: 16, color: 'var(--text-rich)', fontWeight: 600 }}>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div></div>
-              <div className="appt-summary-divider" style={{ width: 1, background: 'rgba(14,143,143,0.2)' }} />
-              <div><div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2, color: 'var(--teal-dark)', marginBottom: 4 }}>TIME</div><div style={{ fontSize: 16, color: 'var(--text-rich)', fontWeight: 600 }}>{selectedTime}</div></div>
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 4px 32px rgba(0,0,0,0.06)', padding: 36 }}>
+            {/* Summary */}
+            <div style={{ background: 'rgba(7,96,96,0.05)', border: '1px solid rgba(7,96,96,0.15)', borderRadius: 8, padding: '16px 20px', marginBottom: 32, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: '#076060', marginBottom: 4 }}>DATE</div>
+                <div style={{ fontSize: 15, color: '#2E2318', fontWeight: 600 }}>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+              </div>
+              <div style={{ width: 1, background: 'rgba(7,96,96,0.15)' }} />
+              <div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: '#076060', marginBottom: 4 }}>TIME</div>
+                <div style={{ fontSize: 15, color: '#2E2318', fontWeight: 600 }}>{selectedTime}</div>
+              </div>
             </div>
-            <div className="appt-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
-              {[['Full Name *', 'name', 'text'], ['Email *', 'email', 'email'], ['Phone', 'phone', 'tel']].map(([label, field, type]) => (
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+              <div style={{ marginBottom: 20, gridColumn: '1 / -1' }}>
+                <label style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: '#076060', display: 'block', marginBottom: 8, fontWeight: 700 }}>FULL NAME</label>
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  style={{ width: '100%', border: '1.5px solid rgba(196,154,10,0.3)', padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: 17, color: '#2E2318', outline: 'none', borderRadius: 6, boxSizing: 'border-box' as const }} />
+              </div>
+              {[['EMAIL ADDRESS *', 'email', 'email'], ['PHONE NUMBER', 'phone', 'tel']].map(([label, field, type]) => (
                 <div key={field} style={{ marginBottom: 20 }}>
-                  <label className="lux-label">{label}</label>
-                  <input className="luxury-input" type={type} value={(form as any)[field]} onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))} style={{ borderRadius: 4 }} />
+                  <label style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: '#076060', display: 'block', marginBottom: 8, fontWeight: 700 }}>{label}</label>
+                  <input type={type} value={(form as any)[field]} onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
+                    style={{ width: '100%', border: '1.5px solid rgba(196,154,10,0.3)', padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: 17, color: '#2E2318', outline: 'none', borderRadius: 6, boxSizing: 'border-box' as const }} />
                 </div>
               ))}
               <div style={{ marginBottom: 20 }}>
-                <label className="lux-label">Appointment Type</label>
-                <select className="luxury-input" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={{ borderRadius: 4 }}>
+                <label style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: '#076060', display: 'block', marginBottom: 8, fontWeight: 700 }}>APPOINTMENT TYPE</label>
+                <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
+                  style={{ width: '100%', border: '1.5px solid rgba(196,154,10,0.3)', padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: 17, color: '#2E2318', outline: 'none', borderRadius: 6, background: 'white', boxSizing: 'border-box' as const }}>
                   {TYPES.map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
             </div>
-            <div style={{ marginBottom: 24 }}>
-              <label className="lux-label">Notes (Optional)</label>
-              <textarea className="luxury-input" rows={3} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="What would you like to discuss?" style={{ resize: 'vertical', borderRadius: 4 }} />
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: '#076060', display: 'block', marginBottom: 8, fontWeight: 700 }}>NOTES <span style={{ color: 'rgba(7,96,96,0.5)', fontWeight: 400 }}>(OPTIONAL)</span></label>
+              <textarea rows={3} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                placeholder={`What would you like to discuss, ${firstName}?`}
+                style={{ width: '100%', border: '1.5px solid rgba(196,154,10,0.3)', padding: '13px 16px', fontFamily: 'Cormorant Garamond, serif', fontSize: 17, color: '#2E2318', outline: 'none', borderRadius: 6, resize: 'vertical', boxSizing: 'border-box' as const }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <button className="btn-ghost" style={{ borderRadius: 4, padding: '12px 28px' }} onClick={() => setStep(2)}>← Back</button>
-              <button className="btn-teal" style={{ borderRadius: 4, padding: '14px 44px', opacity: loading ? 0.7 : 1 }} onClick={submit} disabled={loading}>
-                {loading ? 'Submitting...' : 'Confirm Appointment ✦'}
+              <button onClick={() => setStep(2)} style={{ padding: '12px 28px', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1px solid rgba(196,154,10,0.3)', background: 'transparent', color: '#2E2318', cursor: 'pointer', borderRadius: 6 }}>← Back</button>
+              <button onClick={submit} disabled={loading}
+                style={{ background: loading ? 'rgba(7,96,96,0.5)' : '#076060', color: 'white', border: 'none', padding: '14px 44px', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, cursor: loading ? 'not-allowed' : 'pointer', borderRadius: 6, fontWeight: 700, boxShadow: loading ? 'none' : '0 6px 24px rgba(7,96,96,0.3)' }}>
+                {loading ? 'CONFIRMING...' : 'CONFIRM MY APPOINTMENT ✦'}
               </button>
             </div>
           </div>
