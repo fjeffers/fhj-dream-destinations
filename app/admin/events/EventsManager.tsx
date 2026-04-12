@@ -17,9 +17,7 @@ function ImageUploader({ label, value, onChange, round = false }: { label: strin
     setError('')
     const ext = file.name.split('.').pop()
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { data, error: uploadError } = await supabase.storage
-      .from('event-images')
-      .upload(filename, file, { upsert: true })
+    const { data, error: uploadError } = await supabase.storage.from('event-images').upload(filename, file, { upsert: true })
     if (uploadError) { setError(`Upload failed: ${uploadError.message}`); setUploading(false); return }
     const { data: urlData } = supabase.storage.from('event-images').getPublicUrl(data.path)
     onChange(urlData.publicUrl)
@@ -36,28 +34,12 @@ function ImageUploader({ label, value, onChange, round = false }: { label: strin
   return (
     <div style={{ marginBottom: 18 }}>
       <label className="lux-label">{label}</label>
-      {/* Drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        style={{
-          border: `2px dashed ${dragging ? 'var(--teal)' : 'rgba(196,154,10,0.35)'}`,
-          borderRadius: round ? '50%' : 8,
-          padding: round ? 0 : '20px',
-          textAlign: 'center',
-          cursor: 'pointer',
-          background: dragging ? 'rgba(14,143,143,0.06)' : '#FAFAF7',
-          transition: 'all 0.2s',
-          width: round ? 100 : '100%',
-          height: round ? 100 : 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
+        style={{ border: `2px dashed ${dragging ? 'var(--teal)' : 'rgba(196,154,10,0.35)'}`, borderRadius: round ? '50%' : 8, padding: round ? 0 : '20px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(14,143,143,0.06)' : '#FAFAF7', transition: 'all 0.2s', width: round ? 100 : '100%', height: round ? 100 : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
         {value ? (
           <img src={value} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: round ? '50%' : 6 }} />
         ) : uploading ? (
@@ -71,24 +53,17 @@ function ImageUploader({ label, value, onChange, round = false }: { label: strin
         )}
         <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f) }} />
       </div>
-      {/* Or paste URL */}
       <div style={{ marginTop: 8 }}>
-        <input
-          className="luxury-input"
-          style={{ borderRadius: 4, fontSize: 12 }}
-          placeholder="Or paste image URL here..."
-          value={value}
-          onChange={e => onChange(e.target.value)}
-        />
+        <input className="luxury-input" style={{ borderRadius: 4, fontSize: 12 }} placeholder="Or paste image URL here..." value={value} onChange={e => onChange(e.target.value)} />
       </div>
       {error && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>⚠ {error}</div>}
-      {value && (
-        <button onClick={() => onChange('')} style={{ marginTop: 6, fontSize: 11, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          ✕ Remove image
-        </button>
-      )}
+      {value && <button onClick={() => onChange('')} style={{ marginTop: 6, fontSize: 11, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ Remove image</button>}
     </div>
   )
+}
+
+function slugify(text: string) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 export default function EventsManager({ initialEvents }: { initialEvents: any[] }) {
@@ -104,9 +79,14 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fhjdreamdestinations.com'
 
-  const copyLink = (eventId: string) => {
-    navigator.clipboard.writeText(`${baseUrl}/events/${eventId}/rsvp`)
-    setCopied(eventId)
+  const getRsvpLink = (ev: any) => {
+    const slug = ev.slug || ev.id
+    return `${baseUrl}/events/${slug}/rsvp`
+  }
+
+  const copyLink = (ev: any) => {
+    navigator.clipboard.writeText(getRsvpLink(ev))
+    setCopied(ev.id)
     setTimeout(() => setCopied(null), 2500)
   }
 
@@ -116,14 +96,17 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
     setSaveError('')
     setModal(true)
   }
+
   const openEdit = (ev: any) => { setEditing(ev); setForm({ ...ev }); setSaveError(''); setModal(true) }
 
   const save = async () => {
     if (!form.title) { setSaveError('Event title is required.'); return }
     setSaving(true)
     setSaveError('')
+    const slug = form.slug || slugify(form.title)
     const payload = {
       title: form.title,
+      slug,
       description: form.description || null,
       date: form.date || null,
       time: form.time || null,
@@ -134,6 +117,9 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
       hosted_by: form.hosted_by || null,
       host_image_url: form.host_image_url || null,
       background_image_url: form.background_image_url || null,
+      dress_code: form.dress_code || null,
+      special_notes: form.special_notes || null,
+      agenda: form.agenda || null,
     }
     if (editing) {
       const { data, error } = await supabase.from('events').update(payload).eq('id', editing.id)
@@ -151,25 +137,17 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
   }
 
   const deleteEvent = async (id: string) => {
-    if (!confirm('Delete this event and all its RSVPs? This cannot be undone.')) return
+    if (!confirm('Delete this event and all its RSVPs?')) return
     const { error } = await supabase.from('events').delete().eq('id', id)
-    if (error) { alert(`Failed to delete event: ${error.message}`); return }
+    if (error) { alert(error.message); return }
     setEvents(p => p.filter(e => e.id !== id))
   }
 
   const updateRsvpStatus = async (eventId: string, rsvpId: string, status: string) => {
     const { error } = await supabase.from('event_rsvps').update({ status }).eq('id', rsvpId)
-    if (error) { alert(`Failed to update status: ${error.message}`); return }
-    setEvents(p => p.map(ev => ev.id === eventId
-      ? { ...ev, event_rsvps: ev.event_rsvps.map((r: any) => r.id === rsvpId ? { ...r, status } : r) }
-      : ev
-    ))
-    if (rsvpView?.id === eventId) {
-      setRsvpView((prev: any) => ({
-        ...prev,
-        event_rsvps: prev.event_rsvps.map((r: any) => r.id === rsvpId ? { ...r, status } : r)
-      }))
-    }
+    if (error) { alert(error.message); return }
+    setEvents(p => p.map(ev => ev.id === eventId ? { ...ev, event_rsvps: ev.event_rsvps.map((r: any) => r.id === rsvpId ? { ...r, status } : r) } : ev))
+    if (rsvpView?.id === eventId) setRsvpView((prev: any) => ({ ...prev, event_rsvps: prev.event_rsvps.map((r: any) => r.id === rsvpId ? { ...r, status } : r) }))
   }
 
   const getTotalGuests = (ev: any) => ev.event_rsvps?.reduce((s: number, r: any) => s + (r.party_size || 1), 0) || 0
@@ -179,22 +157,17 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'var(--teal)', marginBottom: 8, fontWeight: 600 }}>PRIVATE CELEBRATIONS</div>
-          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 40, fontWeight: 300, color: 'var(--text-rich)' }}>
-            Events & <em style={{ color: 'var(--teal-dark)' }}>RSVP</em>
-          </h1>
+          <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 40, fontWeight: 300, color: 'var(--text-rich)' }}>Events & <em style={{ color: 'var(--teal-dark)' }}>RSVP</em></h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 6 }}>Create private events, share the RSVP link with your client, and watch guests roll in.</p>
         </div>
-        <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4, padding: '12px 28px', alignSelf: 'flex-end' }}>
-          + Create Event
-        </button>
+        <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4, padding: '12px 28px', alignSelf: 'flex-end' }}>+ Create Event</button>
       </div>
 
       <div style={{ background: 'rgba(14,143,143,0.06)', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 6, padding: '16px 22px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 20 }}>💡</span>
         <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6 }}>
           <strong style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: 'var(--teal-dark)' }}>HOW IT WORKS: </strong>
-          Create an event → Copy the RSVP link → Send to your client → They share it with guests →
-          Guests RSVP (no account needed) → Their info appears here and they become clients automatically.
+          Create an event → Copy the RSVP link → Send to your client → They share it with guests → Guests RSVP → Their info appears here automatically.
         </div>
       </div>
 
@@ -211,7 +184,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
             const totalGuests = getTotalGuests(ev)
             const rsvpCount = ev.event_rsvps?.length || 0
             const pct = Math.min((totalGuests / (ev.capacity || 1)) * 100, 100)
-            const rsvpLink = `${baseUrl}/events/${ev.id}/rsvp`
+            const rsvpLink = getRsvpLink(ev)
             const isCopied = copied === ev.id
             return (
               <div key={ev.id} style={{ background: 'white', borderRadius: 8, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 2px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
@@ -219,9 +192,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                 <div style={{ padding: '24px 28px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                      {ev.host_image_url && (
-                        <img src={ev.host_image_url} alt={ev.hosted_by} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,154,10,0.3)', flexShrink: 0 }} />
-                      )}
+                      {ev.host_image_url && <img src={ev.host_image_url} alt={ev.hosted_by} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(196,154,10,0.3)', flexShrink: 0 }} />}
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                           {ev.occasion && <span className="badge badge-gold">{ev.occasion}</span>}
@@ -232,6 +203,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                         <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
                           {ev.date && <span>📅 {new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}{ev.time ? ` at ${ev.time}` : ''}</span>}
                           {ev.location && <span>📍 {ev.location}</span>}
+                          {ev.dress_code && <span>👔 {ev.dress_code}</span>}
                         </div>
                       </div>
                     </div>
@@ -245,14 +217,12 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                     <div style={{ height: 5, background: '#F0EAD8', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? 'var(--danger)' : 'linear-gradient(90deg, var(--teal-dark), var(--teal))', transition: 'width 0.5s', borderRadius: 3 }} />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
-                      {ev.capacity - totalGuests > 0 ? `${ev.capacity - totalGuests} spots remaining` : '🔴 Event is Full'}
-                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>{ev.capacity - totalGuests > 0 ? `${ev.capacity - totalGuests} spots remaining` : '🔴 Event is Full'}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0, background: '#F9F7F2', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 4, overflow: 'hidden', minWidth: 240 }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#F9F7F2', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 4, overflow: 'hidden', minWidth: 240 }}>
                       <div style={{ padding: '9px 14px', fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>🔗 {rsvpLink}</div>
-                      <button onClick={() => copyLink(ev.id)} style={{ padding: '9px 16px', background: isCopied ? 'var(--success)' : 'var(--teal)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, whiteSpace: 'nowrap', transition: 'background 0.2s', fontWeight: 700 }}>
+                      <button onClick={() => copyLink(ev)} style={{ padding: '9px 16px', background: isCopied ? 'var(--success)' : 'var(--teal)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, whiteSpace: 'nowrap', transition: 'background 0.2s', fontWeight: 700 }}>
                         {isCopied ? '✓ COPIED' : 'COPY LINK'}
                       </button>
                     </div>
@@ -267,7 +237,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
         </div>
       )}
 
-      {/* RSVP Modal */}
+      {/* RSVP View Modal */}
       {rsvpView && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setRsvpView(null) }}>
@@ -276,20 +246,14 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
               <div>
                 <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'var(--teal)', marginBottom: 4 }}>RSVP LIST</div>
                 <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, color: 'var(--text-rich)', fontWeight: 300 }}>{rsvpView.title}</h3>
-                <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
-                  {rsvpView.event_rsvps?.length || 0} RSVP{rsvpView.event_rsvps?.length !== 1 ? 's' : ''} · {getTotalGuests(rsvpView)} total guests · {rsvpView.capacity} capacity
-                </p>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{rsvpView.event_rsvps?.length || 0} RSVPs · {getTotalGuests(rsvpView)} total guests · {rsvpView.capacity} capacity</p>
               </div>
               <button onClick={() => setRsvpView(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
             </div>
             <div style={{ padding: '14px 28px', background: 'rgba(14,143,143,0.04)', borderBottom: '1px solid rgba(196,154,10,0.1)', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 13, color: 'var(--muted)' }}>Share link:</span>
-              <div style={{ flex: 1, fontSize: 12, color: 'var(--teal-dark)', background: '#F9F7F2', padding: '7px 12px', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 3, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {`${baseUrl}/events/${rsvpView.id}/rsvp`}
-              </div>
-              <button onClick={() => copyLink(rsvpView.id)} className="btn-teal btn-sm" style={{ borderRadius: 4, flexShrink: 0 }}>
-                {copied === rsvpView.id ? '✓ Copied' : 'Copy'}
-              </button>
+              <div style={{ flex: 1, fontSize: 12, color: 'var(--teal-dark)', background: '#F9F7F2', padding: '7px 12px', border: '1px solid rgba(14,143,143,0.2)', borderRadius: 3, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getRsvpLink(rsvpView)}</div>
+              <button onClick={() => copyLink(rsvpView)} className="btn-teal btn-sm" style={{ borderRadius: 4, flexShrink: 0 }}>{copied === rsvpView.id ? '✓ Copied' : 'Copy'}</button>
             </div>
             <div style={{ padding: '20px 28px' }}>
               {!rsvpView.event_rsvps?.length ? (
@@ -303,9 +267,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                     <div key={r.id} style={{ background: r.status === 'cancelled' ? '#FFF5F5' : '#FAFAF7', border: `1.5px solid ${r.status === 'cancelled' ? 'rgba(192,57,43,0.2)' : 'rgba(196,154,10,0.15)'}`, borderRadius: 8, padding: '18px 22px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
-                            {(r.name || '?')[0].toUpperCase()}
-                          </div>
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{(r.name || '?')[0].toUpperCase()}</div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-rich)' }}>{r.name || '—'}</div>
                             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{r.email}{r.phone && <span style={{ marginLeft: 12 }}>· {r.phone}</span>}</div>
@@ -314,8 +276,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'var(--teal-dark)' }}>👥 {r.party_size || 1} guest{(r.party_size || 1) !== 1 ? 's' : ''}</span>
                           {r.source === 'public_link' && <span className="badge badge-teal" style={{ fontSize: 8 }}>Via Link</span>}
-                          <select value={r.status || 'confirmed'} onChange={e => updateRsvpStatus(rsvpView.id, r.id, e.target.value)}
-                            style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1.5px solid var(--border)', borderRadius: 4, padding: '5px 8px', background: 'white', color: 'var(--teal-dark)', cursor: 'pointer', outline: 'none' }}>
+                          <select value={r.status || 'confirmed'} onChange={e => updateRsvpStatus(rsvpView.id, r.id, e.target.value)} style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, border: '1.5px solid var(--border)', borderRadius: 4, padding: '5px 8px', background: 'white', color: 'var(--teal-dark)', cursor: 'pointer', outline: 'none' }}>
                             <option value="confirmed">Confirmed</option>
                             <option value="waitlist">Waitlist</option>
                             <option value="cancelled">Cancelled</option>
@@ -345,7 +306,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
-          <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: 'white', borderRadius: 12, width: '100%', maxWidth: 640, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
             <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(196,154,10,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'var(--teal)', marginBottom: 4 }}>EVENT</div>
@@ -354,10 +315,10 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
               <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
             </div>
             <div style={{ padding: 28 }}>
-              {saveError && (
-                <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>⚠ {saveError}</div>
-              )}
+              {saveError && <div style={{ padding: '12px 16px', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)', color: 'var(--danger)', borderRadius: 4, marginBottom: 20, fontSize: 14 }}>⚠ {saveError}</div>}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+                {/* Occasion */}
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
                   <label className="lux-label">Occasion Type</label>
                   <select className="luxury-input" style={{ borderRadius: 4 }} value={form.occasion || ''} onChange={e => setForm((p: any) => ({ ...p, occasion: e.target.value }))}>
@@ -365,34 +326,36 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                     {OCCASIONS.map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
+                {/* Title */}
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
                   <label className="lux-label">Event Title *</label>
-                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. The Johnson Anniversary Celebration" value={form.title || ''} onChange={e => setForm((p: any) => ({ ...p, title: e.target.value }))} />
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. The Jeffers Family Wedding" value={form.title || ''}
+                    onChange={e => setForm((p: any) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))} />
                 </div>
+                {/* Slug / URL */}
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
-                  <label className="lux-label">Hosted By (Primary Client)</label>
-                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Marcus & Diana Johnson" value={form.hosted_by || ''} onChange={e => setForm((p: any) => ({ ...p, hosted_by: e.target.value }))} />
+                  <label className="lux-label">Custom URL Slug (auto-generated)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9F7F2', border: '1.5px solid rgba(196,154,10,0.25)', borderRadius: 4, padding: '10px 14px' }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>/events/</span>
+                    <input style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 13, color: 'var(--teal-dark)', outline: 'none', fontFamily: 'monospace' }}
+                      value={form.slug || ''} onChange={e => setForm((p: any) => ({ ...p, slug: e.target.value }))} />
+                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>/rsvp</span>
+                  </div>
                 </div>
-
-                {/* Host Photo Upload */}
+                {/* Hosted By */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Hosted By</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Hortense & Fred Jeffers" value={form.hosted_by || ''} onChange={e => setForm((p: any) => ({ ...p, hosted_by: e.target.value }))} />
+                </div>
+                {/* Host Photo */}
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <ImageUploader
-                    label="Host Photo (drag & drop or paste URL)"
-                    value={form.host_image_url || ''}
-                    onChange={url => setForm((p: any) => ({ ...p, host_image_url: url }))}
-                    round={true}
-                  />
+                  <ImageUploader label="Host Photo (drag & drop or paste URL)" value={form.host_image_url || ''} onChange={url => setForm((p: any) => ({ ...p, host_image_url: url }))} round={true} />
                 </div>
-
-                {/* Background Image Upload */}
+                {/* Background Image */}
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <ImageUploader
-                    label="Background Image for RSVP Page (drag & drop or paste URL)"
-                    value={form.background_image_url || ''}
-                    onChange={url => setForm((p: any) => ({ ...p, background_image_url: url }))}
-                  />
+                  <ImageUploader label="Background Image for RSVP Page" value={form.background_image_url || ''} onChange={url => setForm((p: any) => ({ ...p, background_image_url: url }))} />
                 </div>
-
+                {/* Date + Time */}
                 <div style={{ marginBottom: 18 }}>
                   <label className="lux-label">Date *</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} type="date" value={form.date || ''} onChange={e => setForm((p: any) => ({ ...p, date: e.target.value }))} />
@@ -401,6 +364,7 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                   <label className="lux-label">Time</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. 7:00 PM" value={form.time || ''} onChange={e => setForm((p: any) => ({ ...p, time: e.target.value }))} />
                 </div>
+                {/* Location + Capacity */}
                 <div style={{ marginBottom: 18 }}>
                   <label className="lux-label">Location / Venue</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="Venue name or address" value={form.location || ''} onChange={e => setForm((p: any) => ({ ...p, location: e.target.value }))} />
@@ -409,10 +373,27 @@ export default function EventsManager({ initialEvents }: { initialEvents: any[] 
                   <label className="lux-label">Guest Capacity</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} type="number" min="1" value={form.capacity || 50} onChange={e => setForm((p: any) => ({ ...p, capacity: e.target.value }))} />
                 </div>
+                {/* Dress Code */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Dress Code</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Black Tie, Cocktail Attire, Tropical Formal" value={form.dress_code || ''} onChange={e => setForm((p: any) => ({ ...p, dress_code: e.target.value }))} />
+                </div>
+                {/* Description */}
                 <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
                   <label className="lux-label">Event Description</label>
-                  <textarea className="luxury-input" style={{ borderRadius: 4, resize: 'vertical' }} rows={3} placeholder="A brief description shown on the RSVP page..." value={form.description || ''} onChange={e => setForm((p: any) => ({ ...p, description: e.target.value }))} />
+                  <textarea className="luxury-input" style={{ borderRadius: 4, resize: 'vertical' }} rows={3} placeholder="A beautiful description of the event..." value={form.description || ''} onChange={e => setForm((p: any) => ({ ...p, description: e.target.value }))} />
                 </div>
+                {/* Agenda */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Agenda / Schedule</label>
+                  <textarea className="luxury-input" style={{ borderRadius: 4, resize: 'vertical' }} rows={4} placeholder="e.g.&#10;6:00 PM — Cocktail Hour&#10;7:00 PM — Dinner & Toasts&#10;9:00 PM — Dancing" value={form.agenda || ''} onChange={e => setForm((p: any) => ({ ...p, agenda: e.target.value }))} />
+                </div>
+                {/* Special Notes */}
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Special Notes for Guests</label>
+                  <textarea className="luxury-input" style={{ borderRadius: 4, resize: 'vertical' }} rows={3} placeholder="e.g. Parking available on site. Please arrive 15 minutes early." value={form.special_notes || ''} onChange={e => setForm((p: any) => ({ ...p, special_notes: e.target.value }))} />
+                </div>
+                {/* Active */}
                 <div style={{ gridColumn: '1 / -1', marginBottom: 8 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.active !== false} onChange={e => setForm((p: any) => ({ ...p, active: e.target.checked }))} style={{ width: 16, height: 16 }} />
