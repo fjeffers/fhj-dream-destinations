@@ -110,7 +110,7 @@ export default function PartnersManager({ initialPartners }: { initialPartners: 
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 6 }}>Manage your preferred vendors and business partners shown on the site.</p>
         </div>
-        <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4, padding: '12px 28px', alignSelf: 'flex-end' }}> Add Partner</button>
+        <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4, padding: '12px 28px', alignSelf: 'flex-end' }}>+ Add Partner</button>
       </div>
 
       <div style={{ marginBottom: 20, padding: '12px 16px', background: 'rgba(14,143,143,0.06)', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 6, fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
@@ -122,7 +122,6 @@ export default function PartnersManager({ initialPartners }: { initialPartners: 
           <div style={{ fontSize: 56, marginBottom: 20 }}>🤝</div>
           <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, color: 'var(--text-rich)', marginBottom: 12 }}>No Partners Yet</h3>
           <p style={{ color: 'var(--muted)', fontSize: 15, marginBottom: 28 }}>Add your first preferred vendor or business partner.</p>
-          <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4 }}> Add Partner</button>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
