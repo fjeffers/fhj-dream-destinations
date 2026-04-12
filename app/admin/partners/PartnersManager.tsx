@@ -122,7 +122,7 @@ export default function PartnersManager({ initialPartners }: { initialPartners: 
           <div style={{ fontSize: 56, marginBottom: 20 }}>🤝</div>
           <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, color: 'var(--text-rich)', marginBottom: 12 }}>No Partners Yet</h3>
           <p style={{ color: 'var(--muted)', fontSize: 15, marginBottom: 28 }}>Add your first preferred vendor or business partner.</p>
-          <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4 }}>+ Add Partner</button>
+          <button className="btn-teal" onClick={openAdd} style={{ borderRadius: 4 }}> Add Partner</button>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 16 }}>
