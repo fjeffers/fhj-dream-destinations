@@ -63,8 +63,8 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
   const supabase = createClient()
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fhjdreamdestinations.com'
-
   const getJoinLink = (trip: any) => `${baseUrl}/group-trips/${trip.slug || trip.id}/join`
+  const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   const copyLink = (trip: any) => {
     navigator.clipboard.writeText(getJoinLink(trip))
@@ -72,20 +72,13 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
     setTimeout(() => setCopied(null), 2500)
   }
 
-  const openAdd = () => {
-    setEditing(null)
-    setForm({ spots: 12, booked: 0, status: 'Open' })
-    setModal(true)
-  }
-
+  const openAdd = () => { setEditing(null); setForm({ spots: 12, booked: 0, status: 'Open' }); setModal(true) }
   const openEdit = (t: any) => { setEditing(t); setForm({ ...t }); setModal(true) }
 
   const viewRegs = async (trip: any) => {
-    setRegsView(trip)
-    setLoadingRegs(true)
+    setRegsView(trip); setLoadingRegs(true)
     const { data } = await supabase.from('group_trip_registrations').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false })
-    setRegs(data || [])
-    setLoadingRegs(false)
+    setRegs(data || []); setLoadingRegs(false)
   }
 
   const save = async () => {
@@ -95,6 +88,8 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
       name: form.name,
       destination: form.destination,
       date: form.date || null,
+      end_date: form.end_date || null,
+      duration: form.duration || null,
       spots: parseInt(form.spots) || 12,
       booked: parseInt(form.booked) || 0,
       price: form.price || null,
@@ -152,8 +147,8 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
           const isCopied = copied === trip.id
           return (
             <div key={trip.id} style={{ background: 'white', borderRadius: 8, border: '1px solid rgba(196,154,10,0.2)', boxShadow: '0 2px 16px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-              <div style={{ height: 3, background: `linear-gradient(90deg, var(--teal-dark), var(--gold), var(--teal-light))` }} />
-              <div style={{ display: 'flex', gap: 0 }}>
+              <div style={{ height: 3, background: 'linear-gradient(90deg, var(--teal-dark), var(--gold), var(--teal-light))' }} />
+              <div style={{ display: 'flex' }}>
                 {trip.image_url && (
                   <div style={{ width: 140, flexShrink: 0 }}>
                     <img src={trip.image_url} alt={trip.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -168,7 +163,8 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
                       </div>
                       <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
                         {trip.destination && <span>📍 {trip.destination}</span>}
-                        {trip.date && <span>📅 {new Date(trip.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>}
+                        {trip.date && <span>📅 {fmt(trip.date)}{trip.end_date ? ` → ${fmt(trip.end_date)}` : ''}</span>}
+                        {trip.duration && <span>⏱ {trip.duration}</span>}
                         {trip.price && <span style={{ color: 'var(--gold-dark)', fontWeight: 600 }}>💰 {trip.price}</span>}
                       </div>
                       {trip.description && <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>{trip.description}</p>}
@@ -179,16 +175,12 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>of {trip.spots}</div>
                     </div>
                   </div>
-
-                  {/* Progress bar */}
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ height: 5, background: '#F0EAD8', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? 'var(--danger)' : 'linear-gradient(90deg, var(--teal-dark), var(--teal))', transition: 'width 0.5s', borderRadius: 3 }} />
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{(trip.spots || 0) - (trip.booked || 0)} spots remaining</div>
                   </div>
-
-                  {/* Join link + actions */}
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                     {trip.slug && (
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#F9F7F2', border: '1.5px solid rgba(14,143,143,0.2)', borderRadius: 4, overflow: 'hidden', minWidth: 240 }}>
@@ -310,18 +302,26 @@ export default function GroupTripsManager({ initialTrips }: { initialTrips: any[
                   <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. Reykjavik, Iceland" value={form.destination || ''} onChange={e => setForm((p: any) => ({ ...p, destination: e.target.value }))} />
                 </div>
                 <div style={{ marginBottom: 18 }}>
+                  <label className="lux-label">Price Per Person</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="$0,000/pp" value={form.price || ''} onChange={e => setForm((p: any) => ({ ...p, price: e.target.value }))} />
+                </div>
+                <div style={{ marginBottom: 18 }}>
                   <label className="lux-label">Departure Date</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} type="date" value={form.date || ''} onChange={e => setForm((p: any) => ({ ...p, date: e.target.value }))} />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label className="lux-label">Return Date</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} type="date" value={form.end_date || ''} onChange={e => setForm((p: any) => ({ ...p, end_date: e.target.value }))} />
+                </div>
+                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
+                  <label className="lux-label">Duration (e.g. "7 Nights / 8 Days")</label>
+                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="e.g. 7 Nights / 8 Days" value={form.duration || ''} onChange={e => setForm((p: any) => ({ ...p, duration: e.target.value }))} />
                 </div>
                 <div style={{ marginBottom: 18 }}>
                   <label className="lux-label">Total Spots</label>
                   <input className="luxury-input" style={{ borderRadius: 4 }} type="number" min="1" value={form.spots || 12} onChange={e => setForm((p: any) => ({ ...p, spots: e.target.value }))} />
                 </div>
                 <div style={{ marginBottom: 18 }}>
-                  <label className="lux-label">Price Per Person</label>
-                  <input className="luxury-input" style={{ borderRadius: 4 }} placeholder="$0,000/pp" value={form.price || ''} onChange={e => setForm((p: any) => ({ ...p, price: e.target.value }))} />
-                </div>
-                <div style={{ marginBottom: 18, gridColumn: '1 / -1' }}>
                   <label className="lux-label">Status</label>
                   <select className="luxury-input" style={{ borderRadius: 4 }} value={form.status || 'Open'} onChange={e => setForm((p: any) => ({ ...p, status: e.target.value }))}>
                     {['Open', 'Sold Out', 'Waitlist'].map(s => <option key={s}>{s}</option>)}
