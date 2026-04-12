@@ -16,6 +16,7 @@ const sections = [
   { href: '/admin/intake', label: 'Intake Requests', icon: '📥' },
   { href: '/admin/messages', label: 'Messages', icon: '✉' },
   { href: '/admin/content', label: 'Content Manager', icon: '✏️' },
+  { href: '/admin/partners', label: 'Partners', icon: '🤝' },
   { href: '/admin/team', label: 'Team', icon: '🔑' },
 ]
 
@@ -31,9 +32,6 @@ export default function AdminShell({ children, profile }: { children: React.Reac
     router.refresh()
   }
 
-  // FIX: dispatch on window with bubbles:true so event reaches window listeners in useInactivityLogout
-  // BUG WAS: document.dispatchEvent(new MouseEvent('click')) — MouseEvent defaults bubbles:false
-  // so the event never propagated from document → window, meaning the timer was never reset.
   const resetInactivityTimer = () => {
     window.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   }
