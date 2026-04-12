@@ -33,10 +33,10 @@ export function useInactivityLogout(timeoutSeconds = 90) {
         }, 1000)
       }, (timeoutSeconds - 15) * 1000)
 
-      // Auto logout
+      // Auto logout — redirect to admin login
       timerRef.current = setTimeout(async () => {
         await supabase.auth.signOut()
-        router.replace('/login?reason=timeout')
+        router.replace('/login?type=admin&reason=timeout')
       }, timeoutSeconds * 1000)
     }
 
