@@ -2,7 +2,32 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-const CATEGORIES = ['Photography', 'Videography', 'Catering', 'Florist', 'Music & Entertainment', 'Transportation', 'Venue', 'Beauty & Wellness', 'Planning & Decor', 'Other']
+const CATEGORIES = [
+  'Photography',
+  'Videography',
+  'Catering',
+  'Florist',
+  'Music & Entertainment',
+  'Transportation',
+  'Venue',
+  'Beauty & Wellness',
+  'Planning & Decor',
+  'Fashion & Apparel',
+  'Jewelry & Accessories',
+  'Luxury Retail',
+  'Private Aviation',
+  'Yacht & Marine',
+  'Hotels & Resorts',
+  'Restaurants & Dining',
+  'Spa & Wellness',
+  'Fitness & Health',
+  'Art & Culture',
+  'Gift & Concierge',
+  'Technology',
+  'Insurance & Legal',
+  'Financial Services',
+  'Other',
+]
 
 function ImageUploader({ label, value, onChange }: { label: string, value: string, onChange: (url: string) => void }) {
   const [dragging, setDragging] = useState(false)
