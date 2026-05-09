@@ -56,7 +56,8 @@ export default function LoginPage() {
       return
     }
 
-    if (isAdmin && profile.role !== 'admin') {
+    const ADMIN_ROLES = ['admin', 'manager', 'employee']
+    if (isAdmin && !ADMIN_ROLES.includes(profile.role)) {
       await supabase.auth.signOut()
       setError('Access denied. Admin credentials required.')
       setLoading(false)
