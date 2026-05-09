@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/types'
+import LoyaltyManager from './LoyaltyManager'
 
 export default function ClientsManager({ initialClients }: { initialClients: Profile[] }) {
   const [clients, setClients] = useState(initialClients)
@@ -18,6 +19,7 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
   const [tierFilter, setTierFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortBy, setSortBy] = useState('name')
+  const [loyaltyClient, setLoyaltyClient] = useState<Profile | null>(null)
   const supabase = createClient()
 
   const sendInvite = async () => {
@@ -301,10 +303,15 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <button onClick={() => openEdit(c)}
                         style={{ background: 'rgba(14,143,143,0.08)', border: '1px solid rgba(14,143,143,0.25)', color: 'var(--teal-dark)', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
                         Edit
+                      </button>
+                      <button onClick={() => setLoyaltyClient(c)}
+                        style={{ background: 'rgba(196,154,10,0.08)', border: '1px solid rgba(196,154,10,0.3)', color: 'var(--gold-dark, #8B6914)', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}
+                        title="Travel Loyalty Programs">
+                        ✈ Loyalty
                       </button>
                       <button onClick={() => toggleApproval(c)}
                         style={{ background: c.approved ? 'rgba(192,57,43,0.08)' : 'rgba(26,122,74,0.1)', border: `1px solid ${c.approved ? 'rgba(192,57,43,0.25)' : 'rgba(26,122,74,0.3)'}`, color: c.approved ? 'var(--danger)' : 'var(--success)', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
@@ -317,6 +324,15 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Travel Loyalty Programs Modal */}
+      {loyaltyClient && (
+        <LoyaltyManager
+          clientId={loyaltyClient.id}
+          clientName={loyaltyClient.full_name || loyaltyClient.email || 'Client'}
+          onClose={() => setLoyaltyClient(null)}
+        />
       )}
 
       {/* Edit Modal */}
