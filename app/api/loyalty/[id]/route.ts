@@ -27,8 +27,9 @@ async function assertAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
 // ─── PUT: update a program ────────────────────────────────────────────────────
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const user = await assertAdmin(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -60,7 +61,7 @@ export async function PUT(
   const { data, error } = await supabase
     .from('travel_loyalty')
     .update(updatePayload)
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
     .single()
 
@@ -80,8 +81,9 @@ export async function PUT(
 // ─── DELETE: remove a program ─────────────────────────────────────────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const user = await assertAdmin(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -89,7 +91,7 @@ export async function DELETE(
   const { error } = await supabase
     .from('travel_loyalty')
     .delete()
-    .eq('id', params.id)
+    .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
