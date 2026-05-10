@@ -18,6 +18,7 @@ const sections = [
   { href: '/admin/content', label: 'Content Manager', icon: '✏️' },
   { href: '/admin/partners', label: 'Partners', icon: '🤝' },
   { href: '/admin/team', label: 'Team', icon: '🔑' },
+  { href: '/admin/qr', label: 'QR Generator', icon: '📱' },
 ]
 
 export default function AdminShell({ children, profile }: { children: React.ReactNode, profile: any }) {
