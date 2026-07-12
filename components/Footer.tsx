@@ -168,6 +168,11 @@ export default function Footer() {
         <div style={{ height: 1, background: 'rgba(196,154,69,0.15)', marginBottom: 28 }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>© 2026 FHJ Dream Destinations. All rights reserved.</span>
+          <Link href="/privacy" style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#C49A45')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}>
+            Privacy Policy
+          </Link>
           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: 'rgba(196,154,69,0.5)' }}>LUXURY · CRAFTED · PERSONAL</span>
         </div>
       </div>
