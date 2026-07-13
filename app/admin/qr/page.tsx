@@ -19,16 +19,9 @@ const DESTINATIONS = [
   {
     key: 'intake',
     icon: '📋',
-    label: 'Intake Form',
-    url: 'https://www.fhjdreamdestinations.com/intake',
+    label: 'Trip Intake Form',
+    url: 'https://www.fhjdreamdestinations.com/book',
     action: 'Submit an inquiry',
-  },
-  {
-    key: 'group',
-    icon: '🌍',
-    label: 'Group Trips',
-    url: 'https://www.fhjdreamdestinations.com/group-trips',
-    action: 'View group trips',
   },
 ]
 
@@ -44,7 +37,7 @@ export default function QRGeneratorPage() {
     setLoading(true)
     setQrDataUrl('')
     const encoded = encodeURIComponent(dest.url)
-    const apiUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encoded}&chco=073030|ffffff&chld=H|1`
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}&color=073030&bgcolor=ffffff&ecc=H&qzone=1&format=png`
     fetch(apiUrl)
       .then(r => r.blob())
       .then(blob => {
