@@ -4,6 +4,22 @@ import { createClient } from '@/lib/supabase/client'
 
 const STATUSES = ['Pending', 'Deposit Paid', 'Confirmed', 'Completed', 'Cancelled']
 
+// Itinerary is stored as jsonb [{day,title,detail}]. Admin edits it as text,
+// one day per line: "Title | details".
+function parseItinerary(text?: string): { day: number; title: string; detail: string }[] | null {
+  if (!text || !text.trim()) return null
+  const rows = text.split('\n').map(l => l.trim()).filter(Boolean).map((line, i) => {
+    const [title, ...rest] = line.split('|')
+    return { day: i + 1, title: (title || '').trim(), detail: rest.join('|').trim() }
+  })
+  return rows.length ? rows : null
+}
+
+function serializeItinerary(itin: any): string {
+  if (!Array.isArray(itin)) return ''
+  return itin.map((d: any) => [d.title, d.detail].filter(Boolean).join(' | ')).join('\n')
+}
+
 export default function BookingsManager({ initialBookings }: { initialBookings: any[] }) {
   const [bookings, setBookings] = useState(initialBookings)
   const [modal, setModal] = useState(false)
@@ -14,8 +30,8 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
   const [saveError, setSaveError] = useState('')
   const supabase = createClient()
 
-  const openAdd = () => { setEditing(null); setForm({ status: 'Pending', group_size: 1 }); setModal(true) }
-  const openEdit = (b: any) => { setEditing(b); setForm({ ...b }); setModal(true) }
+  const openAdd = () => { setEditing(null); setForm({ status: 'Pending', group_size: 1, itinerary_text: '' }); setModal(true) }
+  const openEdit = (b: any) => { setEditing(b); setForm({ ...b, itinerary_text: serializeItinerary(b.itinerary) }); setModal(true) }
 
   const save = async () => {
     if (!form.client_name?.trim()) { setSaveError('Client name is required.'); return }
@@ -34,6 +50,7 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
       value: form.value ? parseFloat(form.value) : null,
       status: form.status || 'Pending',
       notes: form.notes || null,
+      itinerary: parseItinerary(form.itinerary_text),
     }
     if (editing) {
       const { data, error } = await supabase.from('bookings').update(payload).eq('id', editing.id).select('*, profiles(full_name, email, tier)').single()
@@ -157,6 +174,10 @@ export default function BookingsManager({ initialBookings }: { initialBookings: 
                 </div>
               </div>
               <div><label className="lux-label">Notes</label><textarea className="luxury-input" rows={3} value={form.notes || ''} onChange={e => setForm((p: any) => ({ ...p, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+              <div>
+                <label className="lux-label">Day-by-Day Itinerary <span style={{ color: 'var(--muted)', textTransform: 'none', letterSpacing: 0 }}>— one day per line, format: <em>Title | details</em></span></label>
+                <textarea className="luxury-input" rows={5} value={form.itinerary_text || ''} onChange={e => setForm((p: any) => ({ ...p, itinerary_text: e.target.value }))} placeholder={'Arrival in Malé | Private transfer to the resort, welcome dinner\nReef snorkeling | Guided excursion followed by a spa afternoon'} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+              </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button className="btn-gold" style={{ flex: 1, opacity: saving ? 0.7 : 1 }} onClick={save} disabled={saving}>{saving ? 'Saving...' : editing ? 'Update Booking' : 'Add Booking'}</button>
                 <button className="btn-ghost" onClick={() => setModal(false)}>Cancel</button>

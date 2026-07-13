@@ -1,18 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Countdown from '@/components/Countdown'
+import TravelMap from '@/components/TravelMap'
+import { destImage } from '@/lib/destinations'
+import { daysUntil } from '@/lib/trip'
+
+const TIERS = ['Silver', 'Gold', 'Platinum'] as const
+const TIER_THRESHOLD: Record<string, number> = { Silver: 0, Gold: 3, Platinum: 6 }
 
 export default async function PortalDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  // Guard: portal layout should catch this, but double-check
   if (!user) redirect('/login?type=client')
 
+  const today = new Date().toISOString().split('T')[0]
   const [profileRes, bookingsRes, appointmentsRes, eventsRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('bookings').select('*').eq('client_id', user.id).order('created_at', { ascending: false }).limit(3),
-    supabase.from('appointments').select('*').eq('client_id', user.id).gte('date', new Date().toISOString().split('T')[0]).order('date').limit(3),
+    supabase.from('bookings').select('*').eq('client_id', user.id).order('travel_date', { ascending: true, nullsFirst: false }),
+    supabase.from('appointments').select('*').eq('client_id', user.id).gte('date', today).order('date').limit(3),
     supabase.from('events').select('*').eq('active', true).order('date').limit(2),
   ])
 
@@ -22,28 +28,76 @@ export default async function PortalDashboard() {
   const events = eventsRes.data || []
   const firstName = profile?.full_name?.split(' ')[0] || 'Valued Client'
 
+  // Next upcoming trip = soonest travel_date in the future that isn't cancelled
+  const nextTrip = bookings.find((b: any) => b.travel_date && b.travel_date >= today && (b.status || '').toLowerCase() !== 'cancelled')
+  const upcomingTrips = bookings.filter((b: any) => (b.status || '').toLowerCase() !== 'completed' && (b.status || '').toLowerCase() !== 'cancelled').slice(0, 3)
+
+  const tier = profile?.tier || 'Silver'
+  const tripsCount = profile?.trips_count || 0
+  const tierIdx = Math.max(0, TIERS.indexOf(tier as any))
+  const nextTier = TIERS[tierIdx + 1]
+  const toNext = nextTier ? Math.max(0, TIER_THRESHOLD[nextTier] - tripsCount) : 0
+
   return (
     <div style={{ animation: 'fadeIn 0.4s ease' }}>
-      <div style={{ marginBottom: 36 }}>
+      <div style={{ marginBottom: 28 }}>
         <div className="section-eyebrow" style={{ marginBottom: 8 }}>Welcome Back</div>
         <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 44, fontWeight: 300 }}>
           Hello, <em style={{ color: 'var(--gold)' }}>{firstName}</em>
         </h2>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
-        {[
-          { label: 'Membership', value: profile?.tier || 'Silver', sub: 'Current Tier' },
-          { label: 'Total Trips', value: profile?.trips_count || 0, sub: 'Journeys Taken' },
-          { label: 'Total Spent', value: `$${(profile?.total_spent || 0).toLocaleString()}`, sub: 'Lifetime Value' },
-        ].map(stat => (
-          <div key={stat.label} className="luxury-card" style={{ padding: 22 }}>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', marginBottom: 8 }}>{stat.label}</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, color: 'var(--gold)', lineHeight: 1.2, marginBottom: 4 }}>{stat.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>{stat.sub}</div>
+      {/* Countdown hero for next trip */}
+      {nextTrip && (
+        <Link href={`/portal/trips/${nextTrip.id}`} style={{ textDecoration: 'none' }}>
+          <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', marginBottom: 24, minHeight: 220, display: 'flex', alignItems: 'center' }}>
+            <img src={destImage(nextTrip.destination, nextTrip.package_name)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, rgba(20,25,25,0.9) 0%, rgba(20,25,25,0.55) 60%, rgba(20,25,25,0.25) 100%)' }} />
+            <div style={{ position: 'relative', padding: 32, color: 'white' }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 4, color: 'var(--gold)', marginBottom: 8 }}>✦ YOUR NEXT ADVENTURE</div>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 34, fontWeight: 300, marginBottom: 4 }}>{nextTrip.package_name}</h3>
+              {nextTrip.destination && <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 18 }}>📍 {nextTrip.destination}</div>}
+              <Countdown date={nextTrip.travel_date} compact />
+            </div>
           </div>
-        ))}
+        </Link>
+      )}
+
+      {/* Stats + tier progress */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: 16, marginBottom: 24 }}>
+        <div className="luxury-card" style={{ padding: 22 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', marginBottom: 8 }}>TOTAL TRIPS</div>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 30, color: 'var(--gold)', lineHeight: 1 }}>{tripsCount}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Journeys Taken</div>
+        </div>
+        <div className="luxury-card" style={{ padding: 22 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', marginBottom: 8 }}>LIFETIME VALUE</div>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 30, color: 'var(--gold)', lineHeight: 1 }}>${(profile?.total_spent || 0).toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>With FHJ</div>
+        </div>
+        <div className="luxury-card" style={{ padding: 22 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)' }}>MEMBERSHIP</div>
+            <span className={`badge ${tier === 'Platinum' ? 'badge-teal' : tier === 'Gold' ? 'badge-gold' : 'badge-success'}`}>{tier}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {TIERS.map((tName, i) => (
+              <div key={tName} style={{ flex: 1, height: 6, borderRadius: 3, background: i <= tierIdx ? 'linear-gradient(90deg, var(--teal), var(--gold))' : 'var(--border)' }} />
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            {nextTier ? `${toNext} more ${toNext === 1 ? 'trip' : 'trips'} to ${nextTier}` : '✦ Top tier — thank you for your loyalty'}
+          </div>
+        </div>
+      </div>
+
+      {/* Travel map */}
+      <div className="luxury-card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--gold)', fontWeight: 700 }}>YOUR WORLD</div>
+          <Link href="/portal/trips" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', textDecoration: 'none' }}>All Journeys →</Link>
+        </div>
+        <TravelMap trips={bookings.map((b: any) => ({ id: b.id, label: b.package_name, destination: b.destination, packageName: b.package_name, status: b.status }))} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -53,15 +107,18 @@ export default async function PortalDashboard() {
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--gold)' }}>UPCOMING TRIPS</div>
             <Link href="/portal/trips" style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: 'var(--muted)', textDecoration: 'none' }}>View All →</Link>
           </div>
-          {bookings.length > 0 ? bookings.map((b: any) => (
-            <div key={b.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{b.package_name}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{b.travel_date || 'TBD'}</span>
-                <span className={`badge ${b.status === 'Confirmed' ? 'badge-success' : b.status === 'Deposit Paid' ? 'badge-teal' : 'badge-gold'}`}>{b.status}</span>
-              </div>
-            </div>
-          )) : (
+          {upcomingTrips.length > 0 ? upcomingTrips.map((b: any) => {
+            const d = daysUntil(b.travel_date)
+            return (
+              <Link key={b.id} href={`/portal/trips/${b.id}`} style={{ display: 'block', padding: '14px 0', borderBottom: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
+                <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{b.package_name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{b.travel_date || 'Date TBD'}{d !== null && d > 0 ? ` · ${d} days` : ''}</span>
+                  <span className={`badge ${b.status === 'Confirmed' ? 'badge-success' : b.status === 'Deposit Paid' ? 'badge-teal' : 'badge-gold'}`}>{b.status}</span>
+                </div>
+              </Link>
+            )
+          }) : (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted)' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✈️</div>
               <p style={{ fontSize: 13, marginBottom: 16 }}>No trips booked yet</p>
@@ -83,7 +140,6 @@ export default async function PortalDashboard() {
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>{a.date} at {a.time}</span>
                 <span className={`badge ${a.status === 'Confirmed' ? 'badge-success' : 'badge-gold'}`}>{a.status}</span>
               </div>
-              {a.notes && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{a.notes}</div>}
             </div>
           )) : (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted)' }}>
@@ -95,7 +151,7 @@ export default async function PortalDashboard() {
         </div>
       </div>
 
-      {/* Exclusive Events Preview */}
+      {/* Events */}
       {events.length > 0 && (
         <div className="luxury-card" style={{ padding: 24, marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { destImage } from '@/lib/destinations'
+import { daysUntil, nights } from '@/lib/trip'
 
 export default async function TripsPage() {
   const supabase = await createClient()
@@ -11,7 +13,7 @@ export default async function TripsPage() {
     .from('bookings')
     .select('*')
     .eq('client_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('travel_date', { ascending: true, nullsFirst: false })
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease' }}>
@@ -22,27 +24,37 @@ export default async function TripsPage() {
         </h2>
       </div>
       {bookings && bookings.length > 0 ? (
-        <div style={{ display: 'grid', gap: 16 }}>
-          {bookings.map((b: any) => (
-            <div key={b.id} className="luxury-card" style={{ padding: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                <div style={{ fontSize: 44, flexShrink: 0 }}>✈️</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                    <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22 }}>{b.package_name}</h3>
-                    <span className={`badge ${b.status === 'Confirmed' ? 'badge-success' : b.status === 'Completed' ? 'badge-gold' : b.status === 'Deposit Paid' ? 'badge-teal' : 'badge-gold'}`}>{b.status}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+          {bookings.map((b: any) => {
+            const d = daysUntil(b.travel_date)
+            const n = nights(b.travel_date, b.return_date)
+            const cancelled = (b.status || '').toLowerCase() === 'cancelled'
+            return (
+              <Link key={b.id} href={`/portal/trips/${b.id}`} className="luxury-card" style={{ overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'relative', height: 170 }}>
+                  <img src={destImage(b.destination, b.package_name)} alt={b.package_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,25,25,0.65), transparent 60%)' }} />
+                  <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                    <span className={`badge ${b.status === 'Confirmed' ? 'badge-success' : b.status === 'Completed' ? 'badge-gold' : b.status === 'Deposit Paid' ? 'badge-teal' : cancelled ? 'badge-danger' : 'badge-gold'}`}>{b.status}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 24, fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap' }}>
-                    {b.destination && <span>📍 {b.destination}</span>}
-                    {b.travel_date && <span>📅 {b.travel_date}{b.return_date ? ` → ${b.return_date}` : ''}</span>}
-                    {b.group_size && <span>👥 {b.group_size} {b.group_size === 1 ? 'guest' : 'guests'}</span>}
-                    {b.value && <span style={{ color: 'var(--gold)' }}>💰 ${b.value.toLocaleString()}</span>}
-                  </div>
-                  {b.notes && <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>{b.notes}</p>}
+                  {d !== null && d > 0 && !cancelled && (
+                    <div style={{ position: 'absolute', bottom: 12, left: 14, color: 'white', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1 }}>
+                      ✦ {d} {d === 1 ? 'DAY' : 'DAYS'} TO GO
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          ))}
+                <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22, marginBottom: 6 }}>{b.package_name}</h3>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                    {b.destination && <span>📍 {b.destination}</span>}
+                    {b.travel_date && <span>📅 {new Date(b.travel_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                    {n && <span>🌙 {n} {n === 1 ? 'night' : 'nights'}</span>}
+                  </div>
+                  <div style={{ marginTop: 'auto', paddingTop: 14, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: 'var(--teal-dark)' }}>VIEW JOURNEY →</div>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)' }}>
