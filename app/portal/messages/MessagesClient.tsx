@@ -13,15 +13,24 @@ export default function MessagesClient({ messages: initial, profile, userId, adv
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
+  // Live updates: append replies from the advisor the moment they arrive.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`portal-messages-${userId}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${userId}` },
+        payload => setMessages(prev => prev.some(m => m.id === (payload.new as any).id) ? prev : [...prev, payload.new]))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId])
+
   const send = async () => {
     if (!text.trim() || sending) return
     setSending(true)
-    // For portal, send message — admin will reply. We use a placeholder admin recipient.
-    // In production, fetch admin user id from profiles where role='admin'
-    const { data: admin } = await supabase.from('profiles').select('id').eq('role', 'admin').single()
+    const { data: admin } = await supabase.from('profiles').select('id').eq('role', 'admin').order('created_at').limit(1).single()
     if (admin) {
       const { data: msg } = await supabase.from('messages').insert({ sender_id: userId, recipient_id: admin.id, content: text.trim() }).select('*, sender:profiles!messages_sender_id_fkey(full_name, role)').single()
-      if (msg) setMessages(p => [...p, msg])
+      if (msg) setMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg])
     }
     setText('')
     setSending(false)

@@ -12,6 +12,17 @@ export default function AdminMessagesClient({ messages: initial, clients, adminI
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, selectedClient])
 
+  // Live updates: append client messages the moment they arrive.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`admin-messages-${adminId}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${adminId}` },
+        payload => setMessages(prev => prev.some(m => m.id === (payload.new as any).id) ? prev : [...prev, payload.new]))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [adminId])
+
   const convo = selectedClient ? messages.filter(m =>
     (m.sender_id === adminId && m.recipient_id === selectedClient.id) ||
     (m.sender_id === selectedClient.id && m.recipient_id === adminId)
