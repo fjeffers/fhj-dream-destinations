@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/types'
 import LoyaltyManager from './LoyaltyManager'
+import DocumentsManager from './DocumentsManager'
 
 export default function ClientsManager({ initialClients }: { initialClients: Profile[] }) {
   const [clients, setClients] = useState(initialClients)
@@ -20,6 +21,7 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortBy, setSortBy] = useState('name')
   const [loyaltyClient, setLoyaltyClient] = useState<Profile | null>(null)
+  const [docsClient, setDocsClient] = useState<Profile | null>(null)
   const supabase = createClient()
 
   const sendInvite = async () => {
@@ -313,6 +315,11 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
                         title="Travel Loyalty Programs">
                         ✈ Loyalty
                       </button>
+                      <button onClick={() => setDocsClient(c)}
+                        style={{ background: 'rgba(14,143,143,0.08)', border: '1px solid rgba(14,143,143,0.25)', color: 'var(--teal-dark)', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}
+                        title="Client Documents">
+                        📄 Docs
+                      </button>
                       <button onClick={() => toggleApproval(c)}
                         style={{ background: c.approved ? 'rgba(192,57,43,0.08)' : 'rgba(26,122,74,0.1)', border: `1px solid ${c.approved ? 'rgba(192,57,43,0.25)' : 'rgba(26,122,74,0.3)'}`, color: c.approved ? 'var(--danger)' : 'var(--success)', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: 1, fontWeight: 600 }}>
                         {c.approved ? 'Suspend' : 'Approve'}
@@ -332,6 +339,15 @@ export default function ClientsManager({ initialClients }: { initialClients: Pro
           clientId={loyaltyClient.id}
           clientName={loyaltyClient.full_name || loyaltyClient.email || 'Client'}
           onClose={() => setLoyaltyClient(null)}
+        />
+      )}
+
+      {/* Client Documents Modal */}
+      {docsClient && (
+        <DocumentsManager
+          clientId={docsClient.id}
+          clientName={docsClient.full_name || docsClient.email || 'Client'}
+          onClose={() => setDocsClient(null)}
         />
       )}
 

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function UpdatePasswordPage() {
@@ -11,6 +11,8 @@ export default function UpdatePasswordPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
+  const params = useSearchParams()
+  const loginType = params.get('type') === 'client' ? 'client' : 'admin'
   const supabase = createClient()
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function UpdatePasswordPage() {
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setError(error.message); setLoading(false); return }
     setSuccess(true)
-    setTimeout(() => router.replace('/login?type=admin'), 2000)
+    setTimeout(() => router.replace(`/login?type=${loginType}`), 2000)
   }
 
   return (

@@ -14,8 +14,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const supabase = createClient()
+
+  const handleForgotPassword = async () => {
+    setError('')
+    if (!email.trim()) {
+      setError('Enter your email address above first, then click "Forgot password".')
+      return
+    }
+    setResetting(true)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/update-password?type=${type}`,
+    })
+    setResetting(false)
+    if (resetError) { setError(resetError.message); return }
+    setResetSent(true)
+  }
 
   // Handle password reset token in URL hash
   useEffect(() => {
@@ -102,13 +119,25 @@ export default function LoginPage() {
             </div>
           )}
 
+          {resetSent && (
+            <div style={{ padding: '14px 18px', background: 'rgba(26,122,74,0.08)', border: '2px solid rgba(26,122,74,0.3)', color: 'var(--success)', fontSize: 14, marginBottom: 20, borderRadius: 3, lineHeight: 1.5 }}>
+              Check your inbox — we sent a password reset link to <strong>{email}</strong>.
+            </div>
+          )}
+
           <form onSubmit={handleLogin}>
             <label className="lux-label">Email Address</label>
             <input className="luxury-input" style={{ marginBottom: 20 }} type="email"
               placeholder="your@email.com" value={email}
               onChange={e => setEmail(e.target.value)} required autoComplete="email" />
 
-            <label className="lux-label">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label className="lux-label">Password</label>
+              <button type="button" onClick={handleForgotPassword} disabled={resetting}
+                style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: 'var(--teal-dark)', cursor: resetting ? 'default' : 'pointer', opacity: resetting ? 0.6 : 1 }}>
+                {resetting ? 'Sending…' : 'Forgot password?'}
+              </button>
+            </div>
             <input className="luxury-input" style={{ marginBottom: 32 }} type="password"
               placeholder="••••••••" value={password}
               onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />

@@ -2,12 +2,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function MessagesClient({ messages: initial, profile, userId }: { messages: any[], profile: any, userId: string }) {
+export default function MessagesClient({ messages: initial, profile, userId, advisorName }: { messages: any[], profile: any, userId: string, advisorName: string }) {
   const [messages, setMessages] = useState(initial)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  const advisorInitials = advisorName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'FHJ'
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -42,10 +44,10 @@ export default function MessagesClient({ messages: initial, profile, userId }: {
       </div>
       <div className="luxury-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,var(--gold-dark),var(--gold))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--obsidian)', fontWeight: 700 }}>SL</div>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,var(--gold-dark),var(--gold))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--obsidian)', fontWeight: 700 }}>{advisorInitials}</div>
           <div>
-            <div style={{ fontSize: 14, color: 'var(--text)' }}>Sophia Laurent</div>
-            <div style={{ fontSize: 11, color: 'var(--teal)' }}>● Senior Travel Architect</div>
+            <div style={{ fontSize: 14, color: 'var(--text)' }}>{advisorName}</div>
+            <div style={{ fontSize: 11, color: 'var(--teal)' }}>● Your Travel Advisor</div>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>

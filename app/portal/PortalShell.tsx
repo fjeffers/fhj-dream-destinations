@@ -11,6 +11,7 @@ const tabs = [
   { href: '/portal/events', label: 'Events', icon: '★' },
   { href: '/portal/messages', label: 'Concierge', icon: '✉' },
   { href: '/portal/documents', label: 'Documents', icon: '📄' },
+  { href: '/portal/profile', label: 'My Profile', icon: '⚙' },
 ]
 
 export default function PortalShell({ children, profile }: { children: React.ReactNode, profile: Profile }) {
