@@ -40,14 +40,16 @@ export default function Navigation() {
   return (
     <>
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 1050px) {
           .nav-links { display: none !important; }
           .nav-cta { display: none !important; }
           .nav-hamburger { display: flex !important; }
+        }
+        @media (max-width: 768px) {
           .nav-logo-tagline { display: none !important; }
           nav { padding: 12px 16px !important; }
         }
-        @media (min-width: 769px) {
+        @media (min-width: 1051px) {
           .nav-hamburger { display: none !important; }
           .mobile-menu { display: none !important; }
         }

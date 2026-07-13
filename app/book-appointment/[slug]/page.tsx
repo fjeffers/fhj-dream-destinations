@@ -70,10 +70,7 @@ export default function PersonalizedBookingPage() {
   const today = new Date(); today.setHours(0,0,0,0)
 
   useEffect(() => {
-    supabase.from('appointments').select('date, time').then(({ data }) => setBookedSlots(data || []))
-    supabase.from('appointment_requests').select('date, time').eq('status', 'Confirmed').then(({ data }) => {
-      if (data) setBookedSlots(p => [...p, ...data])
-    })
+    supabase.rpc('get_booked_slots').then(({ data }) => setBookedSlots(data || []))
     supabase.from('blocked_dates').select('date').then(({ data }) => {
       if (data) setBlockedDays(data.map((d: any) => d.date))
     })
@@ -106,9 +103,10 @@ export default function PersonalizedBookingPage() {
     }
     setLoading(true); setError('')
     const dateStr = selectedDate.toISOString().split('T')[0]
-    const { data, error: err } = await supabase.from('appointment_requests').insert({
-      ...form, date: dateStr, time: selectedTime, status: 'Pending'
-    }).select().single()
+    const { data, error: err } = await supabase.rpc('submit_appointment_request', {
+      p_name: form.name, p_email: form.email, p_phone: form.phone,
+      p_type: form.type, p_notes: form.notes, p_date: dateStr, p_time: selectedTime
+    })
     if (err) { setError(err.message); setLoading(false); return }
 
     await notifyAppointmentBooked({
@@ -122,7 +120,7 @@ export default function PersonalizedBookingPage() {
       message: `Hi ${firstName},\n\nThank you for booking with FHJ Dream Destinations!\n\nDate: ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\nTime: ${selectedTime}\nType: ${form.type}\n\nWe will confirm your appointment within 2 hours.\n\nWarm regards,\nFHJ Dream Destinations`
     })
 
-    setConfirmId(data.token || data.id)
+    setConfirmId(data)
     setSubmitted(true); setLoading(false)
   }
 
@@ -310,6 +308,9 @@ export default function PersonalizedBookingPage() {
                 {loading ? 'CONFIRMING...' : 'CONFIRM MY APPOINTMENT ✦'}
               </button>
             </div>
+            <p style={{ marginTop: 16, fontSize: 12, color: 'rgba(44,32,16,0.55)', textAlign: 'right' }}>
+              By confirming, you agree to our <a href="/privacy" style={{ color: '#076060' }}>Privacy Policy</a>.
+            </p>
           </div>
         )}
       </div>

@@ -695,6 +695,9 @@ export default function BookPage() {
                   </button>
               }
             </div>
+            <p style={{ marginTop: 18, fontSize: 12, color: C.muted, textAlign: 'center' }}>
+              By submitting, you agree to our <a href="/privacy" style={{ color: C.teal }}>Privacy Policy</a>.
+            </p>
           </div>
         </div>
       </div>
