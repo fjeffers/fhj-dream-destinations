@@ -54,11 +54,80 @@ export default function QRGeneratorPage() {
       })
   }, [selected])
 
-  const downloadQR = () => {
+  const downloadPlainQR = () => {
     if (!qrDataUrl) return
     const a = document.createElement('a')
     a.href = qrDataUrl
     a.download = `FHJ-QR-${dest.key}.png`
+    a.click()
+    setStatus('Downloaded!')
+    setTimeout(() => setStatus(''), 2500)
+  }
+
+  const downloadBrandedCard = async () => {
+    if (!qrDataUrl) return
+    try { await (document as any).fonts?.ready } catch {}
+
+    const W = 900, H = 1180
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')!
+
+    // Cream background with double gold frame
+    ctx.fillStyle = '#FDFAF3'
+    ctx.fillRect(0, 0, W, H)
+    ctx.strokeStyle = 'rgba(196,154,69,0.85)'
+    ctx.lineWidth = 3
+    ctx.strokeRect(26, 26, W - 52, H - 52)
+    ctx.strokeStyle = 'rgba(196,154,69,0.3)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(40, 40, W - 80, H - 80)
+
+    // Header
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#073030'
+    ctx.font = '700 42px Cinzel, Georgia, serif'
+    ctx.fillText('FHJ DREAM DESTINATIONS', W / 2, 138)
+    ctx.fillStyle = '#C49A45'
+    ctx.font = '600 18px Cinzel, Georgia, serif'
+    ctx.fillText('✦ CURATED JOURNEYS, CRAFTED WITH INTENTION ✦', W / 2, 180)
+
+    // QR panel
+    const qrSize = 520
+    const qx = (W - qrSize) / 2
+    const qy = 240
+    ctx.fillStyle = 'white'
+    ctx.fillRect(qx - 26, qy - 26, qrSize + 52, qrSize + 52)
+    ctx.strokeStyle = '#C49A45'
+    ctx.lineWidth = 4
+    ctx.strokeRect(qx - 26, qy - 26, qrSize + 52, qrSize + 52)
+
+    const img = new Image()
+    if (!qrDataUrl.startsWith('data:')) img.crossOrigin = 'anonymous'
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = qrDataUrl })
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, qx, qy, qrSize, qrSize)
+
+    // Action lines
+    ctx.fillStyle = '#076060'
+    ctx.font = '700 24px Cinzel, Georgia, serif'
+    ctx.fillText('SCAN ME', W / 2, qy + qrSize + 92)
+    ctx.fillStyle = '#2E2318'
+    ctx.font = 'italic 400 40px "Cormorant Garamond", Georgia, serif'
+    ctx.fillText(dest.action, W / 2, qy + qrSize + 148)
+
+    // Footer contacts
+    ctx.fillStyle = '#076060'
+    ctx.font = '600 21px Cinzel, Georgia, serif'
+    ctx.fillText('WWW.FHJDREAMDESTINATIONS.COM', W / 2, H - 118)
+    ctx.fillStyle = '#8A7A6A'
+    ctx.font = '400 26px "Cormorant Garamond", Georgia, serif'
+    ctx.fillText('484-541-3573  ·  info@fhjdreamdestinations.com', W / 2, H - 76)
+
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `FHJ-QR-${dest.key}-card.png`
     a.click()
     setStatus('Downloaded!')
     setTimeout(() => setStatus(''), 2500)
@@ -247,9 +316,13 @@ body{background:white;font-family:'Cormorant Garamond',serif;padding:0.5in;}
           style={{ background: loading || !qrDataUrl ? 'rgba(7,96,96,0.4)' : 'linear-gradient(135deg, #076060, #0E8F8F)', color: 'white', border: 'none', padding: '14px 32px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, fontWeight: 700, cursor: loading || !qrDataUrl ? 'not-allowed' : 'pointer', boxShadow: loading || !qrDataUrl ? 'none' : '0 6px 24px rgba(7,96,96,0.3)', transition: 'all 0.2s' }}>
           🖨 PRINT FULL SHEET
         </button>
-        <button onClick={downloadQR} disabled={loading || !qrDataUrl}
+        <button onClick={downloadBrandedCard} disabled={loading || !qrDataUrl}
           style={{ background: 'white', color: 'var(--teal-dark)', border: '2px solid var(--teal)', padding: '14px 28px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 3, fontWeight: 700, cursor: loading || !qrDataUrl ? 'not-allowed' : 'pointer', opacity: loading || !qrDataUrl ? 0.5 : 1 }}>
-          ⬇ DOWNLOAD QR PNG
+          ⬇ DOWNLOAD BRANDED CARD
+        </button>
+        <button onClick={downloadPlainQR} disabled={loading || !qrDataUrl}
+          style={{ background: 'transparent', color: 'var(--muted)', border: '1px solid rgba(196,154,10,0.35)', padding: '14px 22px', borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, fontWeight: 700, cursor: loading || !qrDataUrl ? 'not-allowed' : 'pointer', opacity: loading || !qrDataUrl ? 0.5 : 1 }}>
+          QR ONLY
         </button>
         {loading && <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: 'var(--muted)' }}>Generating QR...</span>}
         {status && <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: 'var(--teal)', fontWeight: 700 }}>✓ {status}</span>}
@@ -261,7 +334,7 @@ body{background:white;font-family:'Cormorant Garamond',serif;padding:0.5in;}
           ['1', 'Choose where the QR code directs — website, booking, intake form, or group trips'],
           ['2', 'Click "Print Full Sheet" — a new window opens with your full business info and cards'],
           ['3', 'Print on card stock (80–110 lb) and take to FedEx Office or Staples to cut at 3.5" × 2"'],
-          ['4', 'Click "Download QR PNG" to get the QR image for flyers, Instagram, or email signatures'],
+          ['4', 'Click "Download Branded Card" for a ready-to-share image with the business name and contact info — or "QR Only" for the bare code'],
         ].map(([n, t]) => (
           <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 6, fontSize: 14 }}>
             <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'var(--teal)', fontWeight: 700, minWidth: 16 }}>{n}.</span>
