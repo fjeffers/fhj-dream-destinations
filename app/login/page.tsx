@@ -27,8 +27,9 @@ function LoginContent() {
       return
     }
     setResetting(true)
+    const next = encodeURIComponent(`/update-password?type=${type}`)
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/update-password?type=${type}`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
     })
     setResetting(false)
     if (resetError) { setError(resetError.message); return }

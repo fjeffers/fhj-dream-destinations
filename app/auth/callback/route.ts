@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
+  const nextParam = searchParams.get('next')
+  // Only allow same-site relative paths as a redirect target.
+  const next = nextParam && nextParam.startsWith('/') ? nextParam : null
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -37,6 +40,10 @@ export async function GET(request: NextRequest) {
   // FIX: manager and employee roles also belong in /admin, not /portal
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
+    // Explicit destination (e.g. password reset → /update-password) wins.
+    if (next) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -49,5 +56,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/portal`)
   }
 
-  return NextResponse.redirect(`${origin}/login?type=admin`)
+  return NextResponse.redirect(`${origin}${next ?? '/login?type=admin'}`)
 }
