@@ -21,8 +21,16 @@ function UpdatePasswordContent() {
     const hashParams = new URLSearchParams(hash.substring(1))
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
+    // token_hash flow (recommended): the email link points here directly, and we
+    // verify in client-side JS. Email link scanners (Gmail, etc.) fetch the HTML
+    // but don't run JS, so they can't consume the one-time token by prefetching.
+    const tokenHash = params.get('token_hash')
+    const otpType = params.get('otp_type') || params.get('type')
 
-    if (accessToken) {
+    if (tokenHash && otpType && otpType !== 'admin' && otpType !== 'client') {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType as any })
+        .then(({ error }) => { if (error) setError('This link is invalid or has expired.'); else setReady(true) })
+    } else if (accessToken) {
       supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' })
         .then(({ error }) => { if (error) setError('This link is invalid or has expired.'); else setReady(true) })
     } else {
