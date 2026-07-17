@@ -7,6 +7,7 @@ import { useInactivityLogout } from '@/hooks/useInactivityLogout'
 const sections = [
   { href: '/admin', label: 'Overview', icon: '⌂' },
   { href: '/admin/clients', label: 'Clients', icon: '👥' },
+  { href: '/admin/directory', label: 'Directory', icon: '📇' },
   { href: '/admin/deals', label: 'Deals', icon: '★' },
   { href: '/admin/events', label: 'Events & RSVP', icon: '🎟' },
   { href: '/admin/group-trips', label: 'Group Trips', icon: '🌍' },
