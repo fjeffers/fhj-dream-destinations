@@ -332,8 +332,13 @@ export default function BookPage() {
   const occQ = OCCASION_QUESTIONS[form.special_occasion] || []
   const today = new Date().toISOString().split('T')[0]
 
+  // The multi-step form advances with a button, not a native submit, so the
+  // browser never enforces type="email" — validate the address ourselves or a
+  // malformed one reaches intake and silently breaks account creation later.
+  const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())
+
   const canProceed = () => {
-    if (step === 1) return !!(form.first_name && form.last_name && form.email)
+    if (step === 1) return !!(form.first_name && form.last_name && emailLooksValid)
     if (step === 2) return !!form.special_occasion
     if (step === 3) return !!form.trip_type
     if (step === 4) return !!(form.destination && form.travel_dates)
@@ -469,6 +474,11 @@ export default function BookPage() {
                       <Label>{f.label}</Label>
                       <input style={IS} type={f.type} placeholder={f.placeholder || ''}
                         value={form[f.id] || ''} onChange={e => upd(f.id, e.target.value)} />
+                      {f.id === 'email' && form.email.trim() !== '' && !emailLooksValid && (
+                        <div style={{ color: '#c0392b', fontSize: 13, marginTop: 6 }}>
+                          Please enter a complete email address, e.g. name@gmail.com
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
