@@ -6,6 +6,9 @@ import { useInactivityLogout } from '@/hooks/useInactivityLogout'
 
 const sections = [
   { href: '/admin', label: 'Overview', icon: '⌂' },
+  // Intake leads Clients: new inquiries are the first thing to work each day,
+  // and they become clients only after approval.
+  { href: '/admin/intake', label: 'Intake Requests', icon: '📥' },
   { href: '/admin/clients', label: 'Clients', icon: '👥' },
   { href: '/admin/directory', label: 'Directory', icon: '📇' },
   { href: '/admin/deals', label: 'Deals', icon: '★' },
@@ -14,7 +17,6 @@ const sections = [
   { href: '/admin/calendar', label: 'Calendar', icon: '📅' },
   { href: '/admin/appointments', label: 'Appointments', icon: '🔔' },
   { href: '/admin/bookings', label: 'Bookings', icon: '📋' },
-  { href: '/admin/intake', label: 'Intake Requests', icon: '📥' },
   { href: '/admin/messages', label: 'Messages', icon: '✉' },
   { href: '/admin/content', label: 'Content Manager', icon: '✏️' },
   { href: '/admin/partners', label: 'Partners', icon: '🤝' },
